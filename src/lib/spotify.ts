@@ -33,7 +33,7 @@ const mockTrack = {
   uri: "spotify:track:mock",
 };
 
-const mockPlaybackState = {
+let mockPlaybackState = {
   item: mockTrack,
   progress_ms: 45000,
   is_playing: true,
@@ -344,22 +344,36 @@ export async function getPlaybackState() {
 }
 
 export async function play() {
-  if (isMockMode()) return;
+  if (isMockMode()) {
+    mockPlaybackState.is_playing = true;
+    return;
+  }
   return getSpotifyApi().player.startResumePlayback("");
 }
 
 export async function pause() {
-  if (isMockMode()) return;
+  if (isMockMode()) {
+    mockPlaybackState.is_playing = false;
+    return;
+  }
   return getSpotifyApi().player.pausePlayback("");
 }
 
 export async function next() {
-  if (isMockMode()) return;
+  if (isMockMode()) {
+    mockPlaybackState.progress_ms = 0;
+    mockPlaybackState.is_playing = true;
+    return;
+  }
   return getSpotifyApi().player.skipToNext("");
 }
 
 export async function previous() {
-  if (isMockMode()) return;
+  if (isMockMode()) {
+    mockPlaybackState.progress_ms = 0;
+    mockPlaybackState.is_playing = true;
+    return;
+  }
   return getSpotifyApi().player.skipToPrevious("");
 }
 
