@@ -1,0 +1,33 @@
+[package]
+name = "spx"
+version = "0.1.0"
+description = "Retro Spotify client"
+authors = ["SPX"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "spx_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-deep-link = "2"
+dotenvy = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+base64 = "0.22"
+sha2 = "0.10"
+rand = "0.8"
+urlencoding = "2"
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "s"
