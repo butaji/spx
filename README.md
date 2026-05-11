@@ -37,10 +37,50 @@ SPX_MOCK=1 npm run tauri dev    # No Spotify account needed
 ```
 
 **Real Spotify:**
-1. [Create app](https://developer.spotify.com/dashboard) → Web API → `http://localhost:1420/callback`
-2. `echo 'SPOTIFY_CLIENT_ID="your_id"\nSPOTIFY_REDIRECT_URI="http://localhost:1420/callback"' > .env`
-3. `npm run tauri dev`
-4. After clicking "Connect Spotify" and approving in browser, paste the redirect URL back into the app
+
+Spotify rejects `localhost` and `127.0.0.1` redirect URIs. Use **ngrok** for HTTPS tunneling:
+
+1. **Install ngrok:**
+   ```bash
+   brew install ngrok
+   ```
+
+2. **Sign up** at [ngrok.com](https://ngrok.com) (free tier)
+
+3. **Add your authtoken:**
+   ```bash
+   ngrok config add-authtoken YOUR_TOKEN
+   ```
+
+4. **Create a Spotify app** at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+
+5. **Start ngrok tunnel** (separate terminal):
+   ```bash
+   ngrok http 1420
+   ```
+   Copy the HTTPS URL (e.g., `https://abc123.ngrok-free.app`)
+
+6. **Add redirect URI to Spotify app:**
+   - In Spotify Dashboard → Edit Settings → Web API
+   - Add: `https://abc123.ngrok-free.app/callback` (your ngrok URL + `/callback`)
+
+7. **Create your `.env` file:**
+   ```bash
+   echo 'VITE_SPOTIFY_CLIENT_ID="your_client_id"' > .env
+   ```
+
+8. **Start the app:** `npm run tauri dev`
+
+9. **Click "Connect Spotify"** — a browser tab opens
+
+10. **Approve SPX access** in Spotify's authorization page
+
+11. **Spotify redirects you** to your ngrok URL
+    - The callback server built into SPX intercepts this automatically
+
+12. **You're authenticated!** The ngrok URL must stay running while using SPX.
+
+> **Note:** Keep `ngrok http 1420` running in a terminal while using SPX. Free tier ngrok URLs change on restart.
 
 ---
 

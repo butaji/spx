@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
-import { invoke } from "@tauri-apps/api/core";
-import { SpotifyTrack, SpotifyQueueResponse } from "../types";
+import { getQueue } from "../lib/spotify";
+import { SpotifyTrack } from "../types";
 
 interface Props {
   onPlayUris: (uris: string[], offset?: number) => void;
@@ -13,7 +13,7 @@ export default function Queue({ onPlayUris }: Props) {
 
   const loadQueue = useCallback(async () => {
     try {
-      const data = await invoke<SpotifyQueueResponse>("spotify_get_queue");
+      const data = await getQueue();
       setCurrent(data.currently_playing || null);
       setQueue(data.queue || []);
     } catch (e) {

@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
-import { invoke } from "@tauri-apps/api/core";
+import { getPlaylist, getPlaylistTracks } from "../lib/spotify";
 import { formatTime } from "../App";
 import { IconPlay } from "../App";
-import { SpotifyTrack, SpotifyPlaylist, SpotifyPlaylistItem } from "../types";
+import { SpotifyTrack, SpotifyPlaylist } from "../types";
 
 interface Props {
   id: string;
@@ -20,13 +20,13 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
   const loadTracks = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await invoke<{ items: SpotifyPlaylistItem[] }>("spotify_playlist_tracks", { playlistId: id });
+      const data = await getPlaylistTracks(id);
       setTracks((data.items || []).map((i) => i.track).filter(Boolean) as SpotifyTrack[]);
     } catch (e) {
       console.error("Failed to load playlist tracks:", e);
     }
     try {
-      const pl = await invoke<SpotifyPlaylist>("spotify_get_playlist", { playlistId: id });
+      const pl = await getPlaylist(id);
       setPlaylist(pl);
     } catch (e) {
       console.error("Failed to load playlist:", e);

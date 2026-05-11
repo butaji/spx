@@ -74,6 +74,25 @@ export interface SpotifyPlaybackState {
   };
 }
 
+export interface SimplifiedPlaylist {
+  id: string;
+  name: string;
+  description?: string | null;
+  images?: SpotifyImage[];
+  owner?: {
+    id?: string;
+    display_name?: string;
+    href?: string;
+    uri?: string;
+    external_urls?: { spotify?: string };
+  };
+  uri?: string;
+  tracks?: {
+    total?: number;
+    href?: string;
+  };
+}
+
 export interface SpotifyPlaylist {
   id: string;
   name: string;

@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "preact/compat";
 import type { MouseEvent, KeyboardEvent } from "preact/compat";
-import { invoke } from "@tauri-apps/api/core";
+import { getFeaturedPlaylists, getUserPlaylists, getArtist, getArtistTopTracks } from "../lib/spotify";
 import { View, TrackInfo, formatTime } from "../App";
 import { IconHeart } from "../App";
-import type { SpotifyPlaylist, SpotifyArtist, SpotifyFeaturedPlaylists, SpotifyUserPlaylists } from "../types";
+import type { SpotifyArtist } from "../types";
+import type { SimplifiedPlaylist } from "@spotify/web-api-ts-sdk";
 
 interface Props {
   track: TrackInfo | null;
@@ -50,9 +51,10 @@ export default function Home({
   liked,
   onToggleLike,
 }: Props) {
-  const [featured, setFeatured] = useState<SpotifyPlaylist[]>([]);
-  const [recentPl, setRecentPl] = useState<SpotifyPlaylist[]>([]);
+  const [featured, setFeatured] = useState<SimplifiedPlaylist[]>([]);
+  const [recentPl, setRecentPl] = useState<SimplifiedPlaylist[]>([]);
   const [artistDetail, setArtistDetail] = useState<SpotifyArtist | null>(null);
+  const [artistTopTracks, setArtistTopTracks] = useState<any[]>([]);
   const [progress, setProgress] = useState(0);
   const [scrobbleCount, setScrobbleCount] = useState(0);
   const [trackScrobbleCount, setTrackScrobbleCount] = useState(0);
@@ -64,30 +66,39 @@ export default function Home({
 
   const loadData = async () => {
     try {
-      const fp = (await invoke("spotify_featured_playlists")) as SpotifyFeaturedPlaylists;
+      const fp = await getFeaturedPlaylists();
       setFeatured(fp.playlists?.items?.slice(0, 4) || []);
     } catch (e) {
       console.error("Failed to load featured playlists:", e);
     }
     try {
-      const pl = (await invoke("spotify_user_playlists")) as SpotifyUserPlaylists;
+      const pl = await getUserPlaylists();
       setRecentPl((pl.items || []).slice(0, 4));
     } catch (e) {
       console.error("Failed to load user playlists:", e);
     }
   };
 
-  /* Fetch artist detail when track changes */
+  /* Fetch artist detail and top tracks when track changes */
   useEffect(() => {
     if (!track?.artistIds?.[0]) {
       setArtistDetail(null);
+      setArtistTopTracks([]);
       return;
     }
-    invoke("spotify_get_artist", { artistId: track.artistIds[0] })
-      .then((res) => setArtistDetail(res as SpotifyArtist))
+    const artistId = track.artistIds[0];
+    Promise.all([
+      getArtist(artistId),
+      getArtistTopTracks(artistId).catch(() => null),
+    ])
+      .then(([artist, topTracks]) => {
+        setArtistDetail(artist);
+        setArtistTopTracks(topTracks?.tracks?.slice(0, 3) || []);
+      })
       .catch((e) => {
         console.error("Failed to load artist:", e);
         setArtistDetail(null);
+        setArtistTopTracks([]);
       });
   }, [track?.artistIds?.[0]]);
 

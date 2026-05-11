@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
-import { invoke } from "@tauri-apps/api/core";
+import { search } from "../lib/spotify";
 import { View } from "../App";
 import { SpotifyTrack, SpotifyAlbum, SpotifyArtist, SpotifyPlaylist, SpotifySearchResults } from "../types";
 
@@ -25,7 +25,7 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
     if (!q.trim()) return;
     setLoading(true);
     try {
-      const data = await invoke<SpotifySearchResults>("spotify_search", { query: q });
+      const data = await search(q);
       setResults(data);
     } catch (e) {
       console.error("Failed to search:", e);

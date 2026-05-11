@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "preact/compat";
 import type { MouseEvent, CSSProperties } from "preact/compat";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { open } from "@tauri-apps/plugin-shell";
 import Logo from "./components/Logo";
 import Home from "./screens/Home";
 import Search from "./screens/Search";
@@ -12,7 +8,17 @@ import Queue from "./screens/Queue";
 import PlaylistDetail from "./screens/PlaylistDetail";
 import AlbumDetail from "./screens/AlbumDetail";
 import ArtistDetail from "./screens/ArtistDetail";
-import type { SpotifyPlaybackState, SpotifyUserProfile } from "./types";
+import DeviceSelector from "./components/DeviceSelector";
+import {
+  startAuthFlow,
+  handleCallbackUrl,
+  isAuthenticated,
+  checkMockMode,
+  getPlaybackState, play, pause, next, previous,
+  seek, setVolume as apiSetVolume, setShuffle as apiSetShuffle, setRepeat as apiSetRepeat, getUserProfile,
+  playContext, playUris, getAvailableDevices, transferPlayback
+} from "./lib/spotify";
+import type { SpotifyDevice } from "./types";
 
 export type View =
   | { type: "home" }
@@ -35,8 +41,6 @@ export interface TrackInfo {
   imageUrl?: string;
   uri: string;
 }
-
-const appWindow = getCurrentWindow();
 
 const SIDEBAR_VIEWS: { view: View; label: string }[] = [
   { view: { type: "home" }, label: "Now Playing" },
@@ -87,7 +91,10 @@ function IconNext() {
 export function IconHeart({ filled }: { filled?: boolean }) {
   return <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>;
 }
-function IconVolume() {
+function IconVolume({ muted }: { muted?: boolean }) {
+  if (muted) {
+    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>;
+  }
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>;
 }
 function IconShuffle({ active }: { active?: boolean }) {
@@ -107,16 +114,18 @@ function App() {
   const goBack = () => setHistory(prev => prev.slice(0, -1));
   const [track, setTrack] = useState<TrackInfo | null>(null);
   const [isAuthed, setIsAuthed] = useState(false);
-  const [isMock, setIsMock] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingAuth, setPendingAuth] = useState(false);
-  const [callbackUrlInput, setCallbackUrlInput] = useState("");
   const [volume, setVolume] = useState(74);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<"off" | "context" | "track">("off");
   const [liked, setLiked] = useState(false);
   const [user, setUser] = useState<{ name: string; image?: string } | null>(null);
+  const [availableDevices, setAvailableDevices] = useState<SpotifyDevice[]>([]);
+  const [activeDevice, setActiveDevice] = useState<SpotifyDevice | null>(null);
+  const [showDevicePicker, setShowDevicePicker] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
+  const [callbackUrl, setCallbackUrl] = useState("");
 
   // Rate limiting: exponential backoff state
   const [pollInterval, setPollInterval] = useState(1500);
@@ -138,20 +147,57 @@ function App() {
   isAuthedRef.current = isAuthed;
   viewRef.current = view;
 
+  // Check auth status on mount
   useEffect(() => {
-    invoke<boolean>("is_mock_mode").then((mock: boolean) => {
-      const m = Boolean(mock);
-      setIsMock(m);
-      if (m) { setIsAuthed(true); loadUser(); }
-    }).catch((e) => {
-      console.error("Failed to check mock mode:", e);
-      setError(e instanceof Error ? e.message : String(e));
-    });
+    async function init() {
+      await checkMockMode();
+      setIsAuthed(isAuthenticated());
+    }
+    init();
   }, []);
+
+    // Listen for deep link callbacks
+    useEffect(() => {
+      let ignore = false;
+
+      async function handleDeepLink(url: string) {
+        if (ignore) return;
+        try {
+          await handleCallbackUrl(url);
+          setIsAuthed(true);
+          loadUser();
+        } catch (e) {
+          console.error("Deep link auth error:", e);
+          setError(e instanceof Error ? e.message : String(e));
+        }
+      }
+
+      // Listen for Tauri deep link events
+      async function setupDeepLinks() {
+        console.log("Using localhost callback server, no deep links needed");
+      }
+
+      setupDeepLinks();
+
+      // Also check URL on load (for manual deep link handling)
+      const checkUrl = async () => {
+        try {
+          const url = window.location.href;
+          if (url.includes("com.spx.app://callback") && url.includes("code=")) {
+            handleDeepLink(url);
+          }
+        } catch (e) {
+          // Not in Tauri
+        }
+      };
+      checkUrl();
+
+      return () => { ignore = true; };
+    }, []);
 
   const loadUser = useCallback(async () => {
     try {
-      const data = await invoke<SpotifyUserProfile>("spotify_user_profile");
+      const data = await getUserProfile();
       setUser({ name: data.display_name || "User", image: data.images?.[0]?.url });
     } catch (e) {
       console.error("Failed to load user profile:", e);
@@ -159,26 +205,42 @@ function App() {
     }
   }, []);
 
+  const loadDevices = useCallback(async () => {
+    try {
+      const data = await getAvailableDevices();
+      const newDevices = data.devices || [];
+      console.log("Devices found:", newDevices.length, newDevices.map(d => d.name));
+      // Replace device list entirely - Spotify only returns currently available devices
+      setAvailableDevices(newDevices);
+    } catch (e) {
+      console.error("Failed to load devices:", e);
+    }
+  }, []);
+
   const fetchPlayback = useCallback(async () => {
     if (!isAuthed) return;
     try {
-      const data = await invoke<SpotifyPlaybackState>("spotify_playback");
+      const data = await getPlaybackState();
       if (data?.item) {
+        const item = data.item as { id: string; name: string; artists?: { name: string; id: string }[]; album?: { name: string; images?: { url: string }[] }; duration_ms?: number; uri?: string };
         setTrack({
-          id: data.item.id,
-          name: data.item.name,
-          artist: data.item.artists?.map((a: { name: string }) => a.name).join(", ") || "Unknown",
-          artistIds: data.item.artists?.map((a: { id: string }) => a.id) || [],
-          album: data.item.album?.name || "",
-          durationMs: data.item.duration_ms || 0,
+          id: item.id,
+          name: item.name,
+          artist: item.artists?.map((a) => a.name).join(", ") || "Unknown",
+          artistIds: item.artists?.map((a) => a.id) || [],
+          album: item.album?.name || "",
+          durationMs: item.duration_ms || 0,
           progressMs: data.progress_ms || 0,
           isPlaying: data.is_playing || false,
-          imageUrl: data.item.album?.images?.[0]?.url,
-          uri: data.item.uri,
+          imageUrl: item.album?.images?.[0]?.url,
+          uri: item.uri || "",
         });
         setShuffle(data.shuffle_state || false);
-        setRepeat(data.repeat_state || "off");
-        if (data.device) setVolume(data.device.volume_percent || 0);
+        setRepeat((data.repeat_state || "off") as "off" | "context" | "track");
+        if (data.device) {
+          setVolume(data.device.volume_percent || 0);
+          setActiveDevice(data.device as SpotifyDevice);
+        }
       }
       setError(null);
       // Reset poll interval on success after rate limit
@@ -197,70 +259,72 @@ function App() {
     }
   }, [isAuthed]);
 
+  const handleTransferPlayback = useCallback(async (deviceId: string) => {
+    try {
+      await transferPlayback(deviceId);
+      setShowDevicePicker(false);
+      // Refresh after transfer
+      setTimeout(() => {
+        fetchPlayback();
+        loadDevices();
+      }, 500);
+    } catch (e) {
+      console.error("Failed to transfer playback:", e);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [fetchPlayback, loadDevices]);
+
   useEffect(() => {
     const id = setInterval(fetchPlayback, pollInterval);
     return () => clearInterval(id);
   }, [fetchPlayback, pollInterval]);
 
-  const handleAuth = useCallback(async () => {
-    try {
-      const url = await invoke<string>("spotify_auth_url");
-      await open(url);
-      setPendingAuth(true);
-    } catch (e) {
-      console.error("Failed to get auth URL:", e);
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
+  useEffect(() => {
+    if (!isAuthed) return;
+    loadDevices();
+    const id = setInterval(loadDevices, 3000);
+    return () => clearInterval(id);
+  }, [isAuthed, loadDevices]);
 
-  const handleCallbackSubmit = useCallback(async (e: Event) => {
-    e.preventDefault();
-    if (!callbackUrlInput.trim()) {
-      setError("Please paste the redirect URL");
-      return;
-    }
+  const handleStartAuth = useCallback(async () => {
+    if (isAuthLoading) return;
+    setIsAuthLoading(true);
+    setError(null);
     try {
-      const params = new URLSearchParams(callbackUrlInput.split("?")[1] || "");
-      const code = params.get("code");
-      const state = params.get("state");
-      if (!code) {
-        setError("No code found in URL");
-        return;
-      }
-      await invoke("spotify_handle_callback", { code, stateParam: state });
+      await startAuthFlow();
+      console.log("Auth flow completed successfully");
       setIsAuthed(true);
-      setPendingAuth(false);
-      setCallbackUrlInput("");
       loadUser();
     } catch (e) {
-      console.error("Failed to complete auth:", e);
+      console.error("Failed to start auth:", e);
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }, [isAuthLoading, loadUser]);
+
+  const handleSubmitCallback = useCallback(async (e: Event) => {
+    e.preventDefault();
+    if (!callbackUrl.trim()) return;
+    try {
+      await handleCallbackUrl(callbackUrl.trim());
+      setIsAuthed(true);
+      setCallbackUrl("");
+      loadUser();
+    } catch (e) {
+      console.error("Failed to process callback:", e);
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [callbackUrlInput, loadUser]);
-
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    const setupDeepLink = async () => {
-      unlisten = await listen('deep-link-callback', (event) => {
-        const { code, state } = event.payload as { code: string; state: string };
-        invoke('spotify_handle_callback', { code, stateParam: state })
-          .then(() => {
-            setIsAuthed(true);
-            loadUser();
-          })
-          .catch((e) => setError(e.toString()));
-      });
-    };
-
-    setupDeepLink();
-    return () => unlisten?.();
-  }, [loadUser]);
+  }, [callbackUrl, loadUser]);
 
   const handlePlayPause = useCallback(async () => {
     if (!trackRef.current) return;
     try {
-      await invoke(trackRef.current.isPlaying ? "spotify_pause" : "spotify_play");
+      if (trackRef.current.isPlaying) {
+        await pause();
+      } else {
+        await play();
+      }
       fetchPlayback();
     } catch (e) {
       console.error("Failed to play/pause:", e);
@@ -270,7 +334,7 @@ function App() {
 
   const handleNext = useCallback(async () => {
     try {
-      await invoke("spotify_next");
+      await next();
       fetchPlayback();
     } catch (e) {
       console.error("Failed to skip next:", e);
@@ -280,7 +344,7 @@ function App() {
 
   const handlePrev = useCallback(async () => {
     try {
-      await invoke("spotify_previous");
+      await previous();
       fetchPlayback();
     } catch (e) {
       console.error("Failed to skip previous:", e);
@@ -294,7 +358,7 @@ function App() {
     if (!rect) return;
     const pos = Math.floor(((e.clientX - rect.left) / rect.width) * trackRef.current.durationMs);
     try {
-      await invoke("spotify_seek", { positionMs: pos });
+      await seek(pos);
       fetchPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
@@ -304,7 +368,7 @@ function App() {
 
   const handleSeekPosition = useCallback(async (pos: number) => {
     try {
-      await invoke("spotify_seek", { positionMs: pos });
+      await seek(pos);
       fetchPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
@@ -317,7 +381,7 @@ function App() {
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const v = Math.round(pct * 100);
     try {
-      await invoke("spotify_set_volume", { volumePercent: v });
+      await apiSetVolume(v);
       setVolume(v);
     } catch (e) {
       console.error("Failed to set volume:", e);
@@ -327,7 +391,7 @@ function App() {
 
   const handleShuffle = useCallback(async () => {
     try {
-      await invoke("spotify_set_shuffle", { shuffle: !shuffleRef.current });
+      await apiSetShuffle(!shuffleRef.current);
       setShuffle(!shuffleRef.current);
       fetchPlayback();
     } catch (e) {
@@ -336,10 +400,20 @@ function App() {
     }
   }, [fetchPlayback]);
 
+  const handleMuteToggle = useCallback(async () => {
+    const v = volumeRef.current > 0 ? 0 : 74;
+    try {
+      await apiSetVolume(v);
+      setVolume(v);
+    } catch (e) {
+      console.error("Failed to toggle mute:", e);
+    }
+  }, []);
+
   const handleRepeat = useCallback(async () => {
     const next = repeatRef.current === "off" ? "context" : repeatRef.current === "context" ? "track" : "off";
     try {
-      await invoke("spotify_set_repeat", { repeatState: next });
+      await apiSetRepeat(next);
       setRepeat(next);
       fetchPlayback();
     } catch (e) {
@@ -348,9 +422,9 @@ function App() {
     }
   }, [fetchPlayback]);
 
-  const playContext = useCallback(async (uri: string, offsetUri?: string) => {
+  const playContextFn = useCallback(async (uri: string, offsetUri?: string) => {
     try {
-      await invoke("spotify_play_context", { contextUri: uri, offsetUri });
+      await playContext(uri, offsetUri);
       fetchPlayback();
     } catch (e) {
       console.error("Failed to play context:", e);
@@ -358,9 +432,9 @@ function App() {
     }
   }, [fetchPlayback]);
 
-  const playUris = useCallback(async (uris: string[], offset?: number) => {
+  const playUrisFn = useCallback(async (uris: string[], offset?: number) => {
     try {
-      await invoke("spotify_play_uris", { uris, offset });
+      await playUris(uris, offset);
       fetchPlayback();
     } catch (e) {
       console.error("Failed to play URIs:", e);
@@ -389,7 +463,11 @@ function App() {
           e.preventDefault();
           if (!trackRef.current) return;
           try {
-            await invoke(trackRef.current.isPlaying ? "spotify_pause" : "spotify_play");
+            if (trackRef.current.isPlaying) {
+              await pause();
+            } else {
+              await play();
+            }
             fetchPlayback();
           } catch (ev) {
             console.error("Failed to play/pause:", ev);
@@ -400,7 +478,7 @@ function App() {
         case "ArrowRight": {
           e.preventDefault();
           try {
-            await invoke("spotify_next");
+            await next();
             fetchPlayback();
           } catch (ev) {
             console.error("Failed to skip next:", ev);
@@ -415,7 +493,7 @@ function App() {
           } else {
             e.preventDefault();
             try {
-              await invoke("spotify_previous");
+              await previous();
               fetchPlayback();
             } catch (ev) {
               console.error("Failed to skip previous:", ev);
@@ -428,7 +506,7 @@ function App() {
           e.preventDefault();
           const v = Math.min(100, volumeRef.current + 5);
           try {
-            await invoke("spotify_set_volume", { volumePercent: v });
+            await apiSetVolume(v);
             setVolume(v);
           } catch (ev) {
             console.error("Failed to set volume:", ev);
@@ -440,7 +518,7 @@ function App() {
           e.preventDefault();
           const v = Math.max(0, volumeRef.current - 5);
           try {
-            await invoke("spotify_set_volume", { volumePercent: v });
+            await apiSetVolume(v);
             setVolume(v);
           } catch (ev) {
             console.error("Failed to set volume:", ev);
@@ -451,7 +529,7 @@ function App() {
         case "KeyS": {
           e.preventDefault();
           try {
-            await invoke("spotify_set_shuffle", { shuffle: !shuffleRef.current });
+            await apiSetShuffle(!shuffleRef.current);
             setShuffle(!shuffleRef.current);
             fetchPlayback();
           } catch (ev) {
@@ -464,7 +542,7 @@ function App() {
           e.preventDefault();
           const next = repeatRef.current === "off" ? "context" : repeatRef.current === "context" ? "track" : "off";
           try {
-            await invoke("spotify_set_repeat", { repeatState: next });
+            await apiSetRepeat(next);
             setRepeat(next);
             fetchPlayback();
           } catch (ev) {
@@ -477,18 +555,11 @@ function App() {
           e.preventDefault();
           const v = volumeRef.current > 0 ? 0 : 74;
           try {
-            await invoke("spotify_set_volume", { volumePercent: v });
+            await apiSetVolume(v);
             setVolume(v);
           } catch (ev) {
             console.error("Failed to toggle mute:", ev);
             setError(ev instanceof Error ? ev.message : String(ev));
-          }
-          break;
-        }
-        case "Escape": {
-          if (!isAuthedRef.current) {
-            e.preventDefault();
-            appWindow.close();
           }
           break;
         }
@@ -497,6 +568,24 @@ function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [canGoBack, fetchPlayback]);
+
+  // CMD+W to hide window (macOS standard)
+  useEffect(() => {
+    const onKey = async (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
+        e.preventDefault();
+        try {
+          const { getCurrentWindow } = await import('@tauri-apps/api/window');
+          const win = getCurrentWindow();
+          await win.hide();
+        } catch (err) {
+          console.log('Not in Tauri environment');
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const navItems: { view: View; label: string; icon: () => preact.JSX.Element }[] = [
     { view: { type: "home" }, label: "Now Playing", icon: () => <IconHome active={view.type === "home"} /> },
@@ -513,6 +602,8 @@ function App() {
 
   const progressPct = track && track.durationMs > 0 ? (track.progressMs / track.durationMs) * 100 : 0;
 
+  const isMissingCode = error?.includes("No authorization code") || error?.includes("code not found") || error?.includes("missing");
+
   if (!isAuthed) {
     return (
       <div className="app-window" data-tauri-drag-region>
@@ -520,34 +611,87 @@ function App() {
         <div className="auth-screen">
           <Logo size={48} />
           <h2 className="auth-title">SPX</h2>
-          <p className="body-text">Spotify client</p>
-          {error && <p className="auth-error">{error}</p>}
-          {!pendingAuth ? (
-            <>
-              <button className="btn-primary auth-btn" onClick={handleAuth}>Connect Spotify</button>
-              <p className="text-xs text-muted">Or run with SPX_MOCK=1</p>
-            </>
-          ) : (
-            <form className="auth-callback-form" onSubmit={handleCallbackSubmit}>
-              <p className="body-text">Browser opened. After approving, paste the redirect URL here:</p>
-              <input
-                type="text"
-                className="input-field"
-                placeholder="Paste redirect URL here..."
-                value={callbackUrlInput}
-                onChange={(e) => setCallbackUrlInput((e.target as HTMLInputElement).value)}
-              />
-              <button type="submit" className="btn-primary auth-btn">Complete Auth</button>
-              <button type="button" className="btn-secondary auth-btn" onClick={() => { setPendingAuth(false); setError(null); }}>Cancel</button>
-            </form>
+          <p className="auth-subtitle">Spotify client</p>
+
+          {/* Error message - improved */}
+          {error && (
+            <div className="auth-error-box">
+              <p className="auth-error-title">Authorization failed</p>
+              <p className="auth-error">{error}</p>
+              {isMissingCode && (
+                <div className="auth-error-help">
+                  <p><strong>You may have pasted the wrong URL.</strong></p>
+                  <p>The correct URL starts with:</p>
+                  <code className="auth-error-code">http://127.0.0.1:1421/callback?code=</code>
+                  <p>Make sure you copied the URL <em>AFTER</em> clicking Agree in Spotify.</p>
+                </div>
+              )}
+            </div>
           )}
+
+          {/* Step-by-step instructions */}
+          <div className="auth-instructions">
+            <div className="auth-steps">
+              <div className="auth-step">
+                <span className="step-num">1</span>
+                <span className="step-text">Click <strong>Connect Spotify</strong> below</span>
+              </div>
+              <div className="auth-step">
+                <span className="step-num">2</span>
+                <span className="step-text">Approve access in Spotify (click <strong>Agree</strong>)</span>
+              </div>
+              <div className="auth-step auth-step-highlight">
+                <span className="step-num">3</span>
+                <span className="step-text">Wait for the <strong>success page</strong> in your browser</span>
+              </div>
+              <div className="auth-step">
+                <span className="step-num">4</span>
+                <span className="step-text">Return here — authentication completes automatically</span>
+              </div>
+            </div>
+
+            {/* Visual example */}
+            <div className="auth-example">
+              <p className="auth-example-label">The URL you need looks like this:</p>
+              <code className="auth-example-code">http://127.0.0.1:1421/callback?code= A1B2C3... </code>
+            </div>
+
+            {/* Fallback instructions */}
+            <div className="auth-fallback">
+              <p>If the browser doesn't redirect automatically:</p>
+              <ul className="auth-fallback-list">
+                <li>Copy the URL from your browser's address bar</li>
+                <li>Paste it in the field below</li>
+              </ul>
+            </div>
+          </div>
+
+          <button 
+            className="btn-primary auth-btn" 
+            onClick={handleStartAuth}
+            disabled={isAuthLoading}
+          >
+            {isAuthLoading ? 'Connecting...' : 'Connect Spotify'}
+          </button>
+
+          <div className="auth-divider">or paste callback URL manually</div>
+          <form className="callback-form" onSubmit={handleSubmitCallback}>
+            <input
+              type="text"
+              className="callback-input"
+              placeholder="http://127.0.0.1:1421/callback?code=..."
+              value={callbackUrl}
+              onInput={(e) => setCallbackUrl((e.target as HTMLInputElement).value)}
+            />
+            <button type="submit" className="btn-secondary">Submit</button>
+          </form>
         </div>
       </div>
     );
   }
 
   const renderScreen = () => {
-    const common = { onPlayContext: playContext, onPlayUris: playUris, onNavigate: pushView };
+    const common = { onPlayContext: playContextFn, onPlayUris: playUrisFn, onNavigate: pushView };
     switch (view.type) {
       case "home": return (
         <Home
@@ -560,7 +704,7 @@ function App() {
       );
       case "search": return <Search {...common} initialQuery="" />;
       case "library": return <Library {...common} />;
-      case "queue": return <Queue onPlayUris={playUris} />;
+      case "queue": return <Queue onPlayUris={playUrisFn} />;
       case "playlist": return <PlaylistDetail id={view.id} name={view.name} {...common} />;
       case "album": return <AlbumDetail id={view.id} name={view.name} {...common} />;
       case "artist": return <ArtistDetail id={view.id} name={view.name} {...common} />;
@@ -582,9 +726,6 @@ function App() {
             );
           })}
           <div className="sidebar-divider" />
-          {isMock && (
-            <div className="mock-badge">Mock</div>
-          )}
           <div className="sidebar-footer">
             {user && (
               <div className="user-pill">
@@ -658,7 +799,13 @@ function App() {
         </div>
 
         <div className="player-right">
-          <button className="ctrl-btn" aria-label="Volume" role="button" tabIndex={0}><IconVolume /></button>
+          <DeviceSelector
+            devices={availableDevices}
+            activeDevice={activeDevice}
+            onTransfer={handleTransferPlayback}
+            onRefresh={loadDevices}
+          />
+          <button className="ctrl-btn" aria-label="Volume" role="button" tabIndex={0} onClick={handleMuteToggle}><IconVolume muted={volume === 0} /></button>
           <div
             className="volume-track"
             onClick={handleVolumeClick}

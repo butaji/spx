@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
-import { invoke } from "@tauri-apps/api/core";
+import { getAlbum } from "../lib/spotify";
 import { View, formatTime } from "../App";
 import { IconPlay } from "../App";
 import { SpotifyAlbum } from "../types";
@@ -20,7 +20,7 @@ export default function AlbumDetail({ id, name, onPlayContext, onPlayUris, onNav
   const loadAlbum = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await invoke<SpotifyAlbum>("spotify_get_album", { albumId: id });
+      const data = await getAlbum(id);
       setAlbum(data);
     } catch (e) {
       console.error("Failed to load album:", e);

@@ -29,7 +29,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' http://localhost:1420 https://api.spotify.com https://accounts.spotify.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com"
+      "csp": "default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com"
     }
   },
   "bundle": {
@@ -42,12 +42,5 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
-  },
-  "plugins": {
-    "deep-link": {
-      "desktop": {
-        "schemes": ["com.spx.app"]
-      }
-    }
   }
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
-import { invoke } from "@tauri-apps/api/core";
+import { getUserPlaylists, getSavedTracks, getSavedAlbums } from "../lib/spotify";
 import { View } from "../App";
-import { SpotifyPlaylist, SpotifyTrack, SpotifyAlbum, SpotifySavedTracks, SpotifySavedAlbums, SpotifyUserPlaylists } from "../types";
+import { SpotifyPlaylist, SpotifyTrack, SpotifyAlbum } from "../types";
 
 type Tab = "playlists" | "tracks" | "albums";
 
@@ -23,13 +23,13 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
     setLoading(true);
     try {
       if (tab === "playlists") {
-        const d = await invoke<SpotifyUserPlaylists>("spotify_user_playlists");
+        const d = await getUserPlaylists();
         setItems(d.items || []);
       } else if (tab === "tracks") {
-        const d = await invoke<SpotifySavedTracks>("spotify_saved_tracks");
+        const d = await getSavedTracks();
         setItems((d.items || []).map((i) => i.track).filter(Boolean) as SpotifyTrack[]);
       } else if (tab === "albums") {
-        const d = await invoke<SpotifySavedAlbums>("spotify_saved_albums");
+        const d = await getSavedAlbums();
         setItems((d.items || []).map((i) => i.album).filter(Boolean) as SpotifyAlbum[]);
       }
     } catch (e) {
