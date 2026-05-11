@@ -267,30 +267,63 @@ export default function Home({
       {/* ── Artist Section ── */}
       {artistDetail && (
         <div className="artist-section">
-          <div className="artist-section-header">{artistDetail.name}</div>
-          <div className="artist-row">
-            <div className="artist-row-img">
+          <div className="artist-section-header">
+            <span>{artistDetail.name}</span>
+            {artistDetail.followers && (
+              <span className="artist-follower-count">{artistDetail.followers.total.toLocaleString()} followers</span>
+            )}
+          </div>
+          <div className="artist-card">
+            <div className="artist-card-img">
               {artistImage && <img src={artistImage} alt="" />}
             </div>
-            <div className="artist-row-info">
-              <p className="artist-row-bio">
+            <div className="artist-card-info">
+              <p className="artist-card-bio">
                 {artistDetail.name} is a musical artist on Spotify.
-                {artistFollowers && (
-                  <>
-                    {" "}They have{" "}
-                    <strong>{artistFollowers.toLocaleString()}</strong> followers.
-                  </>
-                )}{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onNavigate({ type: "artist", id: artistDetail.id, name: artistDetail.name });
-                  }}
-                >
-                  View more on SPX
-                </a>
               </p>
+              {/* Genres */}
+              {artistDetail.genres?.length > 0 && (
+                <div className="artist-genres" style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {artistDetail.genres.slice(0, 3).map(g => (
+                    <span key={g} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--glass)', borderRadius: 999, color: 'var(--fg-dim)' }}>{g}</span>
+                  ))}
+                </div>
+              )}
+              {/* Popularity */}
+              {artistDetail.popularity !== undefined && (
+                <div className="artist-popularity" style={{ marginTop: 10 }}>
+                  <span style={{ fontSize: 10, color: 'var(--fg-faint)', marginRight: 6 }}>Popularity</span>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 60, height: 4, background: 'var(--glass)', borderRadius: 999, overflow: 'hidden' }}>
+                      <div style={{ width: `${artistDetail.popularity}%`, height: '100%', background: 'var(--accent)', borderRadius: 999 }} />
+                    </div>
+                    <span style={{ fontSize: 10, color: 'var(--fg-dim)' }}>{artistDetail.popularity}</span>
+                  </div>
+                </div>
+              )}
+              {/* Top Tracks */}
+              {artistTopTracks.length > 0 && (
+                <div className="artist-top-tracks" style={{ marginTop: 12 }}>
+                  <span style={{ fontSize: 10, color: 'var(--fg-faint)', display: 'block', marginBottom: 6 }}>Top Tracks</span>
+                  {artistTopTracks.map((t, i) => (
+                    <div key={t.id} className="artist-track-row">
+                      <span className="artist-track-num">{i + 1}</span>
+                      <span className="artist-track-name">{t.name}</span>
+                      <span className="artist-track-dur">{formatTime(t.duration_ms)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <a
+                href="#"
+                className="artist-card-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate({ type: "artist", id: artistDetail.id, name: artistDetail.name });
+                }}
+              >
+                View more on SPX →
+              </a>
             </div>
           </div>
         </div>

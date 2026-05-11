@@ -85,6 +85,39 @@ const mockDevices = {
   ],
 };
 
+const mockArtist = {
+  id: "mock-artist",
+  name: "Mock Artist",
+  genres: ["electronic", "trip hop"],
+  followers: { total: 1234 },
+  images: [{ url: "" }],
+  popularity: 75,
+};
+
+const mockArtistTopTracks = {
+  tracks: [
+    { id: "mock-track-1", name: "Popular Song 1", uri: "spotify:track:mock1", album: { name: "Album 1", images: [{ url: "" }] }, duration_ms: 180000 },
+    { id: "mock-track-2", name: "Popular Song 2", uri: "spotify:track:mock2", album: { name: "Album 2", images: [{ url: "" }] }, duration_ms: 200000 },
+  ]
+};
+
+const mockAlbum = {
+  id: "mock-album",
+  name: "Mock Album",
+  artists: [{ name: "Mock Artist", id: "mock-artist" }],
+  images: [{ url: "" }],
+  tracks: { items: [] },
+  album_type: "album",
+  release_date: "2024-01-01",
+};
+
+const mockSearch = {
+  tracks: { items: [] },
+  albums: { items: [] },
+  artists: { items: [] },
+  playlists: { items: [] },
+};
+
 const REDIRECT_URI = (import.meta.env.VITE_NGROK_URL || "http://127.0.0.1:1421") + "/callback";
 
 let clientId: string | null = null;
@@ -355,6 +388,7 @@ export async function getQueue() {
 }
 
 export async function search(query: string) {
+  if (isMockMode()) return mockSearch;
   return getSpotifyApi().search(query, ["track", "album", "artist", "playlist"]);
 }
 
@@ -381,14 +415,17 @@ export async function getUserProfile() {
 }
 
 export async function getAlbum(albumId: string) {
+  if (isMockMode()) return mockAlbum;
   return getSpotifyApi().albums.get(albumId);
 }
 
 export async function getArtist(artistId: string) {
+  if (isMockMode()) return mockArtist;
   return getSpotifyApi().artists.get(artistId);
 }
 
 export async function getArtistTopTracks(artistId: string) {
+  if (isMockMode()) return mockArtistTopTracks;
   return getSpotifyApi().artists.topTracks(artistId, "US");
 }
 
@@ -407,19 +444,23 @@ export async function getPlaylist(playlistId: string) {
 }
 
 export async function setShuffle(state: boolean) {
+  if (isMockMode()) return;
   return getSpotifyApi().player.togglePlaybackShuffle(state, "");
 }
 
 export async function setRepeat(state: "off" | "context" | "track") {
+  if (isMockMode()) return;
   return getSpotifyApi().player.setRepeatMode(state, "");
 }
 
 export async function playContext(contextUri: string, offsetUri?: string) {
+  if (isMockMode()) return;
   const offset = offsetUri ? { uri: offsetUri } : undefined;
   return getSpotifyApi().player.startResumePlayback("", contextUri, undefined, offset);
 }
 
 export async function playUris(uris: string[], offset?: number) {
+  if (isMockMode()) return;
   const offsetObj = offset !== undefined ? { position: offset } : undefined;
   return getSpotifyApi().player.startResumePlayback("", undefined, uris, offsetObj);
 }

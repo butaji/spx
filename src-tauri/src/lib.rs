@@ -1,6 +1,7 @@
 use std::println;
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tauri::Manager;
 
 #[tauri::command]
 fn is_mock_mode() -> bool {
@@ -104,11 +105,19 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![get_spotify_client_id, start_callback_server, is_mock_mode])
-        .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+        .setup(|app| {
+            // Get the main window and ensure close hides instead of quits
+            if let Some(window) = app.get_webview_window("main") {
+                let win = window.clone();
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        println!("Close requested (CMD+W or X button) - hiding window instead");
+                        api.prevent_close();
+                        let _ = win.hide();
+                    }
+                });
             }
+            Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "preact/compat";
 import type { MouseEvent, CSSProperties } from "preact/compat";
+import { message } from "@tauri-apps/plugin-dialog";
 import Logo from "./components/Logo";
 import Home from "./screens/Home";
 import Search from "./screens/Search";
@@ -13,6 +14,7 @@ import {
   startAuthFlow,
   handleCallbackUrl,
   isAuthenticated,
+  logout,
   checkMockMode,
   getPlaybackState, play, pause, next, previous,
   seek, setVolume as apiSetVolume, setShuffle as apiSetShuffle, setRepeat as apiSetRepeat, getUserProfile,
@@ -114,6 +116,8 @@ function App() {
   const goBack = () => setHistory(prev => prev.slice(0, -1));
   const [track, setTrack] = useState<TrackInfo | null>(null);
   const [isAuthed, setIsAuthed] = useState(false);
+  const [authError, setAuthError] = useState(false);
+  const [isMockMode, setIsMockMode] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolume] = useState(74);
@@ -126,6 +130,16 @@ function App() {
   const [showDevicePicker, setShowDevicePicker] = useState(false);
   const progressRef = useRef<HTMLDivElement>(null);
   const [callbackUrl, setCallbackUrl] = useState("");
+
+  // Error helper using dialog
+  const showError = useCallback(async (msg: string) => {
+    console.error(msg);
+    try {
+      await message(msg, { title: 'SPX Error', kind: 'error' });
+    } catch (e) {
+      setError(msg);
+    }
+  }, []);
 
   // Rate limiting: exponential backoff state
   const [pollInterval, setPollInterval] = useState(1500);
@@ -150,8 +164,14 @@ function App() {
   // Check auth status on mount
   useEffect(() => {
     async function init() {
-      await checkMockMode();
-      setIsAuthed(isAuthenticated());
+      const mock = await checkMockMode();
+      setIsMockMode(mock);
+      const authed = isAuthenticated();
+      setIsAuthed(authed || mock);
+      if (authed || mock) {
+        loadUser();
+        fetchPlayback();
+      }
     }
     init();
   }, []);
@@ -168,7 +188,7 @@ function App() {
           loadUser();
         } catch (e) {
           console.error("Deep link auth error:", e);
-          setError(e instanceof Error ? e.message : String(e));
+          showError(e instanceof Error ? e.message : String(e));
         }
       }
 
@@ -201,7 +221,7 @@ function App() {
       setUser({ name: data.display_name || "User", image: data.images?.[0]?.url });
     } catch (e) {
       console.error("Failed to load user profile:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, []);
 
@@ -247,6 +267,14 @@ function App() {
       setPollInterval(1500);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      // Detect auth errors (401, 403, "Not authenticated")
+      if (msg.includes("Not authenticated") || msg.includes("401") || msg.includes("403")) {
+        console.warn("Auth error detected, forcing re-auth");
+        setIsAuthed(false);
+        setAuthError(true);
+        logout();
+        return;
+      }
       // Detect rate limit (429)
       if (msg.includes("429") || msg.toLowerCase().includes("rate limit")) {
         const newInterval = Math.min(pollIntervalRef.current * 2, 30000);
@@ -254,7 +282,7 @@ function App() {
         console.warn("Rate limited, increasing poll interval to", newInterval);
       } else {
         console.error("Failed to fetch playback:", e);
-        setError(msg);
+        showError(msg);
       }
     }
   }, [isAuthed]);
@@ -270,7 +298,7 @@ function App() {
       }, 500);
     } catch (e) {
       console.error("Failed to transfer playback:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback, loadDevices]);
 
@@ -297,7 +325,7 @@ function App() {
       loadUser();
     } catch (e) {
       console.error("Failed to start auth:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     } finally {
       setIsAuthLoading(false);
     }
@@ -313,7 +341,7 @@ function App() {
       loadUser();
     } catch (e) {
       console.error("Failed to process callback:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [callbackUrl, loadUser]);
 
@@ -328,7 +356,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to play/pause:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -338,7 +366,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to skip next:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -348,7 +376,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to skip previous:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -362,7 +390,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -372,7 +400,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -385,7 +413,7 @@ function App() {
       setVolume(v);
     } catch (e) {
       console.error("Failed to set volume:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, []);
 
@@ -396,7 +424,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to set shuffle:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -418,7 +446,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to set repeat:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -428,7 +456,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to play context:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -438,7 +466,7 @@ function App() {
       fetchPlayback();
     } catch (e) {
       console.error("Failed to play URIs:", e);
-      setError(e instanceof Error ? e.message : String(e));
+      showError(e instanceof Error ? e.message : String(e));
     }
   }, [fetchPlayback]);
 
@@ -471,7 +499,7 @@ function App() {
             fetchPlayback();
           } catch (ev) {
             console.error("Failed to play/pause:", ev);
-            setError(ev instanceof Error ? ev.message : String(ev));
+            showError(ev instanceof Error ? ev.message : String(ev));
           }
           break;
         }
@@ -482,7 +510,7 @@ function App() {
             fetchPlayback();
           } catch (ev) {
             console.error("Failed to skip next:", ev);
-            setError(ev instanceof Error ? ev.message : String(ev));
+            showError(ev instanceof Error ? ev.message : String(ev));
           }
           break;
         }
@@ -497,7 +525,7 @@ function App() {
               fetchPlayback();
             } catch (ev) {
               console.error("Failed to skip previous:", ev);
-              setError(ev instanceof Error ? ev.message : String(ev));
+              showError(ev instanceof Error ? ev.message : String(ev));
             }
           }
           break;
@@ -510,7 +538,7 @@ function App() {
             setVolume(v);
           } catch (ev) {
             console.error("Failed to set volume:", ev);
-            setError(ev instanceof Error ? ev.message : String(ev));
+            showError(ev instanceof Error ? ev.message : String(ev));
           }
           break;
         }
@@ -522,7 +550,7 @@ function App() {
             setVolume(v);
           } catch (ev) {
             console.error("Failed to set volume:", ev);
-            setError(ev instanceof Error ? ev.message : String(ev));
+            showError(ev instanceof Error ? ev.message : String(ev));
           }
           break;
         }
@@ -534,7 +562,7 @@ function App() {
             fetchPlayback();
           } catch (ev) {
             console.error("Failed to set shuffle:", ev);
-            setError(ev instanceof Error ? ev.message : String(ev));
+            showError(ev instanceof Error ? ev.message : String(ev));
           }
           break;
         }
@@ -547,7 +575,7 @@ function App() {
             fetchPlayback();
           } catch (ev) {
             console.error("Failed to set repeat:", ev);
-            setError(ev instanceof Error ? ev.message : String(ev));
+            showError(ev instanceof Error ? ev.message : String(ev));
           }
           break;
         }
@@ -559,7 +587,7 @@ function App() {
             setVolume(v);
           } catch (ev) {
             console.error("Failed to toggle mute:", ev);
-            setError(ev instanceof Error ? ev.message : String(ev));
+            showError(ev instanceof Error ? ev.message : String(ev));
           }
           break;
         }
@@ -569,23 +597,34 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [canGoBack, fetchPlayback]);
 
-  // CMD+W to hide window (macOS standard)
+  // Media Session API for native macOS media keys (play/pause, previous, next)
   useEffect(() => {
-    const onKey = async (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
-        e.preventDefault();
-        try {
-          const { getCurrentWindow } = await import('@tauri-apps/api/window');
-          const win = getCurrentWindow();
-          await win.hide();
-        } catch (err) {
-          console.log('Not in Tauri environment');
-        }
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+    if (!('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      handlePlayPause();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      handlePlayPause();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      handlePrev();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      handleNext();
+    });
+
+    // Update media session metadata when track changes
+    if (track) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.name,
+        artist: track.artist,
+        album: track.album,
+        artwork: track.imageUrl ? [{ src: track.imageUrl, sizes: '512x512', type: 'image/jpeg' }] : []
+      });
+      navigator.mediaSession.playbackState = track.isPlaying ? 'playing' : 'paused';
+    }
+  }, [track, handlePlayPause, handlePrev, handleNext]);
 
   const navItems: { view: View; label: string; icon: () => preact.JSX.Element }[] = [
     { view: { type: "home" }, label: "Now Playing", icon: () => <IconHome active={view.type === "home"} /> },
@@ -602,32 +641,13 @@ function App() {
 
   const progressPct = track && track.durationMs > 0 ? (track.progressMs / track.durationMs) * 100 : 0;
 
-  const isMissingCode = error?.includes("No authorization code") || error?.includes("code not found") || error?.includes("missing");
-
-  if (!isAuthed) {
+  if ((!isAuthed || authError) && !isMockMode) {
     return (
       <div className="app-window" data-tauri-drag-region>
-        <div aria-live="polite" className="sr-only">{error}</div>
         <div className="auth-screen">
           <Logo size={48} />
           <h2 className="auth-title">SPX</h2>
           <p className="auth-subtitle">Spotify client</p>
-
-          {/* Error message - improved */}
-          {error && (
-            <div className="auth-error-box">
-              <p className="auth-error-title">Authorization failed</p>
-              <p className="auth-error">{error}</p>
-              {isMissingCode && (
-                <div className="auth-error-help">
-                  <p><strong>You may have pasted the wrong URL.</strong></p>
-                  <p>The correct URL starts with:</p>
-                  <code className="auth-error-code">http://127.0.0.1:1421/callback?code=</code>
-                  <p>Make sure you copied the URL <em>AFTER</em> clicking Agree in Spotify.</p>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Step-by-step instructions */}
           <div className="auth-instructions">
@@ -725,6 +745,20 @@ function App() {
               </button>
             );
           })}
+          {history.length > 2 && (
+            <div className="sidebar-breadcrumbs">
+              <div className="sidebar-divider" />
+              {history.slice(1, -1).map((h, i) => (
+                <button
+                  key={i}
+                  className="sidebar-btn breadcrumb"
+                  onClick={() => setHistory(history.slice(0, history.indexOf(h) + 1))}
+                >
+                  <span className="breadcrumb-label">{h.type === 'playlist' ? h.name : h.type === 'album' ? h.name : h.type === 'artist' ? h.name : h.type}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="sidebar-divider" />
           <div className="sidebar-footer">
             {user && (

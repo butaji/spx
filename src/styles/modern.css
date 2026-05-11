@@ -38,6 +38,53 @@
   --space-8: 32px;
 }
 
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:              #f5f5f5;
+    --bg-elevated:     #ffffff;
+    --glass:           oklch(95%  0.005 0 / 0.45);
+    --glass-solid:     oklch(95%  0.005 0 / 0.70);
+    --glass-hover:     oklch(90%  0.006 0 / 0.50);
+    --fg:              oklch(20%  0.003 0);
+    --fg-dim:          oklch(45%  0.006 0);
+    --fg-faint:        oklch(55%  0.008 0);
+    --accent:          oklch(60%  0.17  145);
+    --accent-glow:     oklch(60%  0.17  145 / 0.20);
+    --accent-dim:      oklch(60%  0.17  145 / 0.10);
+    --danger:          oklch(55%  0.15  25);
+    --edge:            oklch(0% 0 0 / 0.08);
+    --edge-light:      oklch(0% 0 0 / 0.15);
+    --edge-accent:     oklch(60%  0.17  145 / 0.35);
+    --inner-highlight: inset 0 1px 0 0 oklch(100% 0 0 / 0.50);
+    --shadow-sm:       0 1px 2px oklch(0% 0 0 / 0.10);
+    --shadow-md:       0 4px 16px -4px oklch(0% 0 0 / 0.20);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .sidebar {
+    background: linear-gradient(180deg, oklch(90% 0.005 0 / 0.70), oklch(95% 0.003 0 / 0.80));
+    border-right-color: var(--edge);
+  }
+
+  .player-bar {
+    background: linear-gradient(180deg, var(--bg-elevated), var(--glass));
+    border-top: 1px solid var(--edge);
+  }
+
+  .auth-screen {
+    background: var(--bg);
+  }
+
+  .skeleton {
+    background: oklch(85% 0.005 0);
+  }
+
+  .skeleton-text {
+    background: oklch(85% 0.005 0);
+  }
+}
+
 
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -77,7 +124,7 @@ html, body, #root {
   align-items: center;
   padding: 16px 8px 14px;
   gap: 2px;
-  background: linear-gradient(180deg, oklch(18% 0.005 0 / 0.55), oklch(14% 0.003 0 / 0.65));
+  background: linear-gradient(180deg, var(--glass-solid), var(--glass));
   backdrop-filter: blur(30px) saturate(160%);
   -webkit-backdrop-filter: blur(30px) saturate(160%);
   border-right: 1px solid var(--edge);
@@ -249,7 +296,7 @@ h3, .h3 {
   padding: 8px 18px;
   border-radius: var(--radius-full);
   background: var(--accent);
-  color: oklch(10% 0 0);
+  color: oklch(98% 0 0);
   font-size: 12px;
   font-weight: 600;
   border: none;
@@ -307,7 +354,7 @@ h3, .h3 {
 .np-artwork {
   width: 220px; height: 220px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, oklch(28% 0.008 0), oklch(18% 0.005 0));
+  background: linear-gradient(135deg, var(--glass-hover), var(--glass));
   flex-shrink: 0;
   overflow: hidden;
   box-shadow: var(--shadow-md), 0 0 0 1px var(--edge);
@@ -417,39 +464,6 @@ h3, .h3 {
 
 /* ─── Artist Section ─── */
 .artist-section { margin-top: 4px; }
-.artist-section-header {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--fg);
-  margin-bottom: 14px;
-  letter-spacing: -0.01em;
-}
-.artist-row {
-  display: flex;
-  gap: 18px;
-  align-items: flex-start;
-}
-.artist-row-img {
-  width: 110px; height: 110px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, oklch(28% 0.008 0), oklch(18% 0.005 0));
-  flex-shrink: 0;
-  overflow: hidden;
-  box-shadow: var(--shadow-sm), 0 0 0 1px var(--edge);
-}
-.artist-row-img img { width: 100%; height: 100%; object-fit: cover; }
-.artist-row-info { flex: 1; min-width: 0; }
-.artist-row-bio {
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--fg-dim);
-}
-.artist-row-bio a {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 500;
-}
-.artist-row-bio a:hover { text-decoration: underline; }
 
 /* ─── Progress ─── */
 .progress-track {
@@ -544,7 +558,7 @@ h3, .h3 {
 .track-art {
   width: 36px; height: 36px;
   border-radius: 4px;
-  background: linear-gradient(135deg, oklch(26% 0.008 0), oklch(18% 0.005 0));
+  background: linear-gradient(135deg, var(--glass-hover), var(--glass));
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -586,7 +600,7 @@ h3, .h3 {
 .lib-item-img {
   aspect-ratio: 1;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, oklch(26% 0.008 0), oklch(18% 0.005 0));
+  background: linear-gradient(135deg, var(--glass-hover), var(--glass));
   margin-bottom: 8px;
   overflow: hidden;
   box-shadow: var(--shadow-sm), 0 0 0 1px var(--edge);
@@ -609,7 +623,7 @@ h3, .h3 {
 /* ─── Bottom Player ─── */
 .player-bar {
   height: 68px;
-  background: linear-gradient(180deg, oklch(18% 0.005 0 / 0.60), oklch(14% 0.003 0 / 0.50));
+  background: linear-gradient(180deg, var(--glass-solid), var(--glass));
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border-top: 1px solid var(--edge);
@@ -631,7 +645,7 @@ h3, .h3 {
 .player-art {
   width: 42px; height: 42px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, oklch(26% 0.008 0), oklch(18% 0.005 0));
+  background: linear-gradient(135deg, var(--glass-hover), var(--glass));
   flex-shrink: 0;
   overflow: hidden;
   box-shadow: var(--shadow-sm), 0 0 0 1px var(--edge);
@@ -787,7 +801,7 @@ h3, .h3 {
 .detail-hero-img {
   width: 170px; height: 170px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, oklch(26% 0.008 0), oklch(18% 0.005 0));
+  background: linear-gradient(135deg, var(--glass-hover), var(--glass));
   flex-shrink: 0;
   overflow: hidden;
   box-shadow: var(--shadow-sm), 0 0 0 1px var(--edge);
@@ -814,7 +828,7 @@ h3, .h3 {
   border-radius: 50%;
   background: var(--accent);
   border: none;
-  color: oklch(10% 0 0);
+  color: oklch(98% 0 0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -864,7 +878,7 @@ h3, .h3 {
   justify-content: center;
   font-weight: 700;
   font-size: 22px;
-  color: oklch(10% 0.02 240);
+  color: oklch(98% 0 0);
   box-shadow: 0 4px 20px var(--accent-glow);
 }
 .auth-title {
@@ -922,7 +936,7 @@ h3, .h3 {
   height: 20px;
   border-radius: 50%;
   background: var(--accent);
-  color: oklch(10% 0.02 240);
+  color: oklch(98% 0 0);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -1045,7 +1059,7 @@ h3, .h3 {
 .queue-item-img {
   width: 40px; height: 40px;
   border-radius: 4px;
-  background: linear-gradient(135deg, oklch(26% 0.008 0), oklch(18% 0.005 0));
+  background: linear-gradient(135deg, var(--glass-hover), var(--glass));
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -1368,4 +1382,110 @@ h3, .h3 {
   text-align: center;
   color: var(--fg-faint);
   font-size: 13px;
+}
+
+/* ─── Sidebar Breadcrumbs ─── */
+.sidebar-breadcrumbs {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar-btn.breadcrumb {
+  font-size: 9px;
+  padding: 6px 4px;
+  color: var(--fg-faint);
+}
+.sidebar-btn.breadcrumb:hover {
+  color: var(--fg-dim);
+}
+.breadcrumb-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Artist Card ─── */
+.artist-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.artist-follower-count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--fg-faint);
+}
+.artist-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: var(--glass);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--edge);
+}
+.artist-card-img {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.artist-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.artist-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.artist-card-bio {
+  font-size: 13px;
+  color: var(--fg-dim);
+  line-height: 1.4;
+}
+.artist-card-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.artist-card-link:hover {
+  text-decoration: underline;
+}
+.artist-top-tracks {
+  background: var(--glass-solid);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+.artist-track-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 11px;
+}
+.artist-track-num {
+  width: 14px;
+  text-align: center;
+  color: var(--fg-faint);
+  flex-shrink: 0;
+}
+.artist-track-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+.artist-track-dur {
+  color: var(--fg-faint);
+  flex-shrink: 0;
 }
