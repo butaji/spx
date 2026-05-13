@@ -7,8 +7,6 @@ import {
   getArtist,
   getArtistTopTracks,
   getArtistAlbums,
-  checkMockMode,
-  restoreSession,
   getAccessToken,
   clearToken,
   play,
@@ -60,7 +58,6 @@ export const isAuthLoading = signal<boolean>(false);
 export const userProfile = signal<{ name: string; image?: string } | null>(null);
 
 // Content state
-export const featuredPlaylists = signal<any[]>([]);
 export const userPlaylists = signal<any[]>([]);
 export const playbackQueue = signal<any[]>([]);
 export const queueCurrentTrack = signal<any | null>(null);
@@ -431,15 +428,6 @@ export async function loadUserProfile(): Promise<void> {
 }
 
 /**
- * Load featured playlists from Spotify API
- */
-export async function loadFeaturedPlaylists(): Promise<void> {
-  // Featured playlists endpoint is deprecated (returns 404)
-  // Skip API call to avoid error logging in console
-  featuredPlaylists.value = [];
-}
-
-/**
  * Load user's playlists from Spotify API
  */
 export async function loadUserPlaylists(): Promise<void> {
@@ -714,34 +702,6 @@ export async function loadRecentContainers(): Promise<void> {
 }
 
 /**
- * Initialize authentication state
- */
-export async function initAuth(): Promise<void> {
-  isAuthLoading.value = true;
-  authError.value = false;
-
-  try {
-    // Check mock mode
-    const mock = await checkMockMode();
-    isMockMode.value = mock;
-
-    // Restore session from storage
-    const authenticated = await restoreSession();
-    authState.value = authenticated;
-
-    if (!authenticated && !mock) {
-      authError.value = true;
-    }
-  } catch (e) {
-    console.warn("Auth initialization failed:", e);
-    authError.value = true;
-    authState.value = false;
-  } finally {
-    isAuthLoading.value = false;
-  }
-}
-
-/**
  * Start playback
  */
 export async function playTrack(deviceId?: string): Promise<void> {
@@ -781,7 +741,6 @@ export function clearStore(): void {
   playbackDuration.value = 0;
   isPlaying.value = false;
   userProfile.value = null;
-  featuredPlaylists.value = [];
   userPlaylists.value = [];
   playbackQueue.value = [];
   queueCurrentTrack.value = null;

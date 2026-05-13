@@ -64,7 +64,7 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
         const seen = new Set<string>();
         freshItems = [];
         d.forEach((track) => {
-          if (track.album && !seen.has(track.album.id)) {
+          if (track.album?.id && !seen.has(track.album.id)) {
             seen.add(track.album.id);
             freshItems.push(track.album);
           }
@@ -109,7 +109,8 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
     if (tab === "playlists") {
       onNavigate({ type: "playlist", id: (item as SpotifyPlaylist).id, name: (item as SpotifyPlaylist).name });
     } else if (tab === "albums" || tab === "top") {
-      onNavigate({ type: "album", id: (item as SpotifyAlbum).id, name: (item as SpotifyAlbum).name });
+      const albumId = (item as SpotifyAlbum).id;
+      if (albumId) onNavigate({ type: "album", id: albumId, name: (item as SpotifyAlbum).name });
     }
   }, [tab, onNavigate]);
 

@@ -32,6 +32,7 @@ export default function Home({
   const [scrobbleCount, setScrobbleCount] = useState(0);
   const [trackScrobbleCount, setTrackScrobbleCount] = useState(0);
   const [isLoadingArtist, setIsLoadingArtist] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
   const [, forceUpdate] = useState({});
 
   const displayTrack = track || lastPlayedTrack.value;
@@ -80,8 +81,15 @@ export default function Home({
   }, [track?.id]);
 
   const loadData = async () => {
-    await loadRecentActivity();
-    forceUpdate({});
+    try {
+      await loadRecentActivity();
+      setFeedError(null);
+    } catch (e) {
+      console.error("[Home] Failed to load recent activity:", e);
+      setFeedError("Failed to load recent activity. Try refreshing.");
+    } finally {
+      forceUpdate({});
+    }
   };
 
   const artistName = displayTrack?.artistName || displayTrack?.artist || "Unknown";
@@ -110,6 +118,19 @@ export default function Home({
         topTracks={artistTopTracks}
         tags={tags}
       />
+
+      {feedError && (
+        <div style={{
+          background: 'var(--glass)',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px 16px',
+          marginTop: 16,
+          color: 'var(--fg-dim)',
+          fontSize: 13,
+        }}>
+          {feedError}
+        </div>
+      )}
 
       <RecentGrid
         onNavigate={onNavigate}

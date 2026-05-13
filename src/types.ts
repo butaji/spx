@@ -19,7 +19,7 @@ export interface SpotifyArtist {
 }
 
 export interface SpotifyAlbum {
-  id: string;
+  id?: string;
   name: string;
   images?: SpotifyImage[];
   uri?: string;

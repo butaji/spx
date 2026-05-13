@@ -80,13 +80,6 @@ export interface TrackInfo {
   uri: string;
 }
 
-export function formatTime(ms: number) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const sec = s % 60;
-  return `${m}:${sec.toString().padStart(2, "0")}`;
-}
-
 /* ── Icons ── */
 function IconHome({ active }: { active?: boolean }) {
   return (
@@ -153,6 +146,8 @@ function useDerivedTrack(): TrackInfo | null {
     uri: track.uri,
   };
 }
+
+import { formatTime } from "./lib/utils";
 
 function App() {
   const isMac = /Mac/.test(navigator.userAgent);
@@ -808,7 +803,7 @@ function App() {
       });
       navigator.mediaSession.playbackState = isPlaying.value ? 'playing' : 'paused';
     }
-  }, [handlePlayPause, handlePrev, handleNext]);
+  }, [handlePlayPause, handlePrev, handleNext, playbackTrack.value?.id, isPlaying.value]);
 
   const navItems: { view: View; label: string; icon: () => preact.JSX.Element }[] = [
     { view: { type: "home" }, label: "Now Playing", icon: () => <IconHome active={view.type === "home"} /> },

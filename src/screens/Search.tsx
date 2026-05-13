@@ -67,9 +67,18 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
 
   const handleItemClick = useCallback((item: SearchItem) => {
     if (item.type === "track") playTrack(item.data as SpotifyTrack);
-    else if (item.type === "album") onNavigate({ type: "album", id: (item.data as SpotifyAlbum).id, name: (item.data as SpotifyAlbum).name });
-    else if (item.type === "artist") onNavigate({ type: "artist", id: (item.data as SpotifyArtist).id, name: (item.data as SpotifyArtist).name });
-    else if (item.type === "playlist") onNavigate({ type: "playlist", id: (item.data as SpotifyPlaylist).id, name: (item.data as SpotifyPlaylist).name });
+    else if (item.type === "album") {
+      const id = (item.data as SpotifyAlbum).id;
+      if (id) onNavigate({ type: "album", id, name: (item.data as SpotifyAlbum).name ?? "" });
+    }
+    else if (item.type === "artist") {
+      const id = (item.data as SpotifyArtist).id;
+      if (id) onNavigate({ type: "artist", id, name: (item.data as SpotifyArtist).name ?? "" });
+    }
+    else if (item.type === "playlist") {
+      const id = (item.data as SpotifyPlaylist).id;
+      if (id) onNavigate({ type: "playlist", id, name: (item.data as SpotifyPlaylist).name ?? "" });
+    }
   }, [playTrack, onNavigate]);
 
   const handleItemKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>, item: SearchItem) => {

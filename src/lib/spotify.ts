@@ -14,7 +14,7 @@ const TOKEN_STORAGE_KEY = 'spx_spotify_token';
 const STORE_PATH = 'spotify-auth.bin';
 
 // Recording config
-const RECORD_API = true;
+const RECORD_API = typeof import.meta.env !== 'undefined' && import.meta.env.VITE_SPX_RECORD === '1';
 
 
 async function recordFetch(url: string, options: any, response: Response, data: any) {
@@ -30,7 +30,7 @@ async function recordFetch(url: string, options: any, response: Response, data: 
   };
   
   // Save via Tauri FS or console for manual extraction
-  console.log(`[API_RECORD] ${filename}:`, JSON.stringify(recording).slice(0, 200));
+  console.log(`[API_RECORD] ${filename}:`, JSON.stringify(recording, null, 2).slice(0, 300));
 }
 
 let _store: Store | null = null;
@@ -727,21 +727,21 @@ export async function getUserPlaylists() {
 }
 
 export async function getPlaylistTracks(playlistId: string, limit?: number, offset?: number) {
-  if (await isMockMode()) {
+  if (isMockMode()) {
     return { items: [{ track: mockPlaybackState.item }], total: 1, offset: offset ?? 0, limit: limit ?? 20 };
   }
   return getSpotifyApi().playlists.getPlaylistItems(playlistId);
 }
 
 export async function getSavedTracks(limit?: number, offset?: number) {
-  if (await isMockMode()) {
+  if (isMockMode()) {
     return { items: [{ track: mockPlaybackState.item }], total: 1, offset: offset ?? 0, limit: limit ?? 20 };
   }
   return getSpotifyApi().currentUser.tracks.savedTracks();
 }
 
 export async function getSavedAlbums(limit?: number, offset?: number) {
-  if (await isMockMode()) {
+  if (isMockMode()) {
     return { items: [{ album: mockAlbum }], total: 1, offset: offset ?? 0, limit: limit ?? 20 };
   }
   return getSpotifyApi().currentUser.albums.savedAlbums();
@@ -930,7 +930,7 @@ export async function getArtistAlbums(artistId: string) {
 }
 
 export async function getPlaylist(playlistId: string) {
-  if (await isMockMode()) {
+  if (isMockMode()) {
     return { id: playlistId, name: "Mock Playlist", images: [{ url: "" }], tracks: { total: 1 }, owner: { display_name: "Mock User" }, description: "" };
   }
   return getSpotifyApi().playlists.getPlaylist(playlistId);
