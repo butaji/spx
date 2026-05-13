@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "preact/compat";
-import type { LocalDevice } from "../types";
 import { availableDevices, localDevices, activeDevice, isScanning } from "../stores/devices";
 
 interface Props {

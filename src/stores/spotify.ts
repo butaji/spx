@@ -17,15 +17,12 @@ import {
   getPlaylist,
   getTopArtists,
   getTopTracks,
-  getRecommendations,
   getNewReleases,
   getBrowseCategories,
   getCategoryPlaylists,
   getFollowedArtists,
   getSavedAlbums,
   checkSavedTracks,
-  saveTracks,
-  removeSavedTracks,
 } from "../lib/spotify";
 
 export { clearToken } from "../lib/spotify";
@@ -198,8 +195,6 @@ export async function loadSavedAlbums() {
  */
 export function buildHomeFeed() {
   const items: HomeFeedItem[] = [];
-  const seenIds = new Set<string>();
-
   // Source: albums from top tracks (the user's actual recent listening)
   const seenAlbums = new Set<string>();
   topTracks.value.forEach((track: any) => {

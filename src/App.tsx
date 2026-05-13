@@ -22,7 +22,6 @@ import {
   next, previous,
   seek, setVolume as apiSetVolume, setShuffle as apiSetShuffle, setRepeat as apiSetRepeat,
   playContext, playUris, transferPlayback,
-  logout,
   saveTracks,
   removeSavedTracks,
 } from "./lib/spotify";
@@ -30,8 +29,6 @@ import { initPlayer, onPlaybackEvent } from "./lib/playback";
 import {
   availableDevices,
   localDevices,
-  activeDevice,
-  isScanning,
   refreshSpotifyDevices,
   refreshLocalDevices,
 } from "./stores/devices";
@@ -82,13 +79,6 @@ export interface TrackInfo {
   imageUrl?: string;
   uri: string;
 }
-
-const SIDEBAR_VIEWS: { view: View; label: string }[] = [
-  { view: { type: "home" }, label: "Now Playing" },
-  { view: { type: "search" }, label: "Search" },
-  { view: { type: "library", tab: "playlists" }, label: "Library" },
-  { view: { type: "queue" }, label: "Queue" },
-];
 
 export function formatTime(ms: number) {
   const s = Math.floor(ms / 1000);
@@ -168,15 +158,18 @@ function App() {
   const isMac = /Mac/.test(navigator.userAgent);
   const [history, setHistory] = useState<View[]>([{ type: "home" }]);
   const view = history[history.length - 1];
-  const canGoBack = history.length > 1;
   const pushView = (v: View) => setHistory(prev => [...prev, v]);
   const goBack = () => setHistory(prev => prev.slice(0, -1));
   const [hotkeyHelpOpen, setHotkeyHelpOpen] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const progressRef = useRef<HTMLDivElement>(null);
-  const [callbackUrl, setCallbackUrl] = useState("");
   const [isPlayActionLoading, setIsPlayActionLoading] = useState(false);
+  const isPlayActionLoadingRef = useRef(isPlayActionLoading);
+  isPlayActionLoadingRef.current = isPlayActionLoading;
+  const hotkeyHelpOpenRef = useRef(hotkeyHelpOpen);
+  hotkeyHelpOpenRef.current = hotkeyHelpOpen;
+  const historyRef = useRef(history);
+  historyRef.current = history;
 
   // Derived state from signals
   const track = useDerivedTrack();
@@ -395,34 +388,7 @@ function App() {
     }
   }, []);
 
-  const handleSubmitCallback = useCallback(async (e: Event) => {
-    e.preventDefault();
-    if (isAuthLoading.value || isAuthSignal.value) return;
-    if (!callbackUrl.trim()) return;
-    try {
-      await handleCallbackUrl(callbackUrl.trim());
-      isAuthSignal.value = true;
-      authError.value = false;
-      setCallbackUrl("");
-      // Initialize Web Playback SDK so SPX becomes a playback device
-      try {
-        const token = getAccessToken();
-        if (token) {
-          await initPlayer(token);
-          console.log("Web Playback SDK initialized");
-        }
-      } catch (e) {
-        console.error("Failed to init Web Playback SDK:", e);
-      }
-      loadRecentActivity();
-      refreshPlayback();
-      refreshSpotifyDevices();
-    } catch (e) {
-      console.error("Failed to process callback:", e);
-      authError.value = true;
-      showError(e instanceof Error ? e.message : String(e));
-    }
-  }, [callbackUrl]);
+
 
   const ensureActiveDevice = useCallback(async () => {
     // Refresh device list
@@ -472,7 +438,7 @@ function App() {
   const handlePlayPause = useCallback(async () => {
     console.log('[Play/Pause] Button clicked');
 
-    if (isPlayActionLoading) {
+    if (isPlayActionLoadingRef.current) {
       console.log('[Play/Pause] Already loading, ignoring');
       return;
     }
@@ -486,7 +452,6 @@ function App() {
 
     // OPTIMISTIC UPDATE
     if (track) {
-      playbackTrack.value = { ...track, isPlaying: !playing };
       isPlaying.value = !playing;
       console.log('[Play/Pause] Optimistic update: isPlaying =', !playing);
     }
@@ -514,7 +479,7 @@ function App() {
         } else {
           console.log('[Play/Pause] No active device, trying first available...');
           const firstDevice = availableDevices.value[0];
-          if (firstDevice) {
+          if (firstDevice?.id) {
             console.log('[Play/Pause] Transferring to:', firstDevice.id);
             try {
               await transferPlayback(firstDevice.id, false);
@@ -532,8 +497,7 @@ function App() {
         if (!deviceId) {
           console.warn('[Play/Pause] Cannot play - no device available');
           if (track) {
-            playbackTrack.value = { ...track, isPlaying: !!playing };
-            isPlaying.value = !!playing;
+            isPlaying.value = playing;
           }
           showError("No Spotify devices found. Open Spotify on your phone or computer.");
           return;
@@ -551,14 +515,13 @@ function App() {
     } catch (error) {
       console.error('[Play/Pause] ERROR:', error);
       if (track) {
-        playbackTrack.value = { ...track, isPlaying: !!playing };
-        isPlaying.value = !!playing;
+        isPlaying.value = playing;
       }
     } finally {
       console.log('[Play/Pause] Setting loading to false');
       setIsPlayActionLoading(false);
     }
-  }, [isPlayActionLoading]);
+  }, []);
 
   const handleNext = useCallback(async () => {
     try {
@@ -719,12 +682,12 @@ function App() {
   }, []);
 
   const handleEscape = useCallback(() => {
-    if (hotkeyHelpOpen) {
+    if (hotkeyHelpOpenRef.current) {
       setHotkeyHelpOpen(false);
-    } else if (history.length > 1) {
+    } else if (historyRef.current.length > 1) {
       goBack();
     }
-  }, [hotkeyHelpOpen, history.length]);
+  }, []);
 
   const hideWindow = useCallback(() => {
     // Tauri window hide - imports dynamically to avoid issues in web

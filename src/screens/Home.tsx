@@ -15,8 +15,9 @@ interface Props {
   track: any | null;
   onPlayContext: (uri: string, offsetUri?: string) => void;
   onNavigate: (v: View) => void;
+  onSeek: (ms: number) => void;
   liked: boolean;
-  onToggleLike: () => void;
+  onToggleLike: () => void | Promise<void>;
 }
 
 export default function Home({

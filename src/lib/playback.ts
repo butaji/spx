@@ -216,7 +216,7 @@ export async function initPlayer(token: string): Promise<any> {
       await new Promise(r => setTimeout(r, 500));
       try {
         const devices = await getAvailableDevices();
-        if (devices.some((d: any) => d.id === device_id)) {
+        if (devices.devices?.some((d: any) => d.id === device_id)) {
           console.log('[Play Debug] Device confirmed in API');
           found = true;
           break;

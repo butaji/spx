@@ -15,7 +15,7 @@ const STORE_PATH = 'spotify-auth.bin';
 
 // Recording config
 const RECORD_API = true;
-const RECORDINGS_DIR = 'src/tests/fixtures-live';
+
 
 async function recordFetch(url: string, options: any, response: Response, data: any) {
   if (!RECORD_API) return;
@@ -101,14 +101,7 @@ const mockPlaylists = {
   ],
 };
 
-const mockFeatured = {
-  playlists: {
-    items: [
-      { id: "mock-feat-1", name: "Today's Top Hits", images: [{ url: "" }], tracks: { total: 50 } },
-      { id: "mock-feat-2", name: "Discover Weekly", images: [{ url: "" }], tracks: { total: 30 } },
-    ],
-  },
-};
+
 
 const mockQueue = {
   queue: [

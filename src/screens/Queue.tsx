@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getQueue } from "../lib/spotify";
-import { SpotifyTrack } from "../types";
+import { SpotifyTrack, SpotifyQueueResponse } from "../types";
 
 interface Props {
   onPlayUris: (uris: string[], offset?: number) => void;
@@ -13,7 +13,8 @@ export default function Queue({ onPlayUris }: Props) {
 
   const loadQueue = useCallback(async () => {
     try {
-      const data = await getQueue();
+      const data = await getQueue() as SpotifyQueueResponse;
+      setCurrent(data.currently_playing || null);
       setQueue(data.queue || []);
     } catch (e) {
       console.error("Failed to load queue:", e);

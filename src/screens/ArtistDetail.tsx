@@ -35,7 +35,7 @@ export default function ArtistDetail({ id, name, onPlayUris }: Props) {
     }
     try {
       const tt = await getArtistTopTracks(id);
-      setTopTracks(tt.tracks || []);
+      setTopTracks((tt.tracks || []) as SpotifyTrack[]);
     } catch (e) {
       console.error("Failed to load artist top tracks:", e);
     }
