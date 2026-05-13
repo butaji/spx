@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "preact/compat";
 import type { MouseEvent, CSSProperties } from "preact/compat";
 import { message } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 import Logo from "./components/Logo";
+import { HotkeyHelp } from "./components/HotkeyHelp";
+import { registerHotkey, setupHotkeys } from "./lib/hotkeys";
 import Home from "./screens/Home";
 import Search from "./screens/Search";
 import Library from "./screens/Library";
@@ -13,14 +16,50 @@ import DeviceSelector from "./components/DeviceSelector";
 import {
   startAuthFlow,
   handleCallbackUrl,
-  isAuthenticated,
-  logout,
+  restoreSession,
   checkMockMode,
-  getPlaybackState, play, pause, next, previous,
-  seek, setVolume as apiSetVolume, setShuffle as apiSetShuffle, setRepeat as apiSetRepeat, getUserProfile,
-  playContext, playUris, getAvailableDevices, transferPlayback
+  getAccessToken,
+  next, previous,
+  seek, setVolume as apiSetVolume, setShuffle as apiSetShuffle, setRepeat as apiSetRepeat,
+  playContext, playUris, transferPlayback,
+  logout,
+  saveTracks,
+  removeSavedTracks,
 } from "./lib/spotify";
-import type { SpotifyDevice } from "./types";
+import { initPlayer, onPlaybackEvent } from "./lib/playback";
+import {
+  availableDevices,
+  localDevices,
+  activeDevice,
+  isScanning,
+  refreshSpotifyDevices,
+  refreshLocalDevices,
+} from "./stores/devices";
+import {
+  playbackTrack,
+  playbackVolume,
+  playbackShuffle,
+  playbackRepeat,
+  playbackProgress,
+  playbackDuration,
+  isPlaying,
+  likedTrack,
+  authState as isAuthSignal,
+  isMockMode,
+  authError,
+  isAuthLoading,
+  userProfile,
+  appError,
+  refreshPlayback,
+  loadRecentActivity,
+  refreshLikedStatus,
+
+  playTrack,
+  pauseTrack,
+  startPlaybackPolling,
+  validateToken,
+} from "./stores/spotify";
+
 
 export type View =
   | { type: "home" }
@@ -107,6 +146,24 @@ function IconRepeat({ mode }: { mode: string }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>{mode === "track" && <text x="12" y="15" textAnchor="middle" fill={c} stroke="none" fontSize="10" fontWeight="bold">1</text>}</svg>;
 }
 
+// Derived track info for components expecting flattened structure
+function useDerivedTrack(): TrackInfo | null {
+  const track = playbackTrack.value;
+  if (!track) return null;
+  return {
+    id: track.id,
+    name: track.name,
+    artist: track.artists?.map(a => a.name).join(", ") || "Unknown",
+    artistIds: track.artists?.map(a => a.id) || [],
+    album: track.album?.name || "",
+    durationMs: track.duration_ms,
+    progressMs: playbackProgress.value,
+    isPlaying: isPlaying.value,
+    imageUrl: track.album?.images?.[0]?.url,
+    uri: track.uri,
+  };
+}
+
 function App() {
   const isMac = /Mac/.test(navigator.userAgent);
   const [history, setHistory] = useState<View[]>([{ type: "home" }]);
@@ -114,22 +171,24 @@ function App() {
   const canGoBack = history.length > 1;
   const pushView = (v: View) => setHistory(prev => [...prev, v]);
   const goBack = () => setHistory(prev => prev.slice(0, -1));
-  const [track, setTrack] = useState<TrackInfo | null>(null);
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [authError, setAuthError] = useState(false);
-  const [isMockMode, setIsMockMode] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [volume, setVolume] = useState(74);
-  const [shuffle, setShuffle] = useState(false);
-  const [repeat, setRepeat] = useState<"off" | "context" | "track">("off");
-  const [liked, setLiked] = useState(false);
-  const [user, setUser] = useState<{ name: string; image?: string } | null>(null);
-  const [availableDevices, setAvailableDevices] = useState<SpotifyDevice[]>([]);
-  const [activeDevice, setActiveDevice] = useState<SpotifyDevice | null>(null);
-  const [showDevicePicker, setShowDevicePicker] = useState(false);
+  const [hotkeyHelpOpen, setHotkeyHelpOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const progressRef = useRef<HTMLDivElement>(null);
   const [callbackUrl, setCallbackUrl] = useState("");
+  const [isPlayActionLoading, setIsPlayActionLoading] = useState(false);
+
+  // Derived state from signals
+  const track = useDerivedTrack();
+  const volume = playbackVolume.value;
+  const shuffle = playbackShuffle.value;
+  const repeat = playbackRepeat.value;
+  const isAuthed = isAuthSignal.value;
+  const isAuthErr = authError.value;
+  const isAuthLoad = isAuthLoading.value;
+  const mockMode = isMockMode.value;
+  const error = appError.value;
+  const user = userProfile.value;
 
   // Error helper using dialog
   const showError = useCallback(async (msg: string) => {
@@ -137,272 +196,423 @@ function App() {
     try {
       await message(msg, { title: 'SPX Error', kind: 'error' });
     } catch (e) {
-      setError(msg);
+      appError.value = msg;
     }
   }, []);
 
-  // Rate limiting: exponential backoff state
-  const [pollInterval, setPollInterval] = useState(1500);
-  const pollIntervalRef = useRef(1500);
-  pollIntervalRef.current = pollInterval;
-
   // Refs for keyboard handler to avoid rebinding
-  const trackRef = useRef(track);
-  const volumeRef = useRef(volume);
-  const shuffleRef = useRef(shuffle);
-  const repeatRef = useRef(repeat);
-  const isAuthedRef = useRef(isAuthed);
   const viewRef = useRef(view);
-
-  trackRef.current = track;
-  volumeRef.current = volume;
-  shuffleRef.current = shuffle;
-  repeatRef.current = repeat;
-  isAuthedRef.current = isAuthed;
   viewRef.current = view;
 
   // Check auth status on mount
   useEffect(() => {
     async function init() {
       const mock = await checkMockMode();
-      setIsMockMode(mock);
-      const authed = isAuthenticated();
-      setIsAuthed(authed || mock);
+      isMockMode.value = mock;
+      const authed = await restoreSession();
+      isAuthSignal.value = authed || mock;
       if (authed || mock) {
-        loadUser();
-        fetchPlayback();
+        authError.value = false;
+        // Debug: print token on successful restore
+        const token = getAccessToken();
+        if (token) {
+          console.log('[Debug] Access token:', token);
+        }
+        // Validate token has required scopes (e.g. streaming)
+        const valid = await validateToken();
+        if (!valid) {
+          console.log("Token validation failed, forcing re-auth");
+          isAuthSignal.value = false;
+          authError.value = true;
+          return;
+        }
+        // Initialize Web Playback SDK so SPX becomes a playback device
+        try {
+          const token = getAccessToken();
+          if (token) {
+            await initPlayer(token);
+            console.log("Web Playback SDK initialized");
+          }
+        } catch (e) {
+          console.error("Failed to init Web Playback SDK:", e);
+        }
+        loadRecentActivity();
+        refreshPlayback();
+        refreshSpotifyDevices();
       }
     }
     init();
   }, []);
 
-    // Listen for deep link callbacks
-    useEffect(() => {
-      let ignore = false;
+  // Listen for deep link callbacks
+  useEffect(() => {
+    let ignore = false;
 
-      async function handleDeepLink(url: string) {
-        if (ignore) return;
+    async function handleDeepLink(url: string) {
+      if (ignore) return;
+      try {
+        await handleCallbackUrl(url);
+        isAuthSignal.value = true;
+        // Initialize Web Playback SDK so SPX becomes a playback device
         try {
-          await handleCallbackUrl(url);
-          setIsAuthed(true);
-          loadUser();
-        } catch (e) {
-          console.error("Deep link auth error:", e);
-          showError(e instanceof Error ? e.message : String(e));
-        }
-      }
-
-      // Listen for Tauri deep link events
-      async function setupDeepLinks() {
-        console.log("Using localhost callback server, no deep links needed");
-      }
-
-      setupDeepLinks();
-
-      // Also check URL on load (for manual deep link handling)
-      const checkUrl = async () => {
-        try {
-          const url = window.location.href;
-          if (url.includes("com.spx.app://callback") && url.includes("code=")) {
-            handleDeepLink(url);
+          const token = getAccessToken();
+          if (token) {
+            await initPlayer(token);
+            console.log("Web Playback SDK initialized");
           }
         } catch (e) {
-          // Not in Tauri
+          console.error("Failed to init Web Playback SDK:", e);
         }
-      };
-      checkUrl();
-
-      return () => { ignore = true; };
-    }, []);
-
-  const loadUser = useCallback(async () => {
-    try {
-      const data = await getUserProfile();
-      setUser({ name: data.display_name || "User", image: data.images?.[0]?.url });
-    } catch (e) {
-      console.error("Failed to load user profile:", e);
-      showError(e instanceof Error ? e.message : String(e));
+        loadRecentActivity();
+        refreshPlayback();
+        refreshSpotifyDevices();
+      } catch (e) {
+        console.error("Deep link auth error:", e);
+        showError(e instanceof Error ? e.message : String(e));
+      }
     }
-  }, []);
 
-  const loadDevices = useCallback(async () => {
-    try {
-      const data = await getAvailableDevices();
-      const newDevices = data.devices || [];
-      console.log("Devices found:", newDevices.length, newDevices.map(d => d.name));
-      // Replace device list entirely - Spotify only returns currently available devices
-      setAvailableDevices(newDevices);
-    } catch (e) {
-      console.error("Failed to load devices:", e);
+    // Listen for Tauri deep link events
+    async function setupDeepLinks() {
+      console.log("Using localhost callback server, no deep links needed");
     }
-  }, []);
 
-  const fetchPlayback = useCallback(async () => {
-    if (!isAuthed) return;
-    try {
-      const data = await getPlaybackState();
-      if (data?.item) {
-        const item = data.item as { id: string; name: string; artists?: { name: string; id: string }[]; album?: { name: string; images?: { url: string }[] }; duration_ms?: number; uri?: string };
-        setTrack({
-          id: item.id,
-          name: item.name,
-          artist: item.artists?.map((a) => a.name).join(", ") || "Unknown",
-          artistIds: item.artists?.map((a) => a.id) || [],
-          album: item.album?.name || "",
-          durationMs: item.duration_ms || 0,
-          progressMs: data.progress_ms || 0,
-          isPlaying: data.is_playing || false,
-          imageUrl: item.album?.images?.[0]?.url,
-          uri: item.uri || "",
-        });
-        setShuffle(data.shuffle_state || false);
-        setRepeat((data.repeat_state || "off") as "off" | "context" | "track");
-        if (data.device) {
-          setVolume(data.device.volume_percent || 0);
-          setActiveDevice(data.device as SpotifyDevice);
+    setupDeepLinks();
+
+    // Also check URL on load (for manual deep link handling)
+    const checkUrl = async () => {
+      try {
+        const url = window.location.href;
+        if (url.includes("com.spx.app://callback") && url.includes("code=")) {
+          handleDeepLink(url);
         }
+      } catch (e) {
+        // Not in Tauri
       }
-      setError(null);
-      // Reset poll interval on success after rate limit
-      setPollInterval(1500);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      // Detect auth errors (401, 403, "Not authenticated")
-      if (msg.includes("Not authenticated") || msg.includes("401") || msg.includes("403")) {
-        console.warn("Auth error detected, forcing re-auth");
-        setIsAuthed(false);
-        setAuthError(true);
-        logout();
-        return;
-      }
-      // Detect rate limit (429)
-      if (msg.includes("429") || msg.toLowerCase().includes("rate limit")) {
-        const newInterval = Math.min(pollIntervalRef.current * 2, 30000);
-        setPollInterval(newInterval);
-        console.warn("Rate limited, increasing poll interval to", newInterval);
-      } else {
-        console.error("Failed to fetch playback:", e);
-        showError(msg);
-      }
-    }
-  }, [isAuthed]);
+    };
+    checkUrl();
+
+    return () => { ignore = true; };
+  }, []);
 
   const handleTransferPlayback = useCallback(async (deviceId: string) => {
-    try {
-      await transferPlayback(deviceId);
-      setShowDevicePicker(false);
-      // Refresh after transfer
-      setTimeout(() => {
-        fetchPlayback();
-        loadDevices();
-      }, 500);
-    } catch (e) {
-      console.error("Failed to transfer playback:", e);
-      showError(e instanceof Error ? e.message : String(e));
+    console.log("[Play Debug] Transferring to device:", deviceId);
+
+    // Retry up to 3 times with delay (Spotify servers may need time)
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await transferPlayback(deviceId, false);
+        console.log("[Play Debug] Transfer succeeded on attempt", attempt);
+        // Refresh devices after successful transfer
+        setTimeout(() => refreshSpotifyDevices(), 1000);
+        return;
+      } catch (e: any) {
+        const msg = e?.message || String(e);
+        console.warn(`[Play Debug] Transfer attempt ${attempt} failed:`, msg);
+
+        if (attempt < 3) {
+          // Wait longer between retries
+          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        } else {
+          // All retries failed
+          // If this is a server error, tell user to try again
+          if (msg.includes("500") || msg.includes("503")) {
+            showError("Spotify servers are having issues. Please try again.");
+          } else {
+            showError("Could not transfer playback. Device may be offline.");
+          }
+        }
+      }
     }
-  }, [fetchPlayback, loadDevices]);
 
-  useEffect(() => {
-    const id = setInterval(fetchPlayback, pollInterval);
-    return () => clearInterval(id);
-  }, [fetchPlayback, pollInterval]);
+    // Refresh device list regardless
+    refreshSpotifyDevices();
+  }, []);
 
+  const transferToLocalDevice = useCallback(async (deviceName: string) => {
+    const device = localDevices.value.find((d) => d.name === deviceName);
+    if (!device) {
+      showError("Device not found");
+      return;
+    }
+    if (device.canTransfer && device.id) {
+      await handleTransferPlayback(device.id);
+    } else {
+      await message("To control this device, open Spotify on it first", {
+        title: "SPX",
+        kind: "info",
+      });
+    }
+  }, [handleTransferPlayback]);
+
+  // Start playback polling
   useEffect(() => {
-    if (!isAuthed) return;
-    loadDevices();
-    const id = setInterval(loadDevices, 3000);
-    return () => clearInterval(id);
-  }, [isAuthed, loadDevices]);
+    const cleanup = startPlaybackPolling();
+    return cleanup;
+  }, []);
+
+  // Listen for Web Playback SDK ready event - just refresh state, don't transfer
+  useEffect(() => {
+    const unsub = onPlaybackEvent((event) => {
+      if (event.type === 'ready') {
+        console.log("SPX Player connected and ready, device:", event.data?.device_id);
+        // DON'T transfer - just refresh playback state to see if anything is playing elsewhere
+        refreshPlayback();
+      }
+    });
+    return unsub;
+  }, []);
+
+  // Refresh liked status when track changes
+  useEffect(() => {
+    const id = playbackTrack.value?.id;
+    if (id) {
+      refreshLikedStatus(id);
+    } else {
+      likedTrack.value = false;
+    }
+  }, [playbackTrack.value?.id]);
 
   const handleStartAuth = useCallback(async () => {
-    if (isAuthLoading) return;
-    setIsAuthLoading(true);
-    setError(null);
+    if (isAuthLoading.value || isAuthSignal.value) return;
+    isAuthLoading.value = true;
+    appError.value = null;
+    authError.value = false;
     try {
       await startAuthFlow();
       console.log("Auth flow completed successfully");
-      setIsAuthed(true);
-      loadUser();
+      isAuthSignal.value = true;
+      authError.value = false;
+      loadRecentActivity();
+      refreshPlayback();
+      refreshSpotifyDevices();
     } catch (e) {
       console.error("Failed to start auth:", e);
+      authError.value = true;
       showError(e instanceof Error ? e.message : String(e));
     } finally {
-      setIsAuthLoading(false);
+      isAuthLoading.value = false;
     }
-  }, [isAuthLoading, loadUser]);
+  }, []);
 
   const handleSubmitCallback = useCallback(async (e: Event) => {
     e.preventDefault();
+    if (isAuthLoading.value || isAuthSignal.value) return;
     if (!callbackUrl.trim()) return;
     try {
       await handleCallbackUrl(callbackUrl.trim());
-      setIsAuthed(true);
+      isAuthSignal.value = true;
+      authError.value = false;
       setCallbackUrl("");
-      loadUser();
+      // Initialize Web Playback SDK so SPX becomes a playback device
+      try {
+        const token = getAccessToken();
+        if (token) {
+          await initPlayer(token);
+          console.log("Web Playback SDK initialized");
+        }
+      } catch (e) {
+        console.error("Failed to init Web Playback SDK:", e);
+      }
+      loadRecentActivity();
+      refreshPlayback();
+      refreshSpotifyDevices();
     } catch (e) {
       console.error("Failed to process callback:", e);
+      authError.value = true;
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [callbackUrl, loadUser]);
+  }, [callbackUrl]);
+
+  const ensureActiveDevice = useCallback(async () => {
+    // Refresh device list
+    await refreshSpotifyDevices();
+
+    const devices = availableDevices.value;
+
+    // Check if any device is already active
+    const active = devices.find(d => d.is_active);
+    if (active?.id) {
+      return active.id;
+    }
+
+    // Try SPX Player
+    const spx = devices.find(d => d.name === 'SPX Player');
+    if (spx?.id) {
+      console.log('[Play] Activating SPX Player...');
+      try {
+        await transferPlayback(spx.id, false);
+        // Poll until active
+        for (let i = 0; i < 10; i++) {
+          await new Promise(r => setTimeout(r, 500));
+          await refreshSpotifyDevices();
+          if (availableDevices.value.find(d => d.is_active)?.id === spx.id) {
+            return spx.id;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to activate SPX Player:', e);
+      }
+    }
+
+    // Try any other device
+    const any = devices[0];
+    if (any?.id) {
+      try {
+        await transferPlayback(any.id, false);
+        return any.id;
+      } catch (e) {
+        console.warn('Failed to activate device:', e);
+      }
+    }
+
+    return null;
+  }, []);
 
   const handlePlayPause = useCallback(async () => {
-    if (!trackRef.current) return;
-    try {
-      if (trackRef.current.isPlaying) {
-        await pause();
-      } else {
-        await play();
-      }
-      fetchPlayback();
-    } catch (e) {
-      console.error("Failed to play/pause:", e);
-      showError(e instanceof Error ? e.message : String(e));
+    console.log('[Play/Pause] Button clicked');
+
+    if (isPlayActionLoading) {
+      console.log('[Play/Pause] Already loading, ignoring');
+      return;
     }
-  }, [fetchPlayback]);
+
+    setIsPlayActionLoading(true);
+    console.log('[Play/Pause] Loading state set to true');
+
+    const track = playbackTrack.value;
+    const playing = isPlaying.value; // Use the signal, not track property
+    console.log('[Play/Pause] Current track:', track?.name, 'isPlaying signal:', playing);
+
+    // OPTIMISTIC UPDATE
+    if (track) {
+      playbackTrack.value = { ...track, isPlaying: !playing };
+      isPlaying.value = !playing;
+      console.log('[Play/Pause] Optimistic update: isPlaying =', !playing);
+    }
+
+    try {
+      if (playing) {
+        console.log('[Play/Pause] Calling pauseTrack()...');
+        await pauseTrack();
+        console.log('[Play/Pause] pauseTrack() succeeded');
+      } else {
+        console.log('[Play/Pause] Need to play, checking devices...');
+
+        await refreshSpotifyDevices();
+        console.log('[Play/Pause] Devices:', availableDevices.value.length, 'found');
+        console.log('[Play/Pause] Devices list:', availableDevices.value.map(d => ({ name: d.name, id: d.id, is_active: d.is_active })));
+
+        const activeDevice = availableDevices.value.find(d => d.is_active);
+        console.log('[Play/Pause] Active device:', activeDevice);
+
+        let deviceId: string | null = null;
+
+        if (activeDevice?.id) {
+          deviceId = activeDevice.id;
+          console.log('[Play/Pause] Using active device:', deviceId);
+        } else {
+          console.log('[Play/Pause] No active device, trying first available...');
+          const firstDevice = availableDevices.value[0];
+          if (firstDevice) {
+            console.log('[Play/Pause] Transferring to:', firstDevice.id);
+            try {
+              await transferPlayback(firstDevice.id, false);
+              await new Promise(r => setTimeout(r, 500));
+              deviceId = firstDevice.id;
+              console.log('[Play/Pause] Transfer succeeded');
+            } catch (e) {
+              console.warn('[Play/Pause] Transfer failed:', e);
+            }
+          } else {
+            console.warn('[Play/Pause] NO DEVICES FOUND');
+          }
+        }
+
+        if (!deviceId) {
+          console.warn('[Play/Pause] Cannot play - no device available');
+          if (track) {
+            playbackTrack.value = { ...track, isPlaying: !!playing };
+            isPlaying.value = !!playing;
+          }
+          showError("No Spotify devices found. Open Spotify on your phone or computer.");
+          return;
+        }
+
+        console.log('[Play/Pause] Calling playTrack(', deviceId, ')...');
+        await playTrack(deviceId);
+        console.log('[Play/Pause] playTrack() succeeded');
+      }
+
+      setTimeout(() => {
+        console.log('[Play/Pause] Refreshing playback state...');
+        refreshPlayback();
+      }, 500);
+    } catch (error) {
+      console.error('[Play/Pause] ERROR:', error);
+      if (track) {
+        playbackTrack.value = { ...track, isPlaying: !!playing };
+        isPlaying.value = !!playing;
+      }
+    } finally {
+      console.log('[Play/Pause] Setting loading to false');
+      setIsPlayActionLoading(false);
+    }
+  }, [isPlayActionLoading]);
 
   const handleNext = useCallback(async () => {
     try {
+      const hasDevice = await ensureActiveDevice();
+      if (!hasDevice) {
+        showError("No active device. Please open Spotify on a device first.");
+        return;
+      }
       await next();
-      fetchPlayback();
+      refreshPlayback();
     } catch (e) {
       console.error("Failed to skip next:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [fetchPlayback]);
+  }, [ensureActiveDevice]);
 
   const handlePrev = useCallback(async () => {
     try {
+      const hasDevice = await ensureActiveDevice();
+      if (!hasDevice) {
+        showError("No active device. Please open Spotify on a device first.");
+        return;
+      }
       await previous();
-      fetchPlayback();
+      refreshPlayback();
     } catch (e) {
       console.error("Failed to skip previous:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [fetchPlayback]);
+  }, [ensureActiveDevice]);
 
   const handleSeek = useCallback(async (e: MouseEvent<HTMLDivElement>) => {
-    if (!trackRef.current) return;
+    if (!playbackTrack.value) return;
     const rect = progressRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const pos = Math.floor(((e.clientX - rect.left) / rect.width) * trackRef.current.durationMs);
+    const pos = Math.floor(((e.clientX - rect.left) / rect.width) * playbackDuration.value);
     try {
       await seek(pos);
-      fetchPlayback();
+      refreshPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [fetchPlayback]);
+  }, []);
 
   const handleSeekPosition = useCallback(async (pos: number) => {
     try {
       await seek(pos);
-      fetchPlayback();
+      refreshPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [fetchPlayback]);
+  }, []);
 
   const handleVolumeClick = useCallback(async (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -410,7 +620,7 @@ function App() {
     const v = Math.round(pct * 100);
     try {
       await apiSetVolume(v);
-      setVolume(v);
+      playbackVolume.value = v;
     } catch (e) {
       console.error("Failed to set volume:", e);
       showError(e instanceof Error ? e.message : String(e));
@@ -419,183 +629,193 @@ function App() {
 
   const handleShuffle = useCallback(async () => {
     try {
-      await apiSetShuffle(!shuffleRef.current);
-      setShuffle(!shuffleRef.current);
-      fetchPlayback();
+      const newShuffle = !playbackShuffle.value;
+      await apiSetShuffle(newShuffle);
+      playbackShuffle.value = newShuffle;
+      refreshPlayback();
     } catch (e) {
       console.error("Failed to set shuffle:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [fetchPlayback]);
+  }, []);
 
   const handleMuteToggle = useCallback(async () => {
-    const v = volumeRef.current > 0 ? 0 : 74;
+    const v = playbackVolume.value > 0 ? 0 : 74;
     try {
       await apiSetVolume(v);
-      setVolume(v);
+      playbackVolume.value = v;
     } catch (e) {
       console.error("Failed to toggle mute:", e);
     }
   }, []);
 
   const handleRepeat = useCallback(async () => {
-    const next = repeatRef.current === "off" ? "context" : repeatRef.current === "context" ? "track" : "off";
+    const current = playbackRepeat.value;
+    const next = current === "off" ? "context" : current === "context" ? "track" : "off";
     try {
       await apiSetRepeat(next);
-      setRepeat(next);
-      fetchPlayback();
+      playbackRepeat.value = next;
+      refreshPlayback();
     } catch (e) {
       console.error("Failed to set repeat:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [fetchPlayback]);
+  }, []);
 
   const playContextFn = useCallback(async (uri: string, offsetUri?: string) => {
     try {
       await playContext(uri, offsetUri);
-      fetchPlayback();
+      refreshPlayback();
     } catch (e) {
       console.error("Failed to play context:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [fetchPlayback]);
+  }, []);
 
   const playUrisFn = useCallback(async (uris: string[], offset?: number) => {
     try {
       await playUris(uris, offset);
-      fetchPlayback();
+      refreshPlayback();
     } catch (e) {
       console.error("Failed to play URIs:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [fetchPlayback]);
+  }, []);
+
+  /* ── Keyboard Shortcut Callbacks (defined before useEffect) ── */
+  const adjustVolume = useCallback(async (delta: number) => {
+    const v = Math.max(0, Math.min(100, playbackVolume.value + delta));
+    try {
+      await apiSetVolume(v);
+      playbackVolume.value = v;
+    } catch (ev) {
+      console.error("Failed to adjust volume:", ev);
+    }
+  }, []);
+
+  const handleToggleLike = useCallback(async () => {
+    const id = playbackTrack.value?.id;
+    if (!id) return;
+    try {
+      if (likedTrack.value) {
+        await removeSavedTracks([id]);
+        likedTrack.value = false;
+      } else {
+        await saveTracks([id]);
+        likedTrack.value = true;
+      }
+    } catch (e) {
+      console.error("Failed to toggle like:", e);
+      showError("Failed to update liked status");
+    }
+  }, [showError]);
+
+  const focusSearch = useCallback(() => {
+    setHistory([{ type: "search" }]);
+    setTimeout(() => {
+      const input = document.querySelector('input[type="search"]') as HTMLInputElement;
+      if (input) input.focus();
+    }, 50);
+  }, []);
+
+  const handleEscape = useCallback(() => {
+    if (hotkeyHelpOpen) {
+      setHotkeyHelpOpen(false);
+    } else if (history.length > 1) {
+      goBack();
+    }
+  }, [hotkeyHelpOpen, history.length]);
+
+  const hideWindow = useCallback(() => {
+    // Tauri window hide - imports dynamically to avoid issues in web
+    import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
+      getCurrentWindow().hide();
+    }).catch(() => {
+      console.warn('Window hide not available');
+    });
+  }, []);
 
   /* ── Keyboard Shortcuts ── */
   useEffect(() => {
-    const onKey = async (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+    // Navigation
+    registerHotkey({ key: '1', modifiers: ['meta'], handler: () => setHistory([{ type: "home" }]), description: 'Now Playing' });
+    registerHotkey({ key: '2', modifiers: ['meta'], handler: () => setHistory([{ type: "search" }]), description: 'Search' });
+    registerHotkey({ key: '3', modifiers: ['meta'], handler: () => setHistory([{ type: "library", tab: "playlists" }]), description: 'Library' });
+    registerHotkey({ key: '4', modifiers: ['meta'], handler: () => setHistory([{ type: "queue" }]), description: 'Queue' });
 
-      /* Cmd+1/2/3/4 → sidebar nav */
-      if (e.metaKey && /^Digit[1-4]$/.test(e.code)) {
-        e.preventDefault();
-        const idx = parseInt(e.code.replace("Digit", ""), 10) - 1;
-        if (SIDEBAR_VIEWS[idx] && viewRef.current.type !== SIDEBAR_VIEWS[idx].view.type) {
-          setHistory([SIDEBAR_VIEWS[idx].view]);
-        }
-        return;
-      }
+    // Playback
+    registerHotkey({ key: ' ', handler: handlePlayPause, description: 'Play/Pause' });
+    registerHotkey({ key: 'ArrowRight', modifiers: ['meta'], handler: handleNext, description: 'Next Track' });
+    registerHotkey({ key: 'ArrowLeft', modifiers: ['meta'], handler: handlePrev, description: 'Previous Track' });
+    registerHotkey({ key: 'ArrowUp', modifiers: ['meta'], handler: () => adjustVolume(5), description: 'Volume Up' });
+    registerHotkey({ key: 'ArrowDown', modifiers: ['meta'], handler: () => adjustVolume(-5), description: 'Volume Down' });
 
-      switch (e.code) {
-        case "Space": {
-          e.preventDefault();
-          if (!trackRef.current) return;
-          try {
-            if (trackRef.current.isPlaying) {
-              await pause();
-            } else {
-              await play();
-            }
-            fetchPlayback();
-          } catch (ev) {
-            console.error("Failed to play/pause:", ev);
-            showError(ev instanceof Error ? ev.message : String(ev));
-          }
-          break;
-        }
-        case "ArrowRight": {
-          e.preventDefault();
-          try {
-            await next();
-            fetchPlayback();
-          } catch (ev) {
-            console.error("Failed to skip next:", ev);
-            showError(ev instanceof Error ? ev.message : String(ev));
-          }
-          break;
-        }
-        case "ArrowLeft": {
-          if (e.altKey) {
-            e.preventDefault();
-            if (canGoBack) goBack();
-          } else {
-            e.preventDefault();
-            try {
-              await previous();
-              fetchPlayback();
-            } catch (ev) {
-              console.error("Failed to skip previous:", ev);
-              showError(ev instanceof Error ? ev.message : String(ev));
-            }
-          }
-          break;
-        }
-        case "ArrowUp": {
-          e.preventDefault();
-          const v = Math.min(100, volumeRef.current + 5);
-          try {
-            await apiSetVolume(v);
-            setVolume(v);
-          } catch (ev) {
-            console.error("Failed to set volume:", ev);
-            showError(ev instanceof Error ? ev.message : String(ev));
-          }
-          break;
-        }
-        case "ArrowDown": {
-          e.preventDefault();
-          const v = Math.max(0, volumeRef.current - 5);
-          try {
-            await apiSetVolume(v);
-            setVolume(v);
-          } catch (ev) {
-            console.error("Failed to set volume:", ev);
-            showError(ev instanceof Error ? ev.message : String(ev));
-          }
-          break;
-        }
-        case "KeyS": {
-          e.preventDefault();
-          try {
-            await apiSetShuffle(!shuffleRef.current);
-            setShuffle(!shuffleRef.current);
-            fetchPlayback();
-          } catch (ev) {
-            console.error("Failed to set shuffle:", ev);
-            showError(ev instanceof Error ? ev.message : String(ev));
-          }
-          break;
-        }
-        case "KeyR": {
-          e.preventDefault();
-          const next = repeatRef.current === "off" ? "context" : repeatRef.current === "context" ? "track" : "off";
-          try {
-            await apiSetRepeat(next);
-            setRepeat(next);
-            fetchPlayback();
-          } catch (ev) {
-            console.error("Failed to set repeat:", ev);
-            showError(ev instanceof Error ? ev.message : String(ev));
-          }
-          break;
-        }
-        case "KeyM": {
-          e.preventDefault();
-          const v = volumeRef.current > 0 ? 0 : 74;
-          try {
-            await apiSetVolume(v);
-            setVolume(v);
-          } catch (ev) {
-            console.error("Failed to toggle mute:", ev);
-            showError(ev instanceof Error ? ev.message : String(ev));
-          }
-          break;
+    // Actions
+    registerHotkey({ key: 'l', handler: handleToggleLike, description: 'Like/Unlike' });
+    registerHotkey({ key: 's', handler: handleShuffle, description: 'Shuffle' });
+    registerHotkey({ key: 'r', handler: handleRepeat, description: 'Repeat' });
+    registerHotkey({ key: 'm', handler: handleMuteToggle, description: 'Mute' });
+
+    // Quick nav
+    registerHotkey({ key: '/', handler: focusSearch, description: 'Focus Search' });
+    registerHotkey({ key: 'Escape', handler: handleEscape, description: 'Close/Cancel' });
+    registerHotkey({ key: '?', handler: () => setHotkeyHelpOpen(true), description: 'Hotkey Help' });
+
+    // macOS window
+    registerHotkey({ key: 'w', modifiers: ['meta'], handler: hideWindow, description: 'Hide Window' });
+
+    setupHotkeys();
+  }, []);
+
+  /* ── macOS Native Menu Events ── */
+  useEffect(() => {
+    const unsubs: (() => void)[] = [];
+
+    const handlers: Record<string, () => void> = {
+      'menu:play_pause': handlePlayPause,
+      'menu:next_track': handleNext,
+      'menu:prev_track': handlePrev,
+      'menu:vol_up': () => adjustVolume(5),
+      'menu:vol_down': () => adjustVolume(-5),
+      'menu:shuffle': handleShuffle,
+      'menu:repeat': handleRepeat,
+      'menu:now_playing': () => setHistory([{ type: 'home' }]),
+      'menu:search': () => setHistory([{ type: 'search' }]),
+      'menu:library': () => setHistory([{ type: 'library' }]),
+      'menu:queue': () => setHistory([{ type: 'queue' }]),
+    };
+
+    Object.entries(handlers).forEach(([event, handler]) => {
+      listen(event, handler).then(unsub => unsubs.push(unsub));
+    });
+
+    return () => {
+      unsubs.forEach(u => u());
+    };
+  }, []);
+
+  // Debug: Press Ctrl+Shift+T to print access token to console
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+        const token = getAccessToken();
+        if (token) {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('Spotify Access Token (copy this):');
+          console.log(token);
+          console.log('Expires in: ~1 hour from issue');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log('Test command:');
+          console.log(`curl -H "Authorization: Bearer ${token}" https://api.spotify.com/v1/me/player/recently-played?limit=5`);
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        } else {
+          console.warn('No access token available. Please authenticate first.');
         }
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [canGoBack, fetchPlayback]);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // Media Session API for native macOS media keys (play/pause, previous, next)
   useEffect(() => {
@@ -615,16 +835,17 @@ function App() {
     });
 
     // Update media session metadata when track changes
-    if (track) {
+    const currentTrack = playbackTrack.value;
+    if (currentTrack) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: track.name,
-        artist: track.artist,
-        album: track.album,
-        artwork: track.imageUrl ? [{ src: track.imageUrl, sizes: '512x512', type: 'image/jpeg' }] : []
+        title: currentTrack.name,
+        artist: currentTrack.artists?.map(a => a.name).join(", ") || "",
+        album: currentTrack.album?.name || "",
+        artwork: currentTrack.album?.images?.[0]?.url ? [{ src: currentTrack.album.images[0].url, sizes: '512x512', type: 'image/jpeg' }] : []
       });
-      navigator.mediaSession.playbackState = track.isPlaying ? 'playing' : 'paused';
+      navigator.mediaSession.playbackState = isPlaying.value ? 'playing' : 'paused';
     }
-  }, [track, handlePlayPause, handlePrev, handleNext]);
+  }, [handlePlayPause, handlePrev, handleNext]);
 
   const navItems: { view: View; label: string; icon: () => preact.JSX.Element }[] = [
     { view: { type: "home" }, label: "Now Playing", icon: () => <IconHome active={view.type === "home"} /> },
@@ -639,72 +860,48 @@ function App() {
     }
   };
 
-  const progressPct = track && track.durationMs > 0 ? (track.progressMs / track.durationMs) * 100 : 0;
+  const progressPct = track && playbackDuration.value > 0 ? (playbackProgress.value / playbackDuration.value) * 100 : 0;
 
-  if ((!isAuthed || authError) && !isMockMode) {
+  if ((!isAuthed || isAuthErr) && !mockMode) {
     return (
-      <div className="app-window" data-tauri-drag-region>
+      <div className="app-window">
         <div className="auth-screen">
-          <Logo size={48} />
-          <h2 className="auth-title">SPX</h2>
-          <p className="auth-subtitle">Spotify client</p>
+          <div className="auth-content">
+            <div className="auth-logo-wrap">
+              <Logo size={140} />
+            </div>
+            <h1 className="auth-title">SPX</h1>
+            <p className="auth-subtitle">
+              <span className="auth-subtitle-accent">Spotify</span> Remote Control
+            </p>
 
-          {/* Step-by-step instructions */}
-          <div className="auth-instructions">
-            <div className="auth-steps">
-              <div className="auth-step">
-                <span className="step-num">1</span>
-                <span className="step-text">Click <strong>Connect Spotify</strong> below</span>
-              </div>
-              <div className="auth-step">
-                <span className="step-num">2</span>
-                <span className="step-text">Approve access in Spotify (click <strong>Agree</strong>)</span>
-              </div>
-              <div className="auth-step auth-step-highlight">
-                <span className="step-num">3</span>
-                <span className="step-text">Wait for the <strong>success page</strong> in your browser</span>
-              </div>
-              <div className="auth-step">
-                <span className="step-num">4</span>
-                <span className="step-text">Return here — authentication completes automatically</span>
-              </div>
+            <div className="auth-instructions">
+              <p>Control your Spotify playback from a beautiful desktop app</p>
             </div>
 
-            {/* Visual example */}
-            <div className="auth-example">
-              <p className="auth-example-label">The URL you need looks like this:</p>
-              <code className="auth-example-code">http://127.0.0.1:1421/callback?code= A1B2C3... </code>
-            </div>
+            <button
+              className="btn-primary auth-btn"
+              onClick={handleStartAuth}
+              disabled={isAuthLoad}
+            >
+              {isAuthLoad ? (
+                <>
+                  <span className="spinner-small" />
+                  Connecting...
+                </>
+              ) : (
+                'Connect with Spotify'
+              )}
+            </button>
 
-            {/* Fallback instructions */}
-            <div className="auth-fallback">
-              <p>If the browser doesn't redirect automatically:</p>
-              <ul className="auth-fallback-list">
-                <li>Copy the URL from your browser's address bar</li>
-                <li>Paste it in the field below</li>
-              </ul>
-            </div>
+            {isAuthErr && (
+              <p className="auth-error">{authError.value}</p>
+            )}
+
+            <p className="auth-footer">
+              Requires a Spotify Premium account
+            </p>
           </div>
-
-          <button 
-            className="btn-primary auth-btn" 
-            onClick={handleStartAuth}
-            disabled={isAuthLoading}
-          >
-            {isAuthLoading ? 'Connecting...' : 'Connect Spotify'}
-          </button>
-
-          <div className="auth-divider">or paste callback URL manually</div>
-          <form className="callback-form" onSubmit={handleSubmitCallback}>
-            <input
-              type="text"
-              className="callback-input"
-              placeholder="http://127.0.0.1:1421/callback?code=..."
-              value={callbackUrl}
-              onInput={(e) => setCallbackUrl((e.target as HTMLInputElement).value)}
-            />
-            <button type="submit" className="btn-secondary">Submit</button>
-          </form>
         </div>
       </div>
     );
@@ -718,8 +915,8 @@ function App() {
           {...common}
           track={track}
           onSeek={handleSeekPosition}
-          liked={liked}
-          onToggleLike={() => setLiked(!liked)}
+          liked={likedTrack.value}
+          onToggleLike={handleToggleLike}
         />
       );
       case "search": return <Search {...common} initialQuery="" />;
@@ -732,7 +929,7 @@ function App() {
   };
 
   return (
-    <div className="app-window" data-tauri-drag-region>
+    <div className="app-window">
       <div aria-live="polite" className="sr-only">{error}</div>
       <div className="app-body">
         <nav className="sidebar">
@@ -787,17 +984,17 @@ function App() {
             {track?.imageUrl ? <img src={track.imageUrl} alt="" /> : null}
           </div>
           <div className="player-meta">
-            <div className="player-title">{track?.name || "No track"}</div>
-            <div className="player-artist">{track?.artist || "—"}</div>
+            <div className="player-title" style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.name || "No track"}</div>
+            <div className="player-artist" style={{ fontSize: 12, color: 'var(--fg-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.artist || "—"}</div>
           </div>
           <button
-            className={liked ? "player-like-btn liked" : "player-like-btn"}
-            onClick={() => setLiked(!liked)}
-            aria-label={liked ? "Remove from liked" : "Add to liked"}
+            className={likedTrack.value ? "player-like-btn liked" : "player-like-btn"}
+            onClick={handleToggleLike}
+            aria-label={likedTrack.value ? "Remove from liked" : "Add to liked"}
             role="button"
             tabIndex={0}
           >
-            <IconHeart filled={liked} />
+            <IconHeart filled={likedTrack.value} />
           </button>
         </div>
 
@@ -805,14 +1002,24 @@ function App() {
           <div className="player-controls" role="group" aria-label="Playback controls">
             <button className="ctrl-btn" onClick={handleShuffle} title="Shuffle" aria-label="Shuffle" role="button" tabIndex={0}><IconShuffle active={shuffle} /></button>
             <button className="ctrl-btn" onClick={handlePrev} aria-label="Previous track" role="button" tabIndex={0}><IconPrev /></button>
-            <button className="ctrl-btn play" onClick={handlePlayPause} aria-label={track?.isPlaying ? "Pause" : "Play"} role="button" tabIndex={0}>
-              {track?.isPlaying ? <IconPause /> : <IconPlay />}
+            <button
+              className={`ctrl-btn ${isPlaying.value ? 'playing' : ''}`}
+              onClick={handlePlayPause}
+              disabled={isPlayActionLoading}
+            >
+              {isPlayActionLoading ? (
+                <span className="spinner-small" />
+              ) : isPlaying.value ? (
+                <IconPause />
+              ) : (
+                <IconPlay />
+              )}
             </button>
             <button className="ctrl-btn" onClick={handleNext} aria-label="Next track" role="button" tabIndex={0}><IconNext /></button>
             <button className="ctrl-btn" onClick={handleRepeat} title="Repeat" aria-label={`Repeat: ${repeat}`} role="button" tabIndex={0}><IconRepeat mode={repeat} /></button>
           </div>
           <div className="scrubber">
-            <span className="time current">{formatTime(track?.progressMs || 0)}</span>
+            <span className="time current">{formatTime(playbackProgress.value)}</span>
             <div
               className="progress-track"
               ref={progressRef}
@@ -828,16 +1035,15 @@ function App() {
               <div className="progress-fill" />
               <div className="progress-thumb" />
             </div>
-            <span className="time total">{formatTime(track?.durationMs || 0)}</span>
+            <span className="time total">{formatTime(playbackDuration.value)}</span>
           </div>
         </div>
 
         <div className="player-right">
           <DeviceSelector
-            devices={availableDevices}
-            activeDevice={activeDevice}
             onTransfer={handleTransferPlayback}
-            onRefresh={loadDevices}
+            onRefreshLocal={refreshLocalDevices}
+            onTransferLocal={transferToLocalDevice}
           />
           <button className="ctrl-btn" aria-label="Volume" role="button" tabIndex={0} onClick={handleMuteToggle}><IconVolume muted={volume === 0} /></button>
           <div
@@ -855,6 +1061,8 @@ function App() {
           </div>
         </div>
       </div>
+
+      {hotkeyHelpOpen && <HotkeyHelp onClose={() => setHotkeyHelpOpen(false)} />}
     </div>
   );
 }

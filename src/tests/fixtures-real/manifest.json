@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "recordedAt": "2024-01-15T10:00:00Z",
+  "token_user": "Vitaly Baum",
+  "endpoints": [
+    {"method": "GET", "path": "/v1/me", "fixture": "user.json", "status": 200},
+    {"method": "GET", "path": "/v1/me/player", "fixture": "playback.json", "status": 204},
+    {"method": "GET", "path": "/v1/me/player/devices", "fixture": "devices.json", "status": 200},
+    {"method": "GET", "path": "/v1/me/playlists", "fixture": "playlists.json", "status": 200},
+    {"method": "GET", "path": "/v1/me/tracks", "fixture": "tracks.json", "status": 200},
+    {"method": "GET", "path": "/v1/me/albums", "fixture": "albums.json", "status": 200},
+    {"method": "GET", "path": "/v1/me/player/recently-played", "fixture": "recent.json", "status": 200},
+    {"method": "GET", "path": "/v1/me/player/queue", "fixture": "queue.json", "status": 200},
+    {"method": "GET", "path": "/v1/artists/:id", "fixture": "artist.json", "status": 200},
+    {"method": "GET", "path": "/v1/search", "fixture": "search.json", "status": 200},
+    {"method": "PUT", "path": "/v1/me/player/play", "fixture": "play-error.json", "status": 404},
+    {"method": "PUT", "path": "/v1/me/player/pause", "fixture": "pause-error.json", "status": 404}
+  ]
+}

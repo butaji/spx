@@ -1,92 +1,61 @@
-import { useEffect, useState, useRef } from "preact/compat";
-import type { MouseEvent, KeyboardEvent } from "preact/compat";
-import { getFeaturedPlaylists, getUserPlaylists, getArtist, getArtistTopTracks } from "../lib/spotify";
-import { View, TrackInfo, formatTime } from "../App";
-import { IconHeart } from "../App";
+import { useEffect, useState } from "preact/compat";
+import { getArtist, getArtistTopTracks } from "../lib/spotify";
+import { loadRecentActivity, lastPlayedTrack } from "../stores/spotify";
+import { View } from "../App";
 import type { SpotifyArtist } from "../types";
-import type { SimplifiedPlaylist } from "@spotify/web-api-ts-sdk";
+
+import NowPlayingHero from "../components/NowPlayingHero";
+import StatsCard from "../components/StatsCard";
+import ArtistTopSongs from "../components/ArtistTopSongs";
+import RecentGrid from "../components/RecentGrid";
+
+const MOCK_TAGS = ["electro swing", "trip hop", "nu jazz", "chillout", "electronic"];
 
 interface Props {
-  track: TrackInfo | null;
+  track: any | null;
   onPlayContext: (uri: string, offsetUri?: string) => void;
   onNavigate: (v: View) => void;
-  onSeek: (ms: number) => void;
   liked: boolean;
   onToggleLike: () => void;
-}
-
-/* Inline icons for action buttons */
-function IconTag() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-      <line x1="7" y1="7" x2="7.01" y2="7"/>
-    </svg>
-  );
-}
-function IconShare() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-      <polyline points="15 3 21 3 21 9"/>
-      <line x1="10" y1="14" x2="21" y2="3"/>
-    </svg>
-  );
-}
-function IconMusic() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 18V5l12-2v13"/>
-      <circle cx="6" cy="18" r="3"/>
-      <circle cx="18" cy="16" r="3"/>
-    </svg>
-  );
 }
 
 export default function Home({
   track,
   onPlayContext,
   onNavigate,
-  onSeek,
   liked,
   onToggleLike,
 }: Props) {
-  const [featured, setFeatured] = useState<SimplifiedPlaylist[]>([]);
-  const [recentPl, setRecentPl] = useState<SimplifiedPlaylist[]>([]);
   const [artistDetail, setArtistDetail] = useState<SpotifyArtist | null>(null);
   const [artistTopTracks, setArtistTopTracks] = useState<any[]>([]);
-  const [progress, setProgress] = useState(0);
   const [scrobbleCount, setScrobbleCount] = useState(0);
   const [trackScrobbleCount, setTrackScrobbleCount] = useState(0);
+  const [isLoadingArtist, setIsLoadingArtist] = useState(true);
+  const [, forceUpdate] = useState({});
 
-  const trackRef = useRef(track);
-  trackRef.current = track;
+  const displayTrack = track || lastPlayedTrack.value;
 
-  useEffect(() => { loadData(); }, []);
-
-  const loadData = async () => {
-    try {
-      const fp = await getFeaturedPlaylists();
-      setFeatured(fp.playlists?.items?.slice(0, 4) || []);
-    } catch (e) {
-      console.error("Failed to load featured playlists:", e);
-    }
-    try {
-      const pl = await getUserPlaylists();
-      setRecentPl((pl.items || []).slice(0, 4));
-    } catch (e) {
-      console.error("Failed to load user playlists:", e);
-    }
-  };
-
-  /* Fetch artist detail and top tracks when track changes */
+  /* Load data on mount */
   useEffect(() => {
-    if (!track?.artistIds?.[0]) {
+    loadData();
+  }, []);
+
+  /* Fetch artist when track changes */
+  useEffect(() => {
+    setIsLoadingArtist(true);
+
+    const artistId =
+      track?.artistIds?.[0] ||
+      track?.artists?.[0]?.id ||
+      lastPlayedTrack.value?.artistId;
+
+    if (!artistId) {
       setArtistDetail(null);
       setArtistTopTracks([]);
+      setIsLoadingArtist(false);
       return;
     }
-    const artistId = track.artistIds[0];
+
     Promise.all([
       getArtist(artistId),
       getArtistTopTracks(artistId).catch(() => null),
@@ -99,295 +68,52 @@ export default function Home({
         console.error("Failed to load artist:", e);
         setArtistDetail(null);
         setArtistTopTracks([]);
-      });
-  }, [track?.artistIds?.[0]]);
+      })
+      .finally(() => setIsLoadingArtist(false));
+  }, [track?.id, lastPlayedTrack.value?.id]);
 
-  /* Scrobble counts - regenerate when track changes */
+  /* Generate mock scrobble counts */
   useEffect(() => {
-    if (track) {
-      setScrobbleCount(Math.floor(Math.random() * 800) + 50);
-      setTrackScrobbleCount(Math.floor(Math.random() * 50) + 5);
-    }
+    setScrobbleCount(Math.floor(Math.random() * 800) + 50);
+    setTrackScrobbleCount(Math.floor(Math.random() * 50) + 5);
   }, [track?.id]);
 
-  /* Local progress */
-  useEffect(() => {
-    if (!track) return;
-    setProgress(track.progressMs);
-    if (!track.isPlaying) return;
-    const id = setInterval(() => {
-      setProgress((p) => Math.min(p + 1000, trackRef.current?.durationMs || 0));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [track?.progressMs, track?.isPlaying, track?.durationMs]);
-
-  const progressPct = track && track.durationMs > 0
-    ? (progress / track.durationMs) * 100
-    : 0;
-
-  const handleSeekClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (!track) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    onSeek(Math.floor(pct * track.durationMs));
+  const loadData = async () => {
+    await loadRecentActivity();
+    forceUpdate({});
   };
 
-  const handleArtistKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter" && artistDetail?.id) {
-      onNavigate({ type: "artist", id: artistDetail.id, name: artistDetail.name });
-    }
-  };
-
-  const handleCardKeyDown = (e: KeyboardEvent<HTMLDivElement>, callback: () => void) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      callback();
-    }
-  };
-
-  const artistImage = artistDetail?.images?.[0]?.url;
-  const artistGenres = artistDetail?.genres?.slice(0, 5) || [];
-  const artistFollowers = artistDetail?.followers?.total;
+  const artistName = displayTrack?.artistName || displayTrack?.artist || "Unknown";
+  const trackName = displayTrack?.name || "Unknown Track";
+  const tags = artistDetail?.genres?.slice(0, 5) || MOCK_TAGS;
 
   return (
     <div className="animate-in">
-      {/* ── Now Playing Hero ── */}
-      {!track ? (
-        <div className="np-hero">
-          <div className="np-artwork skeleton" />
-          <div className="np-info">
-            <div className="skeleton-text" style={{ width: 200 }} />
-            <div className="skeleton-text" style={{ width: 140, marginTop: 8 }} />
-          </div>
-        </div>
-      ) : (
-        <div className="np-hero">
-          <div className="np-artwork">
-            {track?.imageUrl ? (
-              <img src={track.imageUrl} alt="" />
-            ) : null}
-          </div>
+      <NowPlayingHero
+        track={displayTrack}
+        liked={liked}
+        isLoading={isLoadingArtist}
+        tags={tags}
+        onToggleLike={onToggleLike}
+      />
 
-          <div className="np-info">
-            <div>
-              <div className="np-track-name">
-                {track?.name || "Nothing playing"}
-              </div>
-              <div
-                className="np-artist-name"
-                role="link"
-                tabIndex={0}
-                onClick={() => {
-                  if (artistDetail?.id) {
-                    onNavigate({ type: "artist", id: artistDetail.id, name: artistDetail.name });
-                  }
-                }}
-                onKeyDown={handleArtistKeyDown}
-              >
-                {track?.artist ? `by ${track.artist}` : "Start playback on Spotify"}
-              </div>
-              {track?.album && (
-                <div className="np-album-name">from {track.album}</div>
-              )}
-            </div>
+      <StatsCard
+        artistName={artistName}
+        trackName={trackName}
+        scrobbleCount={scrobbleCount}
+        trackScrobbleCount={trackScrobbleCount}
+      />
 
-            <div className="progress-seek-row">
-              <span className="time current">{formatTime(progress)}</span>
-              <div
-                className="progress-track"
-                role="slider"
-                aria-label="Seek"
-                aria-valuenow={progress}
-                aria-valuemax={track?.durationMs || 0}
-                onClick={handleSeekClick}
-                style={{ flex: 1 }}
-              >
-                <div className="progress-fill" style={{ width: `${progressPct}%` }} />
-              </div>
-              <span className="time total">{formatTime(track.durationMs)}</span>
-            </div>
+      <ArtistTopSongs
+        artist={artistDetail}
+        topTracks={artistTopTracks}
+        tags={tags}
+      />
 
-            <div className="np-actions">
-              <button
-                className={liked ? "np-action-btn liked" : "np-action-btn"}
-                onClick={onToggleLike}
-                title="Love"
-                aria-label={liked ? "Unlike" : "Like"}
-                aria-pressed={liked}
-              >
-                <IconHeart filled={liked} />
-              </button>
-              <button className="np-action-btn" title="Tag" aria-label="Tag">
-                <IconTag />
-              </button>
-              <button className="np-action-btn" title="Share" aria-label="Share">
-                <IconShare />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Empty State ── */}
-      {!track && (
-        <div className="empty-state">
-          <IconMusic />
-          <p>Start playback on Spotify</p>
-        </div>
-      )}
-
-      {/* ── Scrobble Info Bubble ── */}
-      {track && (
-        <div className="info-bubble">
-          <p className="info-bubble-text">
-            You've listened to{" "}
-            <strong>{track.artist.split(",")[0].trim()}</strong>{" "}
-            {scrobbleCount.toLocaleString()} times and{" "}
-            <strong>{track.name}</strong>{" "}
-            {trackScrobbleCount.toLocaleString()} times.
-          </p>
-        </div>
-      )}
-
-      {/* ── Tags ── */}
-      {artistGenres.length > 0 && (
-        <div className="tag-row">
-          <span className="tag-row-label">Popular tags:</span>
-          {artistGenres.map((g, i) => (
-            <span key={g}>
-              <span className="tag-link">{g}</span>
-              {i < artistGenres.length - 1 && (
-                <span className="tag-sep"> · </span>
-              )}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* ── Artist Section ── */}
-      {artistDetail && (
-        <div className="artist-section">
-          <div className="artist-section-header">
-            <span>{artistDetail.name}</span>
-            {artistDetail.followers && (
-              <span className="artist-follower-count">{artistDetail.followers.total.toLocaleString()} followers</span>
-            )}
-          </div>
-          <div className="artist-card">
-            <div className="artist-card-img">
-              {artistImage && <img src={artistImage} alt="" />}
-            </div>
-            <div className="artist-card-info">
-              <p className="artist-card-bio">
-                {artistDetail.name} is a musical artist on Spotify.
-              </p>
-              {/* Genres */}
-              {artistDetail.genres?.length > 0 && (
-                <div className="artist-genres" style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {artistDetail.genres.slice(0, 3).map(g => (
-                    <span key={g} style={{ fontSize: 11, padding: '2px 8px', background: 'var(--glass)', borderRadius: 999, color: 'var(--fg-dim)' }}>{g}</span>
-                  ))}
-                </div>
-              )}
-              {/* Popularity */}
-              {artistDetail.popularity !== undefined && (
-                <div className="artist-popularity" style={{ marginTop: 10 }}>
-                  <span style={{ fontSize: 10, color: 'var(--fg-faint)', marginRight: 6 }}>Popularity</span>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 60, height: 4, background: 'var(--glass)', borderRadius: 999, overflow: 'hidden' }}>
-                      <div style={{ width: `${artistDetail.popularity}%`, height: '100%', background: 'var(--accent)', borderRadius: 999 }} />
-                    </div>
-                    <span style={{ fontSize: 10, color: 'var(--fg-dim)' }}>{artistDetail.popularity}</span>
-                  </div>
-                </div>
-              )}
-              {/* Top Tracks */}
-              {artistTopTracks.length > 0 && (
-                <div className="artist-top-tracks" style={{ marginTop: 12 }}>
-                  <span style={{ fontSize: 10, color: 'var(--fg-faint)', display: 'block', marginBottom: 6 }}>Top Tracks</span>
-                  {artistTopTracks.map((t, i) => (
-                    <div key={t.id} className="artist-track-row">
-                      <span className="artist-track-num">{i + 1}</span>
-                      <span className="artist-track-name">{t.name}</span>
-                      <span className="artist-track-dur">{formatTime(t.duration_ms)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <a
-                href="#"
-                className="artist-card-link"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onNavigate({ type: "artist", id: artistDetail.id, name: artistDetail.name });
-                }}
-              >
-                View more on SPX →
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Recent Playlists ── */}
-      {recentPl.length > 0 && (
-        <div style={{ marginTop: 28 }}>
-          <h2 className="section-heading">Your Playlists</h2>
-          <div className="lib-grid">
-            {recentPl.map((pl) => (
-              <div
-                key={pl.id}
-                className="lib-item"
-                role="button"
-                tabIndex={0}
-                onClick={() => onNavigate({ type: "playlist", id: pl.id, name: pl.name })}
-                onKeyDown={(e) => handleCardKeyDown(e, () => onNavigate({ type: "playlist", id: pl.id, name: pl.name }))}
-              >
-                <div
-                  className="lib-item-img"
-                  style={{
-                    background: pl.images?.[0]?.url
-                      ? `url(${pl.images[0].url}) center/cover`
-                      : undefined,
-                  }}
-                />
-                <div className="lib-item-title">{pl.name}</div>
-                <div className="lib-item-sub">{pl.owner?.display_name}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Featured ── */}
-      {featured.length > 0 && (
-        <div style={{ marginTop: 28 }}>
-          <h2 className="section-heading">Featured</h2>
-          <div className="lib-grid">
-            {featured.map((pl) => (
-              <div
-                key={pl.id}
-                className="lib-item"
-                role="button"
-                tabIndex={0}
-                onClick={() => onPlayContext(pl.uri || "")}
-                onKeyDown={(e) => handleCardKeyDown(e, () => onPlayContext(pl.uri || ""))}
-              >
-                <div
-                  className="lib-item-img"
-                  style={{
-                    background: pl.images?.[0]?.url
-                      ? `url(${pl.images[0].url}) center/cover`
-                      : "linear-gradient(135deg, oklch(70% 0.02 270), oklch(60% 0.015 270))",
-                  }}
-                />
-                <div className="lib-item-title">{pl.name}</div>
-                <div className="lib-item-sub">{pl.owner?.display_name}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <RecentGrid
+        onNavigate={onNavigate}
+        onPlayContext={onPlayContext}
+      />
     </div>
   );
 }

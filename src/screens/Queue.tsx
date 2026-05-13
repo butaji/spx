@@ -14,7 +14,6 @@ export default function Queue({ onPlayUris }: Props) {
   const loadQueue = useCallback(async () => {
     try {
       const data = await getQueue();
-      setCurrent(data.currently_playing || null);
       setQueue(data.queue || []);
     } catch (e) {
       console.error("Failed to load queue:", e);

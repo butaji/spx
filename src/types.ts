@@ -58,6 +58,16 @@ export interface SpotifyDevice {
   is_restricted?: boolean;
 }
 
+export interface LocalDevice {
+  name: string;
+  ip: string;
+  port: number;
+  id?: string;           // Spotify device ID if available
+  is_active?: boolean;   // Whether this device is currently active
+  canTransfer?: boolean; // True if also a Spotify Connect device
+  note?: string;         // e.g. "Open Spotify on this device" for Cast-only devices
+}
+
 export interface SpotifyPlaybackState {
   is_playing?: boolean;
   shuffle_state?: boolean;

@@ -24,13 +24,12 @@
         "transparent": true,
         "titleBarStyle": "Transparent",
         "hiddenTitle": true,
-        "acceptFirstMouse": true,
         "center": true,
         "visible": true
       }
     ],
     "security": {
-      "csp": "default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com"
+      "csp": "default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com; img-src 'self' https://i.scdn.co https://mosaic.scdn.co data:; media-src 'self' blob:; connect-src 'self' https://api.spotify.com https://accounts.spotify.com https://sdk.scdn.co https://*.spotify.com"
     }
   },
   "bundle": {
@@ -43,5 +42,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
   }
 }

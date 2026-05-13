@@ -1,0 +1,103 @@
+{
+  "version": "1.0.0",
+  "recordedAt": "2026-05-13T04:58:27.522Z",
+  "tokenPrefix": "BQDyl95jKkO_tZ1X23-R",
+  "endpoints": [
+    {
+      "fixture": "me.json",
+      "method": "GET",
+      "path": "/v1/me",
+      "description": "User profile",
+      "recordedAt": "2026-05-13T04:58:28.097Z",
+      "status": 200
+    },
+    {
+      "fixture": "player.json",
+      "method": "GET",
+      "path": "/v1/me/player",
+      "description": "Current playback",
+      "recordedAt": "2026-05-13T04:58:28.385Z",
+      "status": 204
+    },
+    {
+      "fixture": "devices.json",
+      "method": "GET",
+      "path": "/v1/me/player/devices",
+      "description": "Devices",
+      "recordedAt": "2026-05-13T04:58:28.645Z",
+      "status": 200
+    },
+    {
+      "fixture": "playlists.json",
+      "method": "GET",
+      "path": "/v1/me/playlists",
+      "description": "Playlists",
+      "recordedAt": "2026-05-13T04:58:29.061Z",
+      "status": 200
+    },
+    {
+      "fixture": "tracks.json",
+      "method": "GET",
+      "path": "/v1/me/tracks",
+      "description": "Saved tracks",
+      "recordedAt": "2026-05-13T04:58:29.564Z",
+      "status": 200
+    },
+    {
+      "fixture": "albums.json",
+      "method": "GET",
+      "path": "/v1/me/albums",
+      "description": "Saved albums",
+      "recordedAt": "2026-05-13T04:58:31.080Z",
+      "status": 200
+    },
+    {
+      "fixture": "recently-played.json",
+      "method": "GET",
+      "path": "/v1/me/player/recently-played?limit=50",
+      "description": "Recently played",
+      "recordedAt": "2026-05-13T04:58:31.460Z",
+      "status": 200
+    },
+    {
+      "fixture": "queue.json",
+      "method": "GET",
+      "path": "/v1/me/player/queue",
+      "description": "Queue",
+      "recordedAt": "2026-05-13T04:58:31.709Z",
+      "status": 200
+    },
+    {
+      "fixture": "artist.json",
+      "method": "GET",
+      "path": "/v1/artists/4Z8W4fKeB5YxbusRsdQVPb",
+      "description": "Artist (Radiohead)",
+      "recordedAt": "2026-05-13T04:58:31.994Z",
+      "status": 200
+    },
+    {
+      "fixture": "search.json",
+      "method": "GET",
+      "path": "/v1/search?q=test&type=track",
+      "description": "Search",
+      "recordedAt": "2026-05-13T04:58:32.768Z",
+      "status": 200
+    },
+    {
+      "fixture": "play-error.json",
+      "method": "PUT",
+      "path": "/v1/me/player/play",
+      "description": "Play (expect error - no device)",
+      "recordedAt": "2026-05-13T04:58:33.028Z",
+      "status": 404
+    },
+    {
+      "fixture": "pause-empty.json",
+      "method": "PUT",
+      "path": "/v1/me/player/pause",
+      "description": "Pause",
+      "recordedAt": "2026-05-13T04:58:33.279Z",
+      "status": 404
+    }
+  ]
+}

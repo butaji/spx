@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getAlbum } from "../lib/spotify";
-import { View, formatTime } from "../App";
+import { View } from "../App";
+import { formatTime } from "../lib/utils";
 import { IconPlay } from "../App";
 import { SpotifyAlbum } from "../types";
 

@@ -136,7 +136,7 @@ export default function ArtistDetail({ id, name, onPlayUris }: Props) {
                 {albums.map((album) => (
                   <div
                     key={album.id}
-                    className="lib-card"
+                    className="lib-item"
                     onClick={() => onPlayUris([`spotify:album:${album.id}`])}
                     role="button"
                     tabIndex={0}
@@ -147,9 +147,9 @@ export default function ArtistDetail({ id, name, onPlayUris }: Props) {
                       }
                     }}
                   >
-                    <div className="lib-card-art" style={{ background: album.images?.[0]?.url ? `url(${album.images[0].url}) center/cover` : undefined }} />
-                    <div className="lib-card-name">{album.name}</div>
-                    <div className="lib-card-meta">{album.album_type} · {album.release_date?.split("-")[0]}</div>
+                    <div className="lib-item-img" style={{ background: album.images?.[0]?.url ? `url(${album.images[0].url}) center/cover` : undefined }} />
+                    <div className="lib-item-title">{album.name}</div>
+                    <div className="lib-item-sub">{album.album_type} · {album.release_date?.split("-")[0]}</div>
                   </div>
                 ))}
               </div>

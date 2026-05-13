@@ -1,0 +1,32 @@
+{
+  "country": "PE",
+  "display_name": "Vitaly Baum",
+  "explicit_content": {
+    "filter_enabled": false,
+    "filter_locked": false
+  },
+  "external_urls": {
+    "spotify": "https://open.spotify.com/user/12136016183"
+  },
+  "followers": {
+    "href": null,
+    "total": 29
+  },
+  "href": "https://api.spotify.com/v1/users/12136016183",
+  "id": "12136016183",
+  "images": [
+    {
+      "height": 300,
+      "url": "https://scontent-tpe1-1.xx.fbcdn.net/v/t39.30808-1/365444004_10230877960393583_4916509141045156121_n.jpg?stp=dst-jpg_s240x240_tt6&_nc_cat=111&ccb=1-7&_nc_sid=08baa4&_nc_ohc=7R0VSKknEhEQ7kNvwFdSz1D&_nc_oc=AdpQYxoHvOYMJwZzSpsevBmwaTvWsA23YigJYaHYmdx3hhd9oxscMSVhl7avai81XbCFcU3o6P8-VpsgGBdgGR9s&_nc_zt=24&_nc_ht=scontent-tpe1-1.xx&edm=AP4hL3IEAAAA&_nc_gid=l6ZCRA3DRkQSKxt4UZNiLA&_nc_tpa=Q5bMBQH8C4PmT8TlHd4C9G0OvCFb-YQO6j8BWQi5I2APd1LRxhsPNRkduf3-hAi_gzyS3pLjyun7&oh=00_Af603hL8gu-DgGU0ed2KwgD2-sMaGs84nvwOnDzycK7PGA&oe=6A09C15D",
+      "width": 300
+    },
+    {
+      "height": 64,
+      "url": "https://scontent-tpe1-1.xx.fbcdn.net/v/t39.30808-1/365444004_10230877960393583_4916509141045156121_n.jpg?stp=cp0_dst-jpg_s50x50_tt6&_nc_cat=111&ccb=1-7&_nc_sid=28885b&_nc_ohc=7R0VSKknEhEQ7kNvwFdSz1D&_nc_oc=AdpQYxoHvOYMJwZzSpsevBmwaTvWsA23YigJYaHYmdx3hhd9oxscMSVhl7avai81XbCFcU3o6P8-VpsgGBdgGR9s&_nc_zt=24&_nc_ht=scontent-tpe1-1.xx&edm=AP4hL3IEAAAA&_nc_gid=l6ZCRA3DRkQSKxt4UZNiLA&_nc_tpa=Q5bMBQHFjEiAEf1dUY2pCpFVKQbaUsFs5c4idl04h_Mn9Xr4g_ei4LSUM4zul19taS83fPptr1W9&oh=00_Af5fMsJs-OO-2d5mYDLMXSAuh9h33dTfQLI_SmNvxgOtqQ&oe=6A09C15D",
+      "width": 64
+    }
+  ],
+  "product": "premium",
+  "type": "user",
+  "uri": "spotify:user:12136016183"
+}

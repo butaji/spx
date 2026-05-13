@@ -1,6 +1,10 @@
 use std::println;
+use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tauri::Emitter;
+use tauri::Manager;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 #[tauri::command]
 fn is_mock_mode() -> bool {
     std::env::var("SPX_MOCK").unwrap_or_default() == "1"
@@ -97,19 +101,276 @@ async fn start_callback_server() -> Result<Option<(String, String)>, String> {
     }
 }
 
+#[derive(serde::Serialize, Clone, Debug)]
+struct LocalDevice {
+    name: String,
+    ip: String,
+    port: u16,
+}
+
+#[tauri::command]
+async fn scan_spotify_devices() -> Result<Vec<LocalDevice>, String> {
+    println!("Starting mDNS scan for audio devices...");
+    
+    let mut devices = Vec::new();
+    
+    // Scan Google Cast devices
+    match browse_service("_googlecast._tcp").await {
+        Ok(cast_devices) => {
+            println!("Google Cast scan found {} device(s)", cast_devices.len());
+            for device in cast_devices {
+                if !devices.iter().any(|d: &LocalDevice| d.name == device.name) {
+                    devices.push(device);
+                }
+            }
+        }
+        Err(e) => println!("Google Cast scan error: {}", e),
+    }
+    
+    // Scan Spotify Connect devices
+    match browse_service("_spotify-connect._tcp").await {
+        Ok(spotify_devices) => {
+            println!("Spotify Connect scan found {} device(s)", spotify_devices.len());
+            for device in spotify_devices {
+                if !devices.iter().any(|d: &LocalDevice| d.name == device.name) {
+                    devices.push(device);
+                }
+            }
+        }
+        Err(e) => println!("Spotify Connect scan error: {}", e),
+    }
+    
+    println!("Total devices found: {}", devices.len());
+    Ok(devices)
+}
+
+async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, String> {
+    let mut devices = Vec::new();
+    
+    // Step 1: Browse for instance names
+    println!("Browsing {}...", service_type);
+    
+    let mut child = tokio::process::Command::new("dns-sd")
+        .args(["-B", service_type, "local"])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn dns-sd browse: {}", e))?;
+    
+    // Let it collect responses for 2 seconds
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    
+    // Kill the process
+    let _ = child.kill().await;
+    
+    // Read output
+    let output = child.wait_with_output().await
+        .map_err(|e| format!("Failed to read browse output: {}", e))?;
+    let browse_output = String::from_utf8_lossy(&output.stdout);
+    
+    // Parse instance names: get last field of lines containing "Add"
+    let mut instance_names = Vec::new();
+    for line in browse_output.lines() {
+        if line.contains("Add") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if let Some(name) = parts.last() {
+                if !name.is_empty() && !instance_names.contains(&name.to_string()) {
+                    instance_names.push(name.to_string());
+                }
+            }
+        }
+    }
+    
+    println!("Found {} {} instance(s)", instance_names.len(), service_type);
+    
+    // Step 2: Resolve each instance
+    for instance_name in instance_names {
+        println!("Resolving {}...", instance_name);
+        
+        let mut child = tokio::process::Command::new("dns-sd")
+            .args(["-L", &instance_name, service_type, "local"])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn dns-sd resolve: {}", e))?;
+        
+        // Let it collect responses for 3 seconds
+        tokio::time::sleep(Duration::from_secs(3)).await;
+        
+        // Kill the process
+        let _ = child.kill().await;
+        
+        // Read output
+        let output = child.wait_with_output().await
+            .map_err(|e| format!("Failed to read resolve output: {}", e))?;
+        let resolve_output = String::from_utf8_lossy(&output.stdout);
+        
+        // Parse address from "can be reached at" line
+        let mut addr = None;
+        for line in resolve_output.lines() {
+            if line.contains("can be reached at") {
+                if let Some(start) = line.find("can be reached at ") {
+                    let rest = &line[start + 18..];
+                    if let Some(end) = rest.find(" (interface") {
+                        addr = Some(rest[..end].to_string());
+                    }
+                }
+            }
+        }
+        
+        // Parse friendly name from TXT record (fn=...)
+        let mut friendly_name = instance_name.clone();
+        for line in resolve_output.lines() {
+            if let Some(start) = line.find(" fn=") {
+                let rest = &line[start + 4..];
+                // Parse value: may contain \-escaped spaces
+                // Find the value by taking chars until we hit an unescaped space
+                let mut name = String::new();
+                let mut chars = rest.chars().peekable();
+                while let Some(c) = chars.next() {
+                    if c == '\\' && chars.peek() == Some(&' ') {
+                        // Escaped space - add space and consume it
+                        name.push(' ');
+                        chars.next();
+                    } else if c == ' ' {
+                        // Unescaped space = end of value
+                        break;
+                    } else {
+                        name.push(c);
+                    }
+                }
+                if !name.is_empty() {
+                    friendly_name = name;
+                }
+                break;
+            }
+        }
+        
+        if let Some(address) = addr {
+            if let Some(colon_pos) = address.rfind(':') {
+                let hostname = &address[..colon_pos];
+                let port_str = &address[colon_pos + 1..];
+                
+                if let Ok(port) = port_str.parse::<u16>() {
+                    let device = LocalDevice {
+                        name: friendly_name,
+                        ip: hostname.to_string(),
+                        port,
+                    };
+                    println!("  Found device: {} at {}:{}", device.name, device.ip, device.port);
+                    devices.push(device);
+                }
+            }
+        }
+    }
+    
+    Ok(devices)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     dotenvy::dotenv().ok();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![get_spotify_client_id, start_callback_server, is_mock_mode])
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .invoke_handler(tauri::generate_handler![get_spotify_client_id, start_callback_server, is_mock_mode, scan_spotify_devices])
         .on_window_event(|window, event| {
+            #[cfg(target_os = "macos")]
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                println!("Close requested (CMD+W or X button) - hiding window instead");
                 api.prevent_close();
                 let _ = window.hide();
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            // Build and set the menu bar on macOS
+            #[cfg(target_os = "macos")]
+            {
+                let app_menu = Submenu::with_items(
+                    app,
+                    "SPX",
+                    true,
+                    &[
+                        &PredefinedMenuItem::about(app, Some("About SPX"), None).unwrap(),
+                        &PredefinedMenuItem::separator(app).unwrap(),
+                        &MenuItem::with_id(app, "preferences", "Preferences...", true, Some("Cmd+,")).unwrap(),
+                        &PredefinedMenuItem::separator(app).unwrap(),
+                        &PredefinedMenuItem::quit(app, Some("Quit SPX")).unwrap()
+                    ]
+                ).unwrap();
+
+                let playback_menu = Submenu::with_items(
+                    app,
+                    "Playback",
+                    true,
+                    &[
+                        &MenuItem::with_id(app, "play_pause", "Play/Pause", true, Some("Space")).unwrap(),
+                        &MenuItem::with_id(app, "next_track", "Next Track", true, Some("Cmd+Right")).unwrap(),
+                        &MenuItem::with_id(app, "prev_track", "Previous Track", true, Some("Cmd+Left")).unwrap(),
+                        &PredefinedMenuItem::separator(app).unwrap(),
+                        &MenuItem::with_id(app, "vol_up", "Volume Up", true, Some("Cmd+Up")).unwrap(),
+                        &MenuItem::with_id(app, "vol_down", "Volume Down", true, Some("Cmd+Down")).unwrap(),
+                        &PredefinedMenuItem::separator(app).unwrap(),
+                        &MenuItem::with_id(app, "shuffle", "Shuffle", true, Some("Cmd+S")).unwrap(),
+                        &MenuItem::with_id(app, "repeat", "Repeat", true, Some("Cmd+R")).unwrap(),
+                    ]
+                ).unwrap();
+
+                let view_menu = Submenu::with_items(
+                    app,
+                    "View",
+                    true,
+                    &[
+                        &MenuItem::with_id(app, "now_playing", "Now Playing", true, Some("Cmd+1")).unwrap(),
+                        &MenuItem::with_id(app, "search", "Search", true, Some("Cmd+2")).unwrap(),
+                        &MenuItem::with_id(app, "library", "Library", true, Some("Cmd+3")).unwrap(),
+                        &MenuItem::with_id(app, "queue", "Queue", true, Some("Cmd+4")).unwrap(),
+                    ]
+                ).unwrap();
+
+                let menu = Menu::with_items(app, &[
+                    &app_menu,
+                    &playback_menu,
+                    &view_menu,
+                ]).unwrap();
+
+                app.set_menu(menu).unwrap();
+
+                app.on_menu_event(|app, event| {
+                    match event.id().as_ref() {
+                        "preferences" => { let _ = app.emit("menu:preferences", ()); }
+                        "play_pause" => { let _ = app.emit("menu:play_pause", ()); }
+                        "next_track" => { let _ = app.emit("menu:next_track", ()); }
+                        "prev_track" => { let _ = app.emit("menu:prev_track", ()); }
+                        "vol_up" => { let _ = app.emit("menu:vol_up", ()); }
+                        "vol_down" => { let _ = app.emit("menu:vol_down", ()); }
+                        "shuffle" => { let _ = app.emit("menu:shuffle", ()); }
+                        "repeat" => { let _ = app.emit("menu:repeat", ()); }
+                        "now_playing" => { let _ = app.emit("menu:now_playing", ()); }
+                        "search" => { let _ = app.emit("menu:search", ()); }
+                        "library" => { let _ = app.emit("menu:library", ()); }
+                        "queue" => { let _ = app.emit("menu:queue", ()); }
+                        _ => {}
+                    }
+                });
+            }
+
+            #[cfg(target_os = "macos")]
+            match event {
+                tauri::RunEvent::ExitRequested { api, .. } => {
+                    api.prevent_exit();
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                }
+                tauri::RunEvent::Reopen { .. } => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                }
+                _ => {}
+            }
+        });
 }

@@ -1,0 +1,2214 @@
+{
+  "href": "https://api.spotify.com/v1/users/12136016183/playlists?offset=0&limit=50&locale=*",
+  "limit": 50,
+  "next": "https://api.spotify.com/v1/users/12136016183/playlists?offset=50&limit=50&locale=*",
+  "offset": 0,
+  "previous": null,
+  "total": 76,
+  "items": [
+    {
+      "collaborative": false,
+      "description": "music for indie kids© bored by all the generic indie playlists out there 😴 vibey, creative, energetic, edgy... mostly not boring. updated daily! submissions: boredindiekid.com",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/703U7VHKtXu77IIsyxVOqj"
+      },
+      "href": "https://api.spotify.com/v1/playlists/703U7VHKtXu77IIsyxVOqj",
+      "id": "703U7VHKtXu77IIsyxVOqj",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da849ba7b51af5c19a617f4d5a6b",
+          "width": null
+        }
+      ],
+      "name": "indie pop for bored indie kids",
+      "owner": {
+        "display_name": "bored indie kid",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/31nwuchas3wjnafmuc5y4245wm5u"
+        },
+        "href": "https://api.spotify.com/v1/users/31nwuchas3wjnafmuc5y4245wm5u",
+        "id": "31nwuchas3wjnafmuc5y4245wm5u",
+        "type": "user",
+        "uri": "spotify:user:31nwuchas3wjnafmuc5y4245wm5u"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAA6QLW102xfgW5Qdr2HM79mAfvmDyhp",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/703U7VHKtXu77IIsyxVOqj/tracks",
+        "total": 136
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/703U7VHKtXu77IIsyxVOqj/items",
+        "total": 136
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:703U7VHKtXu77IIsyxVOqj"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/17AQTK16Eh6MvreGRfEloe"
+      },
+      "href": "https://api.spotify.com/v1/playlists/17AQTK16Eh6MvreGRfEloe",
+      "id": "17AQTK16Eh6MvreGRfEloe",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab676d63000076a059a3eed9290743662d375903",
+          "width": null
+        }
+      ],
+      "name": "French Music Mix",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAA9G2CwKqpOwDc6P1p+7TLopzh5FY",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/17AQTK16Eh6MvreGRfEloe/tracks",
+        "total": 30
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/17AQTK16Eh6MvreGRfEloe/items",
+        "total": 30
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:17AQTK16Eh6MvreGRfEloe"
+    },
+    {
+      "collaborative": false,
+      "description": "LoFi House nostalgic to dream and dance. Melodic &amp; Chill - dance like nobody's watching. With dj poolboi, Blimp, Shaolin Cowboy, sunflwr, Dj Boring, Ross from friends, DJ Houseplants, Good Luck,  upper class, Mall Grab, DJ ÆDIDIAS, sideluv...",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/6XgO4pzaf0fVylRejHCMsx"
+      },
+      "href": "https://api.spotify.com/v1/playlists/6XgO4pzaf0fVylRejHCMsx",
+      "id": "6XgO4pzaf0fVylRejHCMsx",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84ced6f698914d2fef30b35332",
+          "width": null
+        }
+      ],
+      "name": "House LoFi ",
+      "owner": {
+        "display_name": "55 MUSIC",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/gd3yexq7dd2dryqq4m94d5hom"
+        },
+        "href": "https://api.spotify.com/v1/users/gd3yexq7dd2dryqq4m94d5hom",
+        "id": "gd3yexq7dd2dryqq4m94d5hom",
+        "type": "user",
+        "uri": "spotify:user:gd3yexq7dd2dryqq4m94d5hom"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAABOf8HKWTF56Pwd/byC2swKxAKcrc6",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/6XgO4pzaf0fVylRejHCMsx/tracks",
+        "total": 220
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/6XgO4pzaf0fVylRejHCMsx/items",
+        "total": 220
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:6XgO4pzaf0fVylRejHCMsx"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/4z63SgTa2O2A34J3telWNo"
+      },
+      "href": "https://api.spotify.com/v1/playlists/4z63SgTa2O2A34J3telWNo",
+      "id": "4z63SgTa2O2A34J3telWNo",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84b1f4e0498aee4157a47e3f9f",
+          "width": null
+        }
+      ],
+      "name": "Transmit",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAADMI7JPKhrvE9cwqXv8gHyWIxP4wU",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/4z63SgTa2O2A34J3telWNo/tracks",
+        "total": 10
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/4z63SgTa2O2A34J3telWNo/items",
+        "total": 10
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:4z63SgTa2O2A34J3telWNo"
+    },
+    {
+      "collaborative": false,
+      "description": "Go in deep into psychedelic rock world. Tame Impala, King Gizzard, Psychedelic Porn Crumpets, The Black Angels, Temples, Brian Jonestown Massacre. Add music: Summer Dream or SonnenKraut. DAILY updated! Submissions: submithub.com&#x2F;to&#x2F;alex-r",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/24LgRN5pEkRjBPbR31kMku"
+      },
+      "href": "https://api.spotify.com/v1/playlists/24LgRN5pEkRjBPbR31kMku",
+      "id": "24LgRN5pEkRjBPbR31kMku",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8468316fa98b8e099e9e037dfe",
+          "width": null
+        }
+      ],
+      "name": "Psychedelia for when you've heard enough Tame Impala",
+      "owner": {
+        "display_name": "Alex Ruiz Llorens",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/112425817"
+        },
+        "href": "https://api.spotify.com/v1/users/112425817",
+        "id": "112425817",
+        "type": "user",
+        "uri": "spotify:user:112425817"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAfe2eSyEFORp4WBn4Y5wdjaUpKz9T5",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/24LgRN5pEkRjBPbR31kMku/tracks",
+        "total": 88
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/24LgRN5pEkRjBPbR31kMku/items",
+        "total": 88
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:24LgRN5pEkRjBPbR31kMku"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/0bva1y47pVXdUxx7JWYRup"
+      },
+      "href": "https://api.spotify.com/v1/playlists/0bva1y47pVXdUxx7JWYRup",
+      "id": "0bva1y47pVXdUxx7JWYRup",
+      "images": [
+        {
+          "height": null,
+          "url": "https://i.scdn.co/image/ab67616d00001e023feee87ba987459cd681b071",
+          "width": null
+        }
+      ],
+      "name": "Cabrio Rock",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAA+DlC2ztkR1Gn88mb//7BUwVg4pY",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/0bva1y47pVXdUxx7JWYRup/tracks",
+        "total": 2
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/0bva1y47pVXdUxx7JWYRup/items",
+        "total": 2
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:0bva1y47pVXdUxx7JWYRup"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/4sTzYhwszRbHAQzcNjZL3d"
+      },
+      "href": "https://api.spotify.com/v1/playlists/4sTzYhwszRbHAQzcNjZL3d",
+      "id": "4sTzYhwszRbHAQzcNjZL3d",
+      "images": null,
+      "name": "My Playlist #49",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAAbVhLED5oMwAZuSmtODjkcvtjIUI",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/4sTzYhwszRbHAQzcNjZL3d/tracks",
+        "total": 0
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/4sTzYhwszRbHAQzcNjZL3d/items",
+        "total": 0
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:4sTzYhwszRbHAQzcNjZL3d"
+    },
+    {
+      "collaborative": false,
+      "description": "All of the songs from &#x27;The Serpent&#x27; BBC&#x2F;Netflix series based on the crimes of serial killer Charles Sobhraj.",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/39Gx66nRQZ4wg2l1T7KBCr"
+      },
+      "href": "https://api.spotify.com/v1/playlists/39Gx66nRQZ4wg2l1T7KBCr",
+      "id": "39Gx66nRQZ4wg2l1T7KBCr",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da847c2fe7616918a592e1912f60",
+          "width": null
+        }
+      ],
+      "name": "THE SERPENT Complete Soundtrack",
+      "owner": {
+        "display_name": "agmp",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/agmp"
+        },
+        "href": "https://api.spotify.com/v1/users/agmp",
+        "id": "agmp",
+        "type": "user",
+        "uri": "spotify:user:agmp"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAJsBU/ulV+g5SFLvHfN/qlclVnw5o",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/39Gx66nRQZ4wg2l1T7KBCr/tracks",
+        "total": 49
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/39Gx66nRQZ4wg2l1T7KBCr/items",
+        "total": 49
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:39Gx66nRQZ4wg2l1T7KBCr"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5XupIEF3117q119ZIH4EV9"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5XupIEF3117q119ZIH4EV9",
+      "id": "5XupIEF3117q119ZIH4EV9",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e0257b6a03ba333943c9925a711ab67616d00001e02602ca5b83fe44b68074a74b2ab67616d00001e0295c5bd516c3a4adebfa4282eab67616d00001e02d68c23912ff2b475fd7bccad",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e0257b6a03ba333943c9925a711ab67616d00001e02602ca5b83fe44b68074a74b2ab67616d00001e0295c5bd516c3a4adebfa4282eab67616d00001e02d68c23912ff2b475fd7bccad",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e0257b6a03ba333943c9925a711ab67616d00001e02602ca5b83fe44b68074a74b2ab67616d00001e0295c5bd516c3a4adebfa4282eab67616d00001e02d68c23912ff2b475fd7bccad",
+          "width": 60
+        }
+      ],
+      "name": "Roadsie",
+      "owner": {
+        "display_name": "Valeria Yáñez",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/22i72mpvr4nkfr7vslt4lgd2i"
+        },
+        "href": "https://api.spotify.com/v1/users/22i72mpvr4nkfr7vslt4lgd2i",
+        "id": "22i72mpvr4nkfr7vslt4lgd2i",
+        "type": "user",
+        "uri": "spotify:user:22i72mpvr4nkfr7vslt4lgd2i"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAKVaniae8sKIM6aOqztfP3LpPlmgR",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5XupIEF3117q119ZIH4EV9/tracks",
+        "total": 40
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5XupIEF3117q119ZIH4EV9/items",
+        "total": 40
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5XupIEF3117q119ZIH4EV9"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/60Ygrd5iePxVlFvLG3Al5K"
+      },
+      "href": "https://api.spotify.com/v1/playlists/60Ygrd5iePxVlFvLG3Al5K",
+      "id": "60Ygrd5iePxVlFvLG3Al5K",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e024050cee3c77374ac009bcb70ab67616d00001e02431ac6e6f393acf475730ec6ab67616d00001e025441385a429db5c8bc129a73ab67616d00001e02772c8ad8cfe3474f36bbad4a",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e024050cee3c77374ac009bcb70ab67616d00001e02431ac6e6f393acf475730ec6ab67616d00001e025441385a429db5c8bc129a73ab67616d00001e02772c8ad8cfe3474f36bbad4a",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e024050cee3c77374ac009bcb70ab67616d00001e02431ac6e6f393acf475730ec6ab67616d00001e025441385a429db5c8bc129a73ab67616d00001e02772c8ad8cfe3474f36bbad4a",
+          "width": 60
+        }
+      ],
+      "name": "his rope (and other belongings)",
+      "owner": {
+        "display_name": "eryn",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/me0wsies"
+        },
+        "href": "https://api.spotify.com/v1/users/me0wsies",
+        "id": "me0wsies",
+        "type": "user",
+        "uri": "spotify:user:me0wsies"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAABxsHCKO1G//V8xGTEf7YisyUIGS5",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/60Ygrd5iePxVlFvLG3Al5K/tracks",
+        "total": 6
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/60Ygrd5iePxVlFvLG3Al5K/items",
+        "total": 6
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:60Ygrd5iePxVlFvLG3Al5K"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/3ktffshPJnztN5IqUTqoqI"
+      },
+      "href": "https://api.spotify.com/v1/playlists/3ktffshPJnztN5IqUTqoqI",
+      "id": "3ktffshPJnztN5IqUTqoqI",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e020459eca6447d2fbbc0a4dff5ab67616d00001e022985511a2874f788dbcfc467ab67616d00001e023d497422da5fc2d2065f04abab67616d00001e0246a4b8cfdcf481e98b6c4eef",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e020459eca6447d2fbbc0a4dff5ab67616d00001e022985511a2874f788dbcfc467ab67616d00001e023d497422da5fc2d2065f04abab67616d00001e0246a4b8cfdcf481e98b6c4eef",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e020459eca6447d2fbbc0a4dff5ab67616d00001e022985511a2874f788dbcfc467ab67616d00001e023d497422da5fc2d2065f04abab67616d00001e0246a4b8cfdcf481e98b6c4eef",
+          "width": 60
+        }
+      ],
+      "name": "Deutsch",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAACtd2rHfjznB+uxRdXeSNR+Jdhq+3",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/3ktffshPJnztN5IqUTqoqI/tracks",
+        "total": 9
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/3ktffshPJnztN5IqUTqoqI/items",
+        "total": 9
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:3ktffshPJnztN5IqUTqoqI"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/1sfVMxwIDtRqJ4d5oWCOml"
+      },
+      "href": "https://api.spotify.com/v1/playlists/1sfVMxwIDtRqJ4d5oWCOml",
+      "id": "1sfVMxwIDtRqJ4d5oWCOml",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da849651b4ce027e8255169b4c54",
+          "width": null
+        }
+      ],
+      "name": "Look... I found Jazz",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAYSJJTDOZ6+nSys7aYneuMgLY0R4H",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/1sfVMxwIDtRqJ4d5oWCOml/tracks",
+        "total": 112
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/1sfVMxwIDtRqJ4d5oWCOml/items",
+        "total": 112
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:1sfVMxwIDtRqJ4d5oWCOml"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/3CxawSlesyc447sTSu8mdk"
+      },
+      "href": "https://api.spotify.com/v1/playlists/3CxawSlesyc447sTSu8mdk",
+      "id": "3CxawSlesyc447sTSu8mdk",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8426cc005ce517889df2a7e24b",
+          "width": null
+        }
+      ],
+      "name": "Poison Heart",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAFDWj6vWAamMUtrL8h6xgNijbZnXl",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/3CxawSlesyc447sTSu8mdk/tracks",
+        "total": 18
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/3CxawSlesyc447sTSu8mdk/items",
+        "total": 18
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:3CxawSlesyc447sTSu8mdk"
+    },
+    {
+      "collaborative": false,
+      "description": "Its when your virtues define your world",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/4mgrWDi352xqjUpFnHtrxq"
+      },
+      "href": "https://api.spotify.com/v1/playlists/4mgrWDi352xqjUpFnHtrxq",
+      "id": "4mgrWDi352xqjUpFnHtrxq",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84e32e7115657f80c71f713c55",
+          "width": null
+        }
+      ],
+      "name": "Summer Indie",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAXpk6rMwnTyXKyNuDmF3AmV5CWdTo",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/4mgrWDi352xqjUpFnHtrxq/tracks",
+        "total": 86
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/4mgrWDi352xqjUpFnHtrxq/items",
+        "total": 86
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:4mgrWDi352xqjUpFnHtrxq"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/6Cj2Y2LzshuOD4CxJN1REo"
+      },
+      "href": "https://api.spotify.com/v1/playlists/6Cj2Y2LzshuOD4CxJN1REo",
+      "id": "6Cj2Y2LzshuOD4CxJN1REo",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e020b4030ffa50c1455cf100a5fab67616d00001e024550984b6c24e07d13809d35ab67616d00001e028d3278424c23e8a7e53f10cbab67616d00001e02f461454fcfbfdb099d9f20cd",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e020b4030ffa50c1455cf100a5fab67616d00001e024550984b6c24e07d13809d35ab67616d00001e028d3278424c23e8a7e53f10cbab67616d00001e02f461454fcfbfdb099d9f20cd",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e020b4030ffa50c1455cf100a5fab67616d00001e024550984b6c24e07d13809d35ab67616d00001e028d3278424c23e8a7e53f10cbab67616d00001e02f461454fcfbfdb099d9f20cd",
+          "width": 60
+        }
+      ],
+      "name": "Juke 0x01",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAOjHxy67i3sVcMqh6DiyGRL1ehSJb",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/6Cj2Y2LzshuOD4CxJN1REo/tracks",
+        "total": 48
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/6Cj2Y2LzshuOD4CxJN1REo/items",
+        "total": 48
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:6Cj2Y2LzshuOD4CxJN1REo"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/6np6BtpzDxtna0mf82SvR5"
+      },
+      "href": "https://api.spotify.com/v1/playlists/6np6BtpzDxtna0mf82SvR5",
+      "id": "6np6BtpzDxtna0mf82SvR5",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e024494c44870e1de47d6461532ab67616d00001e0252f0def0db70d374791610c8ab67616d00001e0282de1ca074ae63cb18fce335ab67616d00001e029864cde735cd34370e4ec3bf",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e024494c44870e1de47d6461532ab67616d00001e0252f0def0db70d374791610c8ab67616d00001e0282de1ca074ae63cb18fce335ab67616d00001e029864cde735cd34370e4ec3bf",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e024494c44870e1de47d6461532ab67616d00001e0252f0def0db70d374791610c8ab67616d00001e0282de1ca074ae63cb18fce335ab67616d00001e029864cde735cd34370e4ec3bf",
+          "width": 60
+        }
+      ],
+      "name": "Reggaeton 0x01",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAACkwyqtfXrg/GVA5rekuv9xxrNP1V",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/6np6BtpzDxtna0mf82SvR5/tracks",
+        "total": 7
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/6np6BtpzDxtna0mf82SvR5/items",
+        "total": 7
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:6np6BtpzDxtna0mf82SvR5"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/2B7gube9cLFk1pI0QBLrtL"
+      },
+      "href": "https://api.spotify.com/v1/playlists/2B7gube9cLFk1pI0QBLrtL",
+      "id": "2B7gube9cLFk1pI0QBLrtL",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da844315ec7a23a26c1019cb10ff",
+          "width": null
+        }
+      ],
+      "name": "На русском",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAOAHGb0kAp8fKQZaqpPefQJPjg4VO",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/2B7gube9cLFk1pI0QBLrtL/tracks",
+        "total": 38
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/2B7gube9cLFk1pI0QBLrtL/items",
+        "total": 38
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:2B7gube9cLFk1pI0QBLrtL"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5CkPJVUD2qQ9DMUiixuwyF"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5CkPJVUD2qQ9DMUiixuwyF",
+      "id": "5CkPJVUD2qQ9DMUiixuwyF",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e026d12ab0ef7e234c1767563ddab67616d00001e02713fd7ef62a78a7ae3cb3d86ab67616d00001e02b00c510f182b92234ca2b93dab67616d00001e02f6c18a7c473b03211ecb551b",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e026d12ab0ef7e234c1767563ddab67616d00001e02713fd7ef62a78a7ae3cb3d86ab67616d00001e02b00c510f182b92234ca2b93dab67616d00001e02f6c18a7c473b03211ecb551b",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e026d12ab0ef7e234c1767563ddab67616d00001e02713fd7ef62a78a7ae3cb3d86ab67616d00001e02b00c510f182b92234ca2b93dab67616d00001e02f6c18a7c473b03211ecb551b",
+          "width": 60
+        }
+      ],
+      "name": "Too Punk To Suck",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAE3tG3v8vNnCSpvAxWB+F9hDqdzWm",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5CkPJVUD2qQ9DMUiixuwyF/tracks",
+        "total": 18
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5CkPJVUD2qQ9DMUiixuwyF/items",
+        "total": 18
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5CkPJVUD2qQ9DMUiixuwyF"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5FlRUnm1EhbVWNJVeOnVTw"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5FlRUnm1EhbVWNJVeOnVTw",
+      "id": "5FlRUnm1EhbVWNJVeOnVTw",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e0274ad7a1e5f14d70d0a477bdbab67616d00001e0278e62a33f64526e737dab482ab67616d00001e028b04dacf186124a62bc667a7ab67616d00001e02e7cd256893602f6973f4e70d",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e0274ad7a1e5f14d70d0a477bdbab67616d00001e0278e62a33f64526e737dab482ab67616d00001e028b04dacf186124a62bc667a7ab67616d00001e02e7cd256893602f6973f4e70d",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e0274ad7a1e5f14d70d0a477bdbab67616d00001e0278e62a33f64526e737dab482ab67616d00001e028b04dacf186124a62bc667a7ab67616d00001e02e7cd256893602f6973f4e70d",
+          "width": 60
+        }
+      ],
+      "name": "Breton vs Foals",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAA+oFYFOmx9VwEoeSJ25LTzBGrwPJ",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5FlRUnm1EhbVWNJVeOnVTw/tracks",
+        "total": 29
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5FlRUnm1EhbVWNJVeOnVTw/items",
+        "total": 29
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5FlRUnm1EhbVWNJVeOnVTw"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5T3TediobBpbDbafBRCqeI"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5T3TediobBpbDbafBRCqeI",
+      "id": "5T3TediobBpbDbafBRCqeI",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da845dd4c068e0e49bee70441b0b",
+          "width": null
+        }
+      ],
+      "name": "Slow down to enjoy",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAK96HHa/S130FhkfAhGWEKxj+GbF7",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5T3TediobBpbDbafBRCqeI/tracks",
+        "total": 39
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5T3TediobBpbDbafBRCqeI/items",
+        "total": 39
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5T3TediobBpbDbafBRCqeI"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/2UNvj6aQuqtGyuzkJg9Kdy"
+      },
+      "href": "https://api.spotify.com/v1/playlists/2UNvj6aQuqtGyuzkJg9Kdy",
+      "id": "2UNvj6aQuqtGyuzkJg9Kdy",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84643c33a5a44371cb425ab9a3",
+          "width": null
+        }
+      ],
+      "name": "Flatbush Hip-Hop Mood",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAMA/Aj+PqoxieKgMZAlSI9RX2ST4a",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/2UNvj6aQuqtGyuzkJg9Kdy/tracks",
+        "total": 39
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/2UNvj6aQuqtGyuzkJg9Kdy/items",
+        "total": 39
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:2UNvj6aQuqtGyuzkJg9Kdy"
+    },
+    {
+      "collaborative": false,
+      "description": "Enjoy one of my most favorite male voices",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5oU1TxYUj9JVKzCUiPBaer"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5oU1TxYUj9JVKzCUiPBaer",
+      "id": "5oU1TxYUj9JVKzCUiPBaer",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84887badbaf149eb2bf4e9938e",
+          "width": null
+        }
+      ],
+      "name": "🤓 Matt \"Sad Dad\" Berninger",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAHwtu0e7opOT9BnP7msOOGNzXd2+J",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5oU1TxYUj9JVKzCUiPBaer/tracks",
+        "total": 35
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5oU1TxYUj9JVKzCUiPBaer/items",
+        "total": 35
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5oU1TxYUj9JVKzCUiPBaer"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/065l3LAdErFhNsYUOYnJE6"
+      },
+      "href": "https://api.spotify.com/v1/playlists/065l3LAdErFhNsYUOYnJE6",
+      "id": "065l3LAdErFhNsYUOYnJE6",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da842030aefffa0785174f6736f4",
+          "width": null
+        }
+      ],
+      "name": "Middle Eastern Jazz",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAQSpa3WCJtL9HWvjq9icNgN5rSWPv",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/065l3LAdErFhNsYUOYnJE6/tracks",
+        "total": 60
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/065l3LAdErFhNsYUOYnJE6/items",
+        "total": 60
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:065l3LAdErFhNsYUOYnJE6"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/7EMHwTXgB12qZ9TNMy8e4f"
+      },
+      "href": "https://api.spotify.com/v1/playlists/7EMHwTXgB12qZ9TNMy8e4f",
+      "id": "7EMHwTXgB12qZ9TNMy8e4f",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84fdc65cd4b638befbb574c7f4",
+          "width": null
+        }
+      ],
+      "name": "when you feel like pop punk",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAERPJ25jO9JF4bBbTW2Rw4Axr46/h",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/7EMHwTXgB12qZ9TNMy8e4f/tracks",
+        "total": 8
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/7EMHwTXgB12qZ9TNMy8e4f/items",
+        "total": 8
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:7EMHwTXgB12qZ9TNMy8e4f"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/6PQz0ozQU3ZGeVhsF6qxbx"
+      },
+      "href": "https://api.spotify.com/v1/playlists/6PQz0ozQU3ZGeVhsF6qxbx",
+      "id": "6PQz0ozQU3ZGeVhsF6qxbx",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8433b15ba98870eda88840bccf",
+          "width": null
+        }
+      ],
+      "name": "No one knows we’re dancing",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAIZSjX9YobSCunit6BR3v1KGWld5y",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/6PQz0ozQU3ZGeVhsF6qxbx/tracks",
+        "total": 29
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/6PQz0ozQU3ZGeVhsF6qxbx/items",
+        "total": 29
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:6PQz0ozQU3ZGeVhsF6qxbx"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/6CxV9f9pfrCIx0B2cpHJPf"
+      },
+      "href": "https://api.spotify.com/v1/playlists/6CxV9f9pfrCIx0B2cpHJPf",
+      "id": "6CxV9f9pfrCIx0B2cpHJPf",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8414af1428e233de0cb0b44544",
+          "width": null
+        }
+      ],
+      "name": "Music for dancing mind",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAdNSBTAWEJV1FV98/DrJk7sfVsLY9",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/6CxV9f9pfrCIx0B2cpHJPf/tracks",
+        "total": 129
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/6CxV9f9pfrCIx0B2cpHJPf/items",
+        "total": 129
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:6CxV9f9pfrCIx0B2cpHJPf"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/7q7GTbetRL6UIvlG0QPghm"
+      },
+      "href": "https://api.spotify.com/v1/playlists/7q7GTbetRL6UIvlG0QPghm",
+      "id": "7q7GTbetRL6UIvlG0QPghm",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8413fb927d1c4f6eeaf38e1212",
+          "width": null
+        }
+      ],
+      "name": "Hi depression, my good old friend",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAEKEGPDYyoMN2W/Zm1eq05o14AFCo",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/7q7GTbetRL6UIvlG0QPghm/tracks",
+        "total": 12
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/7q7GTbetRL6UIvlG0QPghm/items",
+        "total": 12
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:7q7GTbetRL6UIvlG0QPghm"
+    },
+    {
+      "collaborative": false,
+      "description": "Experience pure love energy. Healing music based on miracle tone 639Hz – harmonize relationships, attract &amp; raise positivity.",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/39BtOge1qGyphKrghtISJi"
+      },
+      "href": "https://api.spotify.com/v1/playlists/39BtOge1qGyphKrghtISJi",
+      "id": "39BtOge1qGyphKrghtISJi",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8416d87a773c5c85713a825f1d",
+          "width": null
+        }
+      ],
+      "name": "639 hz love frequency 💗 manifestation - heart chakra",
+      "owner": {
+        "display_name": "Miracle Tones",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/l5spk0tjwmedfp93zv3x3gfv1"
+        },
+        "href": "https://api.spotify.com/v1/users/l5spk0tjwmedfp93zv3x3gfv1",
+        "id": "l5spk0tjwmedfp93zv3x3gfv1",
+        "type": "user",
+        "uri": "spotify:user:l5spk0tjwmedfp93zv3x3gfv1"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAADptLYATFJCwHvL06OuRsce7VqtiwG",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/39BtOge1qGyphKrghtISJi/tracks",
+        "total": 419
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/39BtOge1qGyphKrghtISJi/items",
+        "total": 419
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:39BtOge1qGyphKrghtISJi"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/6ihvBcGgaxwzXecTSz3xql"
+      },
+      "href": "https://api.spotify.com/v1/playlists/6ihvBcGgaxwzXecTSz3xql",
+      "id": "6ihvBcGgaxwzXecTSz3xql",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e021cb502394f162150c508522aab67616d00001e024400af0debecb047939c9254ab67616d00001e02d4390b4ffae7c240a645d90eab67616d00001e02e01c852d05b0802e68ec35b8",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e021cb502394f162150c508522aab67616d00001e024400af0debecb047939c9254ab67616d00001e02d4390b4ffae7c240a645d90eab67616d00001e02e01c852d05b0802e68ec35b8",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e021cb502394f162150c508522aab67616d00001e024400af0debecb047939c9254ab67616d00001e02d4390b4ffae7c240a645d90eab67616d00001e02e01c852d05b0802e68ec35b8",
+          "width": 60
+        }
+      ],
+      "name": "Dirty rock",
+      "owner": {
+        "display_name": "Veksell",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/7k92cb9odnpdijabw2g3yd8bh"
+        },
+        "href": "https://api.spotify.com/v1/users/7k92cb9odnpdijabw2g3yd8bh",
+        "id": "7k92cb9odnpdijabw2g3yd8bh",
+        "type": "user",
+        "uri": "spotify:user:7k92cb9odnpdijabw2g3yd8bh"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAXHfxOwzxFCvo8Kc9H7vUMHXr7gD9",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/6ihvBcGgaxwzXecTSz3xql/tracks",
+        "total": 89
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/6ihvBcGgaxwzXecTSz3xql/items",
+        "total": 89
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:6ihvBcGgaxwzXecTSz3xql"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/2W9npUGhPBOYb7JjX21PIO"
+      },
+      "href": "https://api.spotify.com/v1/playlists/2W9npUGhPBOYb7JjX21PIO",
+      "id": "2W9npUGhPBOYb7JjX21PIO",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e02696127377dec19888b30514cab67616d00001e02c8bd088c6f973c16c818df7bab67616d00001e02ccdddd46119a4ff53eaf1f5dab67616d00001e02d3a81900a475468fd70cb294",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e02696127377dec19888b30514cab67616d00001e02c8bd088c6f973c16c818df7bab67616d00001e02ccdddd46119a4ff53eaf1f5dab67616d00001e02d3a81900a475468fd70cb294",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e02696127377dec19888b30514cab67616d00001e02c8bd088c6f973c16c818df7bab67616d00001e02ccdddd46119a4ff53eaf1f5dab67616d00001e02d3a81900a475468fd70cb294",
+          "width": 60
+        }
+      ],
+      "name": "Wachuma pisac 🏔️🌵",
+      "owner": {
+        "display_name": "Vitaliy Malykhin",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/1218521066"
+        },
+        "href": "https://api.spotify.com/v1/users/1218521066",
+        "id": "1218521066",
+        "type": "user",
+        "uri": "spotify:user:1218521066"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAsTSrTwuhqlPBCrElE9xzPSP6Bw3S",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/2W9npUGhPBOYb7JjX21PIO/tracks",
+        "total": 166
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/2W9npUGhPBOYb7JjX21PIO/items",
+        "total": 166
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:2W9npUGhPBOYb7JjX21PIO"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/3YWYm47zuYJqrKJMPfiEOY"
+      },
+      "href": "https://api.spotify.com/v1/playlists/3YWYm47zuYJqrKJMPfiEOY",
+      "id": "3YWYm47zuYJqrKJMPfiEOY",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e023b22de5d2cc215a307d48732ab67616d00001e0262100064780b1d919a95fcf4ab67616d00001e0291390d24abb65f6fae0323f0ab67616d00001e02a64b06c0eb30ce15c3e6edc1",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e023b22de5d2cc215a307d48732ab67616d00001e0262100064780b1d919a95fcf4ab67616d00001e0291390d24abb65f6fae0323f0ab67616d00001e02a64b06c0eb30ce15c3e6edc1",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e023b22de5d2cc215a307d48732ab67616d00001e0262100064780b1d919a95fcf4ab67616d00001e0291390d24abb65f6fae0323f0ab67616d00001e02a64b06c0eb30ce15c3e6edc1",
+          "width": 60
+        }
+      ],
+      "name": "Saturday Trip",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAbK+PLxNeRZ0cssKUzgbSG2hA6Cs7",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/3YWYm47zuYJqrKJMPfiEOY/tracks",
+        "total": 107
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/3YWYm47zuYJqrKJMPfiEOY/items",
+        "total": 107
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:3YWYm47zuYJqrKJMPfiEOY"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/1ub8j137e4nDEp6dIxQjln"
+      },
+      "href": "https://api.spotify.com/v1/playlists/1ub8j137e4nDEp6dIxQjln",
+      "id": "1ub8j137e4nDEp6dIxQjln",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e022e92f776279eaf45d14a33fdab67616d00001e02712701c5e263efc8726b1464ab67616d00001e027aede4855f6d0d738012e2e5ab67616d00001e02c5649add07ed3720be9d5526",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e022e92f776279eaf45d14a33fdab67616d00001e02712701c5e263efc8726b1464ab67616d00001e027aede4855f6d0d738012e2e5ab67616d00001e02c5649add07ed3720be9d5526",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e022e92f776279eaf45d14a33fdab67616d00001e02712701c5e263efc8726b1464ab67616d00001e027aede4855f6d0d738012e2e5ab67616d00001e02c5649add07ed3720be9d5526",
+          "width": 60
+        }
+      ],
+      "name": "Pal trip",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAIO3RDyAdv+muPsF0LgrIojPXLjOd",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/1ub8j137e4nDEp6dIxQjln/tracks",
+        "total": 31
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/1ub8j137e4nDEp6dIxQjln/items",
+        "total": 31
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:1ub8j137e4nDEp6dIxQjln"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/3brTdKMTC04c0F4nkCMMmB"
+      },
+      "href": "https://api.spotify.com/v1/playlists/3brTdKMTC04c0F4nkCMMmB",
+      "id": "3brTdKMTC04c0F4nkCMMmB",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e02038cd7ac0ad5f0dccfe68569ab67616d00001e020dcfabe232381bc5219e9075ab67616d00001e0277196c639096c2b924cdc02aab67616d00001e02ba55b146199b57729eca3561",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e02038cd7ac0ad5f0dccfe68569ab67616d00001e020dcfabe232381bc5219e9075ab67616d00001e0277196c639096c2b924cdc02aab67616d00001e02ba55b146199b57729eca3561",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e02038cd7ac0ad5f0dccfe68569ab67616d00001e020dcfabe232381bc5219e9075ab67616d00001e0277196c639096c2b924cdc02aab67616d00001e02ba55b146199b57729eca3561",
+          "width": 60
+        }
+      ],
+      "name": "На крайний случай",
+      "owner": {
+        "display_name": "Nick Skublov",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/31p56nk7jzzgfzllgalspuajhui4"
+        },
+        "href": "https://api.spotify.com/v1/users/31p56nk7jzzgfzllgalspuajhui4",
+        "id": "31p56nk7jzzgfzllgalspuajhui4",
+        "type": "user",
+        "uri": "spotify:user:31p56nk7jzzgfzllgalspuajhui4"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAK0cZKhm2qq6+LbADUonc7LdcoPqt",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/3brTdKMTC04c0F4nkCMMmB/tracks",
+        "total": 39
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/3brTdKMTC04c0F4nkCMMmB/items",
+        "total": 39
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:3brTdKMTC04c0F4nkCMMmB"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5mEsEOWpIBT7YmN2HioRT6"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5mEsEOWpIBT7YmN2HioRT6",
+      "id": "5mEsEOWpIBT7YmN2HioRT6",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e02187331e276c898d39764cc98ab67616d00001e022cafcdd985630d72594ecc49ab67616d00001e0248de97658631644cc60f3c8dab67616d00001e025e6f3b66721a47e39fac4274",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e02187331e276c898d39764cc98ab67616d00001e022cafcdd985630d72594ecc49ab67616d00001e0248de97658631644cc60f3c8dab67616d00001e025e6f3b66721a47e39fac4274",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e02187331e276c898d39764cc98ab67616d00001e022cafcdd985630d72594ecc49ab67616d00001e0248de97658631644cc60f3c8dab67616d00001e025e6f3b66721a47e39fac4274",
+          "width": 60
+        }
+      ],
+      "name": "👯‍♀️ Girls songs",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAADNRREs+wALiI1IfcJjnnJieEI+Al",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5mEsEOWpIBT7YmN2HioRT6/tracks",
+        "total": 11
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5mEsEOWpIBT7YmN2HioRT6/items",
+        "total": 11
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5mEsEOWpIBT7YmN2HioRT6"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/3DLVChLzc3eQWjbZWzmbNc"
+      },
+      "href": "https://api.spotify.com/v1/playlists/3DLVChLzc3eQWjbZWzmbNc",
+      "id": "3DLVChLzc3eQWjbZWzmbNc",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8421f161681ae43fab7f0d89ef",
+          "width": null
+        }
+      ],
+      "name": "Glitch titles u will never find ",
+      "owner": {
+        "display_name": "Tripping",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12177418221"
+        },
+        "href": "https://api.spotify.com/v1/users/12177418221",
+        "id": "12177418221",
+        "type": "user",
+        "uri": "spotify:user:12177418221"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAIbw1Dp6motAvSBLggveqpIzGYcmT",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/3DLVChLzc3eQWjbZWzmbNc/tracks",
+        "total": 28
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/3DLVChLzc3eQWjbZWzmbNc/items",
+        "total": 28
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:3DLVChLzc3eQWjbZWzmbNc"
+    },
+    {
+      "collaborative": false,
+      "description": "Soulquarians related and a couple extra. Erykah Badu, Questlove &#x2F; Roots, Common, J Dilla &#x2F; Jay Dee, Pino Palladino, James Poyser, D&#x27;Angelo, Bilal, Roy Hargrove, QTip, Talib Kweli, Yasiin Bey &#x2F; Mos Def",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/7kyplVNsNfKYBblFjf9zIE"
+      },
+      "href": "https://api.spotify.com/v1/playlists/7kyplVNsNfKYBblFjf9zIE",
+      "id": "7kyplVNsNfKYBblFjf9zIE",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8482644f916381ead214922812",
+          "width": null
+        }
+      ],
+      "name": "Soulquarians Definitive Mix",
+      "owner": {
+        "display_name": "freshlymade",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/freshlymade"
+        },
+        "href": "https://api.spotify.com/v1/users/freshlymade",
+        "id": "freshlymade",
+        "type": "user",
+        "uri": "spotify:user:freshlymade"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAABMw5+KJu07QWtLGi41lkzZh47VjoZ",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/7kyplVNsNfKYBblFjf9zIE/tracks",
+        "total": 76
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/7kyplVNsNfKYBblFjf9zIE/items",
+        "total": 76
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:7kyplVNsNfKYBblFjf9zIE"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/36yjaNgZDQaToHqMKPX9au"
+      },
+      "href": "https://api.spotify.com/v1/playlists/36yjaNgZDQaToHqMKPX9au",
+      "id": "36yjaNgZDQaToHqMKPX9au",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67656300005f1f58fd17eaeff7420c9425722aab67656300005f1f8902f110e7cdb60608910fb4ab67656300005f1faebf288621ea86c79d44f12fab67656300005f1ff42fec496ce1704bc60341c3",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67656300005f1f58fd17eaeff7420c9425722aab67656300005f1f8902f110e7cdb60608910fb4ab67656300005f1faebf288621ea86c79d44f12fab67656300005f1ff42fec496ce1704bc60341c3",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67656300005f1f58fd17eaeff7420c9425722aab67656300005f1f8902f110e7cdb60608910fb4ab67656300005f1faebf288621ea86c79d44f12fab67656300005f1ff42fec496ce1704bc60341c3",
+          "width": 60
+        }
+      ],
+      "name": "Seth Godin_The Best",
+      "owner": {
+        "display_name": "MightyPixel",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/luvyato2002"
+        },
+        "href": "https://api.spotify.com/v1/users/luvyato2002",
+        "id": "luvyato2002",
+        "type": "user",
+        "uri": "spotify:user:luvyato2002"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAcSI9mScwGv0UkTa8wYn2nfwlEcFp",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/36yjaNgZDQaToHqMKPX9au/tracks",
+        "total": 61
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/36yjaNgZDQaToHqMKPX9au/items",
+        "total": 61
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:36yjaNgZDQaToHqMKPX9au"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/3tABchxUoH9t7aOOG9daZm"
+      },
+      "href": "https://api.spotify.com/v1/playlists/3tABchxUoH9t7aOOG9daZm",
+      "id": "3tABchxUoH9t7aOOG9daZm",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8450662809fa8ad3bd24f07811",
+          "width": null
+        }
+      ],
+      "name": "Fyfe & Iskra Strings",
+      "owner": {
+        "display_name": "Iskra Strings",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/33yl22xx1aic617fxquv39jfs"
+        },
+        "href": "https://api.spotify.com/v1/users/33yl22xx1aic617fxquv39jfs",
+        "id": "33yl22xx1aic617fxquv39jfs",
+        "type": "user",
+        "uri": "spotify:user:33yl22xx1aic617fxquv39jfs"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAVXR/EhpK73O4Oxj7IJpzpDQ3BLqc",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/3tABchxUoH9t7aOOG9daZm/tracks",
+        "total": 17
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/3tABchxUoH9t7aOOG9daZm/items",
+        "total": 17
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:3tABchxUoH9t7aOOG9daZm"
+    },
+    {
+      "collaborative": false,
+      "description": "A playlist based on your style. You’re Going Out Tonight. You’re wearing Green, Purple, and Pink. Your vibe is Cozy.",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5I3bAD73e0FJEDTppVX7jk"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5I3bAD73e0FJEDTppVX7jk",
+      "id": "5I3bAD73e0FJEDTppVX7jk",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84bff5eb5169dcf2b04f45be5a",
+          "width": null
+        }
+      ],
+      "name": "GetReadyWithVitaly 09.22.22",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAABBpeaywPE+WOLL6Uh0H9Gvaoy4f6",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5I3bAD73e0FJEDTppVX7jk/tracks",
+        "total": 30
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5I3bAD73e0FJEDTppVX7jk/items",
+        "total": 30
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5I3bAD73e0FJEDTppVX7jk"
+    },
+    {
+      "collaborative": false,
+      "description": "Las canciones se añaden automáticamente a esta lista de reproducción cada vez que utilizas Shazam.",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/2AaxTMgqwKhBKsEnfFnNww"
+      },
+      "href": "https://api.spotify.com/v1/playlists/2AaxTMgqwKhBKsEnfFnNww",
+      "id": "2AaxTMgqwKhBKsEnfFnNww",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e023097b158521175c7f2608047ab67616d00001e0250b5922bdf87ba4213b25234ab67616d00001e02c160ede886e4e54350c0cec9ab67616d00001e02d090f1a598fea444a0e0f15a",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e023097b158521175c7f2608047ab67616d00001e0250b5922bdf87ba4213b25234ab67616d00001e02c160ede886e4e54350c0cec9ab67616d00001e02d090f1a598fea444a0e0f15a",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e023097b158521175c7f2608047ab67616d00001e0250b5922bdf87ba4213b25234ab67616d00001e02c160ede886e4e54350c0cec9ab67616d00001e02d090f1a598fea444a0e0f15a",
+          "width": 60
+        }
+      ],
+      "name": "Mis pistas de Shazam",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAFEH5MFPxPXN1u6jiQWdmfsQULdOc",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/2AaxTMgqwKhBKsEnfFnNww/tracks",
+        "total": 17
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/2AaxTMgqwKhBKsEnfFnNww/items",
+        "total": 17
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:2AaxTMgqwKhBKsEnfFnNww"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5GioZStPAul6cdF0Sxc21F"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5GioZStPAul6cdF0Sxc21F",
+      "id": "5GioZStPAul6cdF0Sxc21F",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da8485c81fedd34a68fc542b0c1d",
+          "width": null
+        }
+      ],
+      "name": "prod x alvso.",
+      "owner": {
+        "display_name": "Alvso",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/4udxh1ru03tfh2ub6xevvhjtu"
+        },
+        "href": "https://api.spotify.com/v1/users/4udxh1ru03tfh2ub6xevvhjtu",
+        "id": "4udxh1ru03tfh2ub6xevvhjtu",
+        "type": "user",
+        "uri": "spotify:user:4udxh1ru03tfh2ub6xevvhjtu"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAnBcbE9ERVDR7vwRMtaFzjs1eshyB",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5GioZStPAul6cdF0Sxc21F/tracks",
+        "total": 37
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5GioZStPAul6cdF0Sxc21F/items",
+        "total": 37
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5GioZStPAul6cdF0Sxc21F"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/3rlcDEW9HhdhSjob8o3dTZ"
+      },
+      "href": "https://api.spotify.com/v1/playlists/3rlcDEW9HhdhSjob8o3dTZ",
+      "id": "3rlcDEW9HhdhSjob8o3dTZ",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e02141085e6b096e8e012b75415ab67616d00001e0244f59a85db58f8f56a078e53ab67616d00001e025d42af94ddf824bf3a6ecb90ab67616d00001e02787f3eab625e0cafebbc083d",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e02141085e6b096e8e012b75415ab67616d00001e0244f59a85db58f8f56a078e53ab67616d00001e025d42af94ddf824bf3a6ecb90ab67616d00001e02787f3eab625e0cafebbc083d",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e02141085e6b096e8e012b75415ab67616d00001e0244f59a85db58f8f56a078e53ab67616d00001e025d42af94ddf824bf3a6ecb90ab67616d00001e02787f3eab625e0cafebbc083d",
+          "width": 60
+        }
+      ],
+      "name": "Arabic Traditional Music",
+      "owner": {
+        "display_name": "Gustavo Trento",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12183737334"
+        },
+        "href": "https://api.spotify.com/v1/users/12183737334",
+        "id": "12183737334",
+        "type": "user",
+        "uri": "spotify:user:12183737334"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAK153mm+p/Xq9uNFUjAJZjARKwnih",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/3rlcDEW9HhdhSjob8o3dTZ/tracks",
+        "total": 41
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/3rlcDEW9HhdhSjob8o3dTZ/items",
+        "total": 41
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:3rlcDEW9HhdhSjob8o3dTZ"
+    },
+    {
+      "collaborative": true,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/7jxRc0LbkJoJhFPCS1WqXB"
+      },
+      "href": "https://api.spotify.com/v1/playlists/7jxRc0LbkJoJhFPCS1WqXB",
+      "id": "7jxRc0LbkJoJhFPCS1WqXB",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e0247a76a9d49717b0ed4964411ab67616d00001e02510f4492f233f87e12742636ab67616d00001e02ca08a82376a8180dfa42d0beab67616d00001e02cb029f141c25881dfb44c078",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e0247a76a9d49717b0ed4964411ab67616d00001e02510f4492f233f87e12742636ab67616d00001e02ca08a82376a8180dfa42d0beab67616d00001e02cb029f141c25881dfb44c078",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e0247a76a9d49717b0ed4964411ab67616d00001e02510f4492f233f87e12742636ab67616d00001e02ca08a82376a8180dfa42d0beab67616d00001e02cb029f141c25881dfb44c078",
+          "width": 60
+        }
+      ],
+      "name": "🎺 Sokolov 35",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAADb8/E0UX3dJsIFwBDp/bBMsVSv6xK",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/7jxRc0LbkJoJhFPCS1WqXB/tracks",
+        "total": 492
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/7jxRc0LbkJoJhFPCS1WqXB/items",
+        "total": 492
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:7jxRc0LbkJoJhFPCS1WqXB"
+    },
+    {
+      "collaborative": false,
+      "description": "DARK TRAP | TRAP METAL | MEMPHIS | PHONK | GYM MUSIC | SCREAM RAP | GYM PLAYLIST | TIRADE",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/19WuHd4MxWLzE1fpMmw4S4"
+      },
+      "href": "https://api.spotify.com/v1/playlists/19WuHd4MxWLzE1fpMmw4S4",
+      "id": "19WuHd4MxWLzE1fpMmw4S4",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84cf371ca00cd65c0d4224abce",
+          "width": null
+        }
+      ],
+      "name": "DARK TRAP",
+      "owner": {
+        "display_name": "Eradiel.exe",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/eradiel"
+        },
+        "href": "https://api.spotify.com/v1/users/eradiel",
+        "id": "eradiel",
+        "type": "user",
+        "uri": "spotify:user:eradiel"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AABAO+1OcsWp+C2r/Ra9DJnRVclS6mjY",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/19WuHd4MxWLzE1fpMmw4S4/tracks",
+        "total": 134
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/19WuHd4MxWLzE1fpMmw4S4/items",
+        "total": 134
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:19WuHd4MxWLzE1fpMmw4S4"
+    },
+    {
+      "collaborative": false,
+      "description": "thx for the pop punk revival bestie ",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/22fF9la7mCSyOuArgMoMdw"
+      },
+      "href": "https://api.spotify.com/v1/playlists/22fF9la7mCSyOuArgMoMdw",
+      "id": "22fF9la7mCSyOuArgMoMdw",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e0248ba49e891829319d82275caab67616d00001e02b5dd9044681a2e8e0d072e27ab67616d00001e02c49301002f375131e417ecc1ab67616d00001e02d2939e48fb657d72064ca699",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e0248ba49e891829319d82275caab67616d00001e02b5dd9044681a2e8e0d072e27ab67616d00001e02c49301002f375131e417ecc1ab67616d00001e02d2939e48fb657d72064ca699",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e0248ba49e891829319d82275caab67616d00001e02b5dd9044681a2e8e0d072e27ab67616d00001e02c49301002f375131e417ecc1ab67616d00001e02d2939e48fb657d72064ca699",
+          "width": 60
+        }
+      ],
+      "name": "church of travis barker.",
+      "owner": {
+        "display_name": "lexie (:",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/va01z0f1vhjg5kwzxwy87e6zs"
+        },
+        "href": "https://api.spotify.com/v1/users/va01z0f1vhjg5kwzxwy87e6zs",
+        "id": "va01z0f1vhjg5kwzxwy87e6zs",
+        "type": "user",
+        "uri": "spotify:user:va01z0f1vhjg5kwzxwy87e6zs"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAb9VogNi/BhQyk/5E/uEUlv8dTDbc",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/22fF9la7mCSyOuArgMoMdw/tracks",
+        "total": 84
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/22fF9la7mCSyOuArgMoMdw/items",
+        "total": 84
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:22fF9la7mCSyOuArgMoMdw"
+    },
+    {
+      "collaborative": false,
+      "description": "Tickets To My Downfall (SOLD OUT Deluxe) out now!",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/488jkEU6ZeooqvPL6PpPwu"
+      },
+      "href": "https://api.spotify.com/v1/playlists/488jkEU6ZeooqvPL6PpPwu",
+      "id": "488jkEU6ZeooqvPL6PpPwu",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da84736eb1e0c50028d6add389b5",
+          "width": null
+        }
+      ],
+      "name": "Tickets To My Downfall",
+      "owner": {
+        "display_name": "mgk",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/machinegunkellyak"
+        },
+        "href": "https://api.spotify.com/v1/users/machinegunkellyak",
+        "id": "machinegunkellyak",
+        "type": "user",
+        "uri": "spotify:user:machinegunkellyak"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAARwjK459HwJjsN0HMXZvi2tKAsjxe",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/488jkEU6ZeooqvPL6PpPwu/tracks",
+        "total": 21
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/488jkEU6ZeooqvPL6PpPwu/items",
+        "total": 21
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:488jkEU6ZeooqvPL6PpPwu"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/1dbYleINS43Kqdk0mu2qgj"
+      },
+      "href": "https://api.spotify.com/v1/playlists/1dbYleINS43Kqdk0mu2qgj",
+      "id": "1dbYleINS43Kqdk0mu2qgj",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e0208dd2d9bee0d47716c2bf35cab67616d00001e0279bc00b042eb41e9b2ca9cb8ab67616d00001e0283b00ce6d06cd0b8ae3c5e3aab67616d00001e02929658473c363e164a04ec6a",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e0208dd2d9bee0d47716c2bf35cab67616d00001e0279bc00b042eb41e9b2ca9cb8ab67616d00001e0283b00ce6d06cd0b8ae3c5e3aab67616d00001e02929658473c363e164a04ec6a",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e0208dd2d9bee0d47716c2bf35cab67616d00001e0279bc00b042eb41e9b2ca9cb8ab67616d00001e0283b00ce6d06cd0b8ae3c5e3aab67616d00001e02929658473c363e164a04ec6a",
+          "width": 60
+        }
+      ],
+      "name": "400hz",
+      "owner": {
+        "display_name": "Carol Fonta",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/22qwf2rlh4dr2hladzj5kvq4y"
+        },
+        "href": "https://api.spotify.com/v1/users/22qwf2rlh4dr2hladzj5kvq4y",
+        "id": "22qwf2rlh4dr2hladzj5kvq4y",
+        "type": "user",
+        "uri": "spotify:user:22qwf2rlh4dr2hladzj5kvq4y"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAACCJMqNeW5NkEvdGtIlZCIjrZ4mcE",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/1dbYleINS43Kqdk0mu2qgj/tracks",
+        "total": 7
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/1dbYleINS43Kqdk0mu2qgj/items",
+        "total": 7
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:1dbYleINS43Kqdk0mu2qgj"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/0vn53Z3wFOzaQiapZ1biPf"
+      },
+      "href": "https://api.spotify.com/v1/playlists/0vn53Z3wFOzaQiapZ1biPf",
+      "id": "0vn53Z3wFOzaQiapZ1biPf",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e025f2fb541bf63fc7413462731ab67616d00001e029ff2d7289a76c7a345acee8bab67616d00001e02af9e621f9b415ca51615a426ab67616d00001e02f7e55b51dac2fc2eca6057f9",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e025f2fb541bf63fc7413462731ab67616d00001e029ff2d7289a76c7a345acee8bab67616d00001e02af9e621f9b415ca51615a426ab67616d00001e02f7e55b51dac2fc2eca6057f9",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e025f2fb541bf63fc7413462731ab67616d00001e029ff2d7289a76c7a345acee8bab67616d00001e02af9e621f9b415ca51615a426ab67616d00001e02f7e55b51dac2fc2eca6057f9",
+          "width": 60
+        }
+      ],
+      "name": "",
+      "owner": {
+        "display_name": "finnmckenty",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/finnmckenty"
+        },
+        "href": "https://api.spotify.com/v1/users/finnmckenty",
+        "id": "finnmckenty",
+        "type": "user",
+        "uri": "spotify:user:finnmckenty"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAhZZTlN/DvnpQPcOdp2ev06gIuaAp",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/0vn53Z3wFOzaQiapZ1biPf/tracks",
+        "total": 79
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/0vn53Z3wFOzaQiapZ1biPf/items",
+        "total": 79
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:0vn53Z3wFOzaQiapZ1biPf"
+    },
+    {
+      "collaborative": false,
+      "description": "",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5Ljayzod6UEj5G1sLqOocY"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5Ljayzod6UEj5G1sLqOocY",
+      "id": "5Ljayzod6UEj5G1sLqOocY",
+      "images": [
+        {
+          "height": 640,
+          "url": "https://mosaic.scdn.co/640/ab67616d00001e020cfa5fc5f0f3b23f4676635dab67616d00001e02a3bc94f95c99c3ad2f40740aab67616d00001e02a668a97d2afabc23021da7ffab67616d00001e02eb8f5a57741a413b60e0498b",
+          "width": 640
+        },
+        {
+          "height": 300,
+          "url": "https://mosaic.scdn.co/300/ab67616d00001e020cfa5fc5f0f3b23f4676635dab67616d00001e02a3bc94f95c99c3ad2f40740aab67616d00001e02a668a97d2afabc23021da7ffab67616d00001e02eb8f5a57741a413b60e0498b",
+          "width": 300
+        },
+        {
+          "height": 60,
+          "url": "https://mosaic.scdn.co/60/ab67616d00001e020cfa5fc5f0f3b23f4676635dab67616d00001e02a3bc94f95c99c3ad2f40740aab67616d00001e02a668a97d2afabc23021da7ffab67616d00001e02eb8f5a57741a413b60e0498b",
+          "width": 60
+        }
+      ],
+      "name": "My Shazam Tracks",
+      "owner": {
+        "display_name": "Vitaly Baum",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/12136016183"
+        },
+        "href": "https://api.spotify.com/v1/users/12136016183",
+        "id": "12136016183",
+        "type": "user",
+        "uri": "spotify:user:12136016183"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAAAWTEHtfErjkS1uWHpIcvY7ipRFMlM",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5Ljayzod6UEj5G1sLqOocY/tracks",
+        "total": 90
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5Ljayzod6UEj5G1sLqOocY/items",
+        "total": 90
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5Ljayzod6UEj5G1sLqOocY"
+    },
+    {
+      "collaborative": false,
+      "description": "Get loud with the very best of Eastern European folk, rock and gypsy music! Visit our Bandcamp for Merchandize. ",
+      "external_urls": {
+        "spotify": "https://open.spotify.com/playlist/5Bn9hfE5G67UI3uRYfdtqO"
+      },
+      "href": "https://api.spotify.com/v1/playlists/5Bn9hfE5G67UI3uRYfdtqO",
+      "id": "5Bn9hfE5G67UI3uRYfdtqO",
+      "images": [
+        {
+          "height": null,
+          "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da849b361c403e4f555ae2ac1aa3",
+          "width": null
+        }
+      ],
+      "name": "The Beast From The East",
+      "owner": {
+        "display_name": "Asphalt Tango Records",
+        "external_urls": {
+          "spotify": "https://open.spotify.com/user/vuhlq41rbvbw2niwu8x8k3ohi"
+        },
+        "href": "https://api.spotify.com/v1/users/vuhlq41rbvbw2niwu8x8k3ohi",
+        "id": "vuhlq41rbvbw2niwu8x8k3ohi",
+        "type": "user",
+        "uri": "spotify:user:vuhlq41rbvbw2niwu8x8k3ohi"
+      },
+      "primary_color": null,
+      "public": true,
+      "snapshot_id": "AAACowuf3FW5KPCOW0lMu0fA/GSzcL78",
+      "tracks": {
+        "href": "https://api.spotify.com/v1/playlists/5Bn9hfE5G67UI3uRYfdtqO/tracks",
+        "total": 144
+      },
+      "items": {
+        "href": "https://api.spotify.com/v1/playlists/5Bn9hfE5G67UI3uRYfdtqO/items",
+        "total": 144
+      },
+      "type": "playlist",
+      "uri": "spotify:playlist:5Bn9hfE5G67UI3uRYfdtqO"
+    }
+  ]
+}

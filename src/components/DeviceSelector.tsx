@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "preact/compat";
-import type { SpotifyDevice } from "../types";
+import type { LocalDevice } from "../types";
+import { availableDevices, localDevices, activeDevice, isScanning } from "../stores/devices";
 
 interface Props {
-  devices: SpotifyDevice[];
-  activeDevice: SpotifyDevice | null;
   onTransfer: (deviceId: string) => void;
-  onRefresh: () => void;
+  onRefreshLocal: () => void;
+  onTransferLocal?: (deviceName: string) => void;
 }
 
 function getDeviceIcon(type: string) {
@@ -90,27 +90,41 @@ function getDeviceIcon(type: string) {
   }
 }
 
-export default function DeviceSelector({ devices, activeDevice, onTransfer, onRefresh }: Props) {
-  const [open, setOpen] = useState(false);
+export default function DeviceSelector({ onTransfer, onRefreshLocal, onTransferLocal }: Props) {
+  const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const devices = availableDevices.value;
+  const locals = localDevices.value;
+  const active = activeDevice.value;
+  const scanning = isScanning.value;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
+        setIsOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const active = activeDevice || devices.find(d => d.is_active);
+  // Auto-scan local network the first time dropdown opens (if no locals yet)
+  useEffect(() => {
+    if (isOpen && !scanning && locals.length === 0) {
+      onRefreshLocal();
+    }
+  }, [isOpen]);
+
+  const hasLocalDevices = locals && locals.length > 0;
+  const hasControllableDevices = devices.length > 0;
+  const hasOnlyLocalDevices = !hasControllableDevices && hasLocalDevices;
 
   return (
     <div className="device-selector" ref={ref}>
       <button
         className={`ctrl-btn device-btn ${active ? "active-device" : ""}`}
-        onClick={() => setOpen(!open)}
+        onClick={() => setIsOpen(!isOpen)}
         aria-label="Select playback device"
         title={active?.name || "Select device"}
       >
@@ -122,39 +136,106 @@ export default function DeviceSelector({ devices, activeDevice, onTransfer, onRe
         {active && <span className="device-indicator" />}
       </button>
 
-      {open && (
+      {isOpen && (
         <div className="device-dropdown">
           <div className="device-dropdown-header">
-            <span>Connect to a device</span>
-            <button className="device-refresh-btn" onClick={onRefresh} title="Refresh devices">
+            <span>{scanning ? "Searching..." : "Connect to a device"}</span>
+            <button
+              className={`device-refresh-btn ${scanning ? 'spinning' : ''}`}
+              onClick={onRefreshLocal}
+              title="Scan for local devices"
+              disabled={scanning}
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="23 4 23 10 17 10"/>
                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
               </svg>
             </button>
           </div>
-          
-          {devices.length === 0 ? (
-            <div className="device-empty">No devices found</div>
-          ) : (
-            <div className="device-list">
-              {devices.map((device) => (
-                <button
-                  key={device.id || device.name}
-                  className={`device-item ${device.is_active ? "active" : ""}`}
-                  onClick={() => device.id && onTransfer(device.id)}
-                  disabled={!device.id || device.is_restricted}
-                >
-                  <span className="device-icon">{getDeviceIcon(device.type || "")}</span>
-                  <div className="device-info">
-                    <div className="device-name">{device.name}</div>
-                    <div className="device-type">{device.type}</div>
-                  </div>
-                  {device.is_active && <span className="device-active-badge">Active</span>}
-                </button>
-              ))}
+
+          {!hasControllableDevices && !hasLocalDevices && (
+            <div className="device-empty">
+              {scanning ? (
+                <span className="device-empty-searching">
+                  <span className="spinner-small" />
+                  Searching for devices...
+                </span>
+              ) : (
+                <>
+                  <span className="device-empty-title">No active devices</span>
+                  <span className="device-empty-hint">
+                    Open Spotify on your computer or another device to control playback.
+                  </span>
+                </>
+              )}
             </div>
           )}
+
+          {/* Message when local devices found but no controllable ones */}
+          {hasOnlyLocalDevices && !scanning && (
+            <div className="device-info-banner">
+              SPX Player uses this computer's speakers.<br />Click play to start.
+            </div>
+          )}
+
+          <div className="device-list">
+            {/* Available Devices - Spotify API controllable devices */}
+            {devices.length > 0 && (
+              <>
+                <div className="device-section-header">Spotify Devices</div>
+                {devices.map((device) => (
+                  <button
+                    key={device.id || device.name}
+                    className={`device-item ${device.is_active ? "active" : ""}`}
+                    onClick={() => device.id && onTransfer(device.id)}
+                    disabled={!device.id || device.is_restricted}
+                  >
+                    <span className="device-icon">{getDeviceIcon(device.type || "")}</span>
+                    <div className="device-info">
+                      <div className="device-name">{device.name}</div>
+                      <div className="device-type">{device.type}</div>
+                    </div>
+                    {device.is_active && <span className="device-active-badge">Active</span>}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {/* Local Network - mDNS discovered devices */}
+            {hasLocalDevices && (
+              <>
+                <div className="device-section-header">Local Network</div>
+                {locals!.map((device) => (
+                  <div
+                    key={`local-${device.ip}`}
+                    className="device-item device-item-local"
+                  >
+                    <span className="device-icon">{getDeviceIcon("speaker")}</span>
+                    <div className="device-info">
+                      <div className="device-name">{device.name}</div>
+                      <div className="device-type">
+                        {device.canTransfer ? (
+                          <span className="device-transfer-ok">Spotify Connect</span>
+                        ) : (
+                          <span className="device-transfer-none">{device.note || "Network Device"}</span>
+                        )}
+                      </div>
+                    </div>
+                    {device.canTransfer && device.id ? (
+                      <button
+                        className="device-action-btn"
+                        onClick={() => onTransferLocal?.(device.name)}
+                      >
+                        Transfer
+                      </button>
+                    ) : (
+                      <span className="device-badge device-badge-local">Cast</span>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
