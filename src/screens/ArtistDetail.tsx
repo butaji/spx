@@ -67,9 +67,16 @@ export default function ArtistDetail({ id, name, onPlayUris }: Props) {
   return (
     <div>
       <div className="detail-hero">
-        <div className="detail-hero-img" style={{
-          background: artist?.images?.[0]?.url ? `url(${artist.images[0].url}) center/cover` : undefined
-        }} />
+        {artist?.images?.[0]?.url ? (
+          <img
+            src={artist.images[0].url}
+            alt={artist.name || name}
+            className="detail-hero-img"
+            style={{ objectFit: 'cover' }}
+          />
+        ) : (
+          <div className="detail-hero-img" style={{ background: 'var(--surface)' }} />
+        )}
         <div className="detail-hero-info">
             <div className="eyebrow">Artist</div>
             <h1>{artist?.name || name}</h1>
