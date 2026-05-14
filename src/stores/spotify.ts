@@ -251,6 +251,8 @@ export async function loadRecentActivity(): Promise<void> {
   console.log('[RecentActivity] Loading top tracks...');
   await loadTopTracks();
   buildHomeFeed();
+  // Also load recently played containers so lastPlayedTrack is available for fallback display
+  await loadRecentContainers();
   console.log('[RecentActivity] Complete');
 }
 

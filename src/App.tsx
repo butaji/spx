@@ -55,6 +55,7 @@ import {
   pauseTrack,
   startPlaybackPolling,
   validateToken,
+  lastPlayedTrack,
 } from "./stores/spotify";
 import type { View, TrackInfo } from './types';
 
@@ -115,10 +116,11 @@ function useDerivedTrack(): TrackInfo | null {
     id: track.id,
     name: track.name,
     artist: track.artists?.map(a => a.name).join(", ") || "Unknown",
+    artistIds: track.artists?.map(a => a.id) || [],
     artistId: track.artists?.[0]?.id || null,
     album: track.album?.name || "",
     albumId: track.album?.id || null,
-    art: track.album?.images?.[0]?.url || "",
+    imageUrl: track.album?.images?.[0]?.url || "",
     duration: track.duration_ms || 0,
     durationMs: track.duration_ms || 0,
     uri: track.uri,
@@ -917,11 +919,11 @@ function App() {
       <div className="player-bar">
         <div className="player-track">
           <div className="player-art">
-            {track?.art ? <img src={track.art} alt="" /> : null}
+            {(track?.imageUrl || lastPlayedTrack.value?.imageUrl) ? <img src={track?.imageUrl || lastPlayedTrack.value?.imageUrl} alt="" /> : null}
           </div>
           <div className="player-meta">
-            <div className="player-title" style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.name || "No track"}</div>
-            <div className="player-artist" style={{ fontSize: 12, color: 'var(--fg-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.artist || "—"}</div>
+            <div className="player-title" style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.name || lastPlayedTrack.value?.name || "No track"}</div>
+            <div className="player-artist" style={{ fontSize: 12, color: 'var(--fg-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.artist || lastPlayedTrack.value?.artistName || "—"}</div>
           </div>
           <button
             className={likedTrack.value ? "player-like-btn liked" : "player-like-btn"}

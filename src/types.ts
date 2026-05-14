@@ -313,7 +313,7 @@ export interface TrackInfo {
   artistName?: string;
   album: string;
   albumId?: string | null;
-  art: string;
+  imageUrl: string;
   duration: number;
   durationMs: number;
   uri: string;

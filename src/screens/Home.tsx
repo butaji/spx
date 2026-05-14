@@ -29,7 +29,13 @@ export default function Home({ track, onNavigate, liked, onToggleLike, ...rest }
   const [feedError, setFeedError] = useState<string | null>(null);
   const [, forceUpdate] = useState({});
 
-  const displayTrack = track || lastPlayedTrack.value;
+  const displayTrack = track || (lastPlayedTrack.value ? {
+    name: lastPlayedTrack.value.name,
+    artist: lastPlayedTrack.value.artistName,
+    artistName: lastPlayedTrack.value.artistName,
+    imageUrl: lastPlayedTrack.value.imageUrl,
+    album: lastPlayedTrack.value.albumName,
+  } : null);
 
   /* Load data on mount */
   useEffect(() => {
