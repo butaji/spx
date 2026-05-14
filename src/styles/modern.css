@@ -1147,6 +1147,9 @@ h3, .h3 {
   font-size: 11px;
   color: var(--fg-faint);
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lib-item.artist .lib-item-img {
   border-radius: 50%;
