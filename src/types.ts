@@ -56,16 +56,25 @@ export interface SpotifyDevice {
   is_active?: boolean;
   is_private_session?: boolean;
   is_restricted?: boolean;
+  supports_volume?: boolean;
+  // Extended fields for local device merging
+  isLocal?: boolean;
+  localNote?: string;
+  canTransfer?: boolean;
+  needsWakeUp?: boolean;
+  deviceIp?: string;
 }
 
 export interface LocalDevice {
   name: string;
   ip: string;
   port: number;
-  id?: string;           // Spotify device ID if available
-  is_active?: boolean;   // Whether this device is currently active
-  canTransfer?: boolean; // True if also a Spotify Connect device
-  note?: string;         // e.g. "Open Spotify on this device" for Cast-only devices
+  id?: string;              // Spotify device ID if available
+  is_active?: boolean;      // Whether this device is currently active
+  canTransfer?: boolean;    // True if also a Spotify Connect device
+  note?: string;            // e.g. "Open Spotify on this device" for Cast-only devices
+  service_type?: string;    // Which mDNS service discovered it (e.g. "_googlecast._tcp.local.")
+  friendly_name?: string;   // Human-readable name from TXT records
 }
 
 export interface SpotifyPlaybackState {

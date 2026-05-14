@@ -267,13 +267,86 @@ async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, String> 
     Ok(devices)
 }
 
+/// Wake up a Cast device by launching the Spotify receiver app via Cast V2.
+/// Falls back to DIAL if Cast V2 fails.
+#[tauri::command]
+async fn wake_cast_device(ip: String) -> Result<String, String> {
+    println!("Waking Cast device at {}", ip);
+
+    // Try Cast V2 first (port 8009, TLS)
+    match wake_cast_v2(&ip).await {
+        Ok(result) => {
+            println!("Cast V2 wake successful: {}", result);
+            return Ok(result);
+        }
+        Err(e) => {
+            println!("Cast V2 failed: {}, trying DIAL fallback...", e);
+        }
+    }
+
+    // Fall back to DIAL protocol (port 8008, HTTP)
+    wake_cast_dial(&ip).await
+}
+
+async fn wake_cast_v2(ip: &str) -> Result<String, String> {
+    let ip_owned = ip.to_string();
+    tokio::task::spawn_blocking(move || {
+        use rustls::crypto::aws_lc_rs;
+
+        // Install aws_lc_rs crypto provider
+        if let Err(e) = aws_lc_rs::default_provider().install_default() {
+            return Err(format!("Failed to install crypto provider: {:?}", e));
+        }
+
+        let mut cast_device = rust_cast::CastDevice::connect_without_host_verification(&ip_owned, 8009)
+            .map_err(|e| format!("Cast V2 connect failed: {}", e))?;
+
+        let spotify_app = rust_cast::channels::receiver::CastDeviceApp::from_str("CC320225")
+            .map_err(|_| "Invalid app ID".to_string())?;
+
+        match cast_device.receiver.launch_app(&spotify_app) {
+            Ok(app) => Ok(format!("Spotify app launched via Cast V2: {:?}", app)),
+            Err(e) => Err(format!("Cast V2 launch failed: {}", e)),
+        }
+    })
+    .await
+    .map_err(|e| format!("Task error: {}", e))?
+}
+
+async fn wake_cast_dial(ip: &str) -> Result<String, String> {
+    let url = format!("http://{}:8008/apps/CC320225", ip);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| format!("HTTP client error: {}", e))?;
+
+    match client.post(&url)
+        .header("Content-Type", "application/xml")
+        .body("")
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            if status.is_success() || status.as_u16() == 201 {
+                Ok(format!("Spotify app launched via DIAL (status: {})", status))
+            } else {
+                let body = response.text().await.unwrap_or_default();
+                Err(format!("DIAL launch failed (status: {}): {}", status, body))
+            }
+        }
+        Err(e) => Err(format!("DIAL request failed: {}", e)),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     dotenvy::dotenv().ok();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![get_spotify_client_id, start_callback_server, is_mock_mode, scan_spotify_devices])
+        .invoke_handler(tauri::generate_handler![get_spotify_client_id, start_callback_server, is_mock_mode, scan_spotify_devices, wake_cast_device])
         .on_window_event(|window, event| {
             #[cfg(target_os = "macos")]
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

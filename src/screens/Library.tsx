@@ -2,8 +2,10 @@ import { useEffect, useState, useCallback, useRef } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getUserPlaylists, getSavedTracks, getSavedAlbums, getTopTracks } from "../lib/spotify";
 import { getCached, setCache } from "../lib/cache";
+import { formatTime } from "../lib/utils";
 import { View } from "../App";
 import { SpotifyPlaylist, SpotifyTrack, SpotifyAlbum } from "../types";
+import { Artwork } from "../components/Artwork";
 
 type Tab = "playlists" | "tracks" | "albums" | "top";
 
@@ -192,11 +194,12 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
               onKeyDown={(e) => handleItemKeyDown(e, item)}
               aria-label={`${item.name} - ${tab === "playlists" ? "playlist" : "album"}`}
             >
-              <div className="lib-item-img" style={{
-                background: ("images" in item && item.images?.[0]?.url) || ("album" in item && (item as SpotifyTrack).album?.images?.[0]?.url)
-                  ? `url(${("images" in item ? (item as SpotifyPlaylist).images?.[0]?.url : undefined) || (item as SpotifyTrack).album?.images?.[0]?.url}) center/cover`
-                  : undefined
-              }} />
+              <Artwork
+                src={("images" in item ? (item as SpotifyPlaylist).images?.[0]?.url : undefined) || ((item as SpotifyTrack).album?.images?.[0]?.url)}
+                alt={item.name}
+                size={160}
+                className="lib-item-img"
+              />
               <div className="lib-item-title">{item.name}</div>
               <div className="lib-item-sub">
                 {tab === "playlists" ? `${("tracks" in item ? item.tracks?.total || 0 : 0)} tracks` : ("artists" in item && item.artists?.[0]?.name) || ""}
@@ -222,16 +225,25 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
               aria-label={`${item.name} by ${(item as SpotifyTrack).artists?.map((a) => a.name).join(", ")}`}
             >
               <div className="track-num">{i + 1}</div>
-              <div className="track-art" style={{
-                background: (item as SpotifyTrack).album?.images?.[0]?.url ? `url(${(item as SpotifyTrack).album?.images?.[0]?.url}) center/cover` : undefined
-              }} />
+              <Artwork
+                src={(item as SpotifyTrack).album?.images?.[0]?.url}
+                alt=""
+                size={40}
+                className="track-art"
+              />
               <div className="track-info">
                 <div className="track-title">{item.name}</div>
                 <div className="track-album">{(item as SpotifyTrack).artists?.map((a) => a.name).join(", ")}</div>
               </div>
+              <div style={{
+                fontSize: 12,
+                color: "var(--fg-faint)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}>{(item as SpotifyTrack).album?.name}</div>
               <div />
-              <div />
-              <div className="track-dur" />
+              <div className="track-dur">{formatTime((item as SpotifyTrack).duration_ms || 0)}</div>
             </div>
           ))}
           {items.length === 0 && (

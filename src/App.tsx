@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from "preact/compat";
-import type { MouseEvent, CSSProperties } from "preact/compat";
 import { message } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import Logo from "./components/Logo";
 import { HotkeyHelp } from "./components/HotkeyHelp";
+import { Sidebar } from "./components/Sidebar";
+import { PlayerBar } from "./components/PlayerBar";
+import ContextPanel from "./components/ContextPanel";
 import { registerHotkey, setupHotkeys } from "./lib/hotkeys";
 import Home from "./screens/Home";
 import Search from "./screens/Search";
 import Library from "./screens/Library";
 import Queue from "./screens/Queue";
+import Stats from "./screens/Stats";
 import PlaylistDetail from "./screens/PlaylistDetail";
 import AlbumDetail from "./screens/AlbumDetail";
 import ArtistDetail from "./screens/ArtistDetail";
-import DeviceSelector from "./components/DeviceSelector";
 import {
   startAuthFlow,
   handleCallbackUrl,
@@ -50,6 +52,7 @@ import {
   refreshPlayback,
   loadRecentActivity,
   refreshLikedStatus,
+  contextPanelItem,
 
   playTrack,
   pauseTrack,
@@ -63,6 +66,7 @@ export type View =
   | { type: "search" }
   | { type: "library"; tab?: string }
   | { type: "queue" }
+  | { type: "stats" }
   | { type: "playlist"; id: string; name: string }
   | { type: "album"; id: string; name: string }
   | { type: "artist"; id: string; name: string };
@@ -78,55 +82,6 @@ export interface TrackInfo {
   isPlaying: boolean;
   imageUrl?: string;
   uri: string;
-}
-
-/* ── Icons ── */
-function IconHome({ active }: { active?: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1" fill={active ? "currentColor" : "none"}/>
-      <rect x="14" y="3" width="7" height="7" rx="1" fill={active ? "currentColor" : "none"}/>
-      <rect x="3" y="14" width="7" height="7" rx="1" fill={active ? "currentColor" : "none"}/>
-      <rect x="14" y="14" width="7" height="7" rx="1" fill={active ? "currentColor" : "none"}/>
-    </svg>
-  );
-}
-function IconSearch() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>;
-}
-function IconLibrary() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
-}
-function IconQueue() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6v12M6 12h12"/></svg>;
-}
-export function IconPlay() {
-  return <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
-}
-export function IconPause() {
-  return <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>;
-}
-function IconPrev() {
-  return <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>;
-}
-function IconNext() {
-  return <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>;
-}
-export function IconHeart({ filled }: { filled?: boolean }) {
-  return <svg viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>;
-}
-function IconVolume({ muted }: { muted?: boolean }) {
-  if (muted) {
-    return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>;
-  }
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>;
-}
-function IconShuffle({ active }: { active?: boolean }) {
-  return <svg viewBox="0 0 24 24" fill="none" stroke={active ? "var(--accent)" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>;
-}
-function IconRepeat({ mode }: { mode: string }) {
-  const c = mode !== "off" ? "var(--accent)" : "currentColor";
-  return <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>{mode === "track" && <text x="12" y="15" textAnchor="middle" fill={c} stroke="none" fontSize="10" fontWeight="bold">1</text>}</svg>;
 }
 
 // Derived track info for components expecting flattened structure
@@ -147,8 +102,6 @@ function useDerivedTrack(): TrackInfo | null {
   };
 }
 
-import { formatTime } from "./lib/utils";
-
 function App() {
   const isMac = /Mac/.test(navigator.userAgent);
   const [history, setHistory] = useState<View[]>([{ type: "home" }]);
@@ -157,7 +110,6 @@ function App() {
   const goBack = () => setHistory(prev => prev.slice(0, -1));
   const [hotkeyHelpOpen, setHotkeyHelpOpen] = useState(false);
 
-  const progressRef = useRef<HTMLDivElement>(null);
   const [isPlayActionLoading, setIsPlayActionLoading] = useState(false);
   const isPlayActionLoadingRef = useRef(isPlayActionLoading);
   isPlayActionLoadingRef.current = isPlayActionLoading;
@@ -548,39 +500,12 @@ function App() {
     }
   }, [ensureActiveDevice]);
 
-  const handleSeek = useCallback(async (e: MouseEvent<HTMLDivElement>) => {
-    if (!playbackTrack.value) return;
-    const rect = progressRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const pos = Math.floor(((e.clientX - rect.left) / rect.width) * playbackDuration.value);
-    try {
-      await seek(pos);
-      refreshPlayback();
-    } catch (e) {
-      console.error("Failed to seek:", e);
-      showError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
-
   const handleSeekPosition = useCallback(async (pos: number) => {
     try {
       await seek(pos);
       refreshPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
-      showError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
-
-  const handleVolumeClick = useCallback(async (e: MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const v = Math.round(pct * 100);
-    try {
-      await apiSetVolume(v);
-      playbackVolume.value = v;
-    } catch (e) {
-      console.error("Failed to set volume:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
   }, []);
@@ -805,21 +730,6 @@ function App() {
     }
   }, [handlePlayPause, handlePrev, handleNext, playbackTrack.value?.id, isPlaying.value]);
 
-  const navItems: { view: View; label: string; icon: () => preact.JSX.Element }[] = [
-    { view: { type: "home" }, label: "Now Playing", icon: () => <IconHome active={view.type === "home"} /> },
-    { view: { type: "search" }, label: "Search", icon: () => <IconSearch /> },
-    { view: { type: "library", tab: "playlists" }, label: "Library", icon: () => <IconLibrary /> },
-    { view: { type: "queue" }, label: "Queue", icon: () => <IconQueue /> },
-  ];
-
-  const handleNavClick = (itemView: View) => {
-    if (view.type !== itemView.type) {
-      setHistory([itemView]);
-    }
-  };
-
-  const progressPct = track && playbackDuration.value > 0 ? (playbackProgress.value / playbackDuration.value) * 100 : 0;
-
   if ((!isAuthed || isAuthErr) && !mockMode) {
     return (
       <div className="app-window">
@@ -880,6 +790,7 @@ function App() {
       case "search": return <Search {...common} initialQuery="" />;
       case "library": return <Library {...common} />;
       case "queue": return <Queue onPlayUris={playUrisFn} />;
+      case "stats": return <Stats />;
       case "playlist": return <PlaylistDetail id={view.id} name={view.name} {...common} />;
       case "album": return <AlbumDetail id={view.id} name={view.name} {...common} />;
       case "artist": return <ArtistDetail id={view.id} name={view.name} {...common} />;
@@ -890,135 +801,57 @@ function App() {
     <div className="app-window">
       <div aria-live="polite" className="sr-only">{error}</div>
       <div className="app-body">
-        <nav className="sidebar">
-          {navItems.map((item) => {
-            const active = view.type === item.view.type;
-            return (
-              <button key={item.label} className={active ? "sidebar-btn active" : "sidebar-btn"} onClick={() => handleNavClick(item.view)} title={item.label} aria-label={item.label}>
-                {item.icon()}
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-          {history.length > 2 && (
-            <div className="sidebar-breadcrumbs">
-              <div className="sidebar-divider" />
-              {history.slice(1, -1).map((h, i) => (
-                <button
-                  key={i}
-                  className="sidebar-btn breadcrumb"
-                  onClick={() => setHistory(history.slice(0, history.indexOf(h) + 1))}
-                >
-                  <span className="breadcrumb-label">{h.type === 'playlist' ? h.name : h.type === 'album' ? h.name : h.type === 'artist' ? h.name : h.type}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="sidebar-divider" />
-          <div className="sidebar-footer">
-            {user && (
-              <div className="user-pill">
-                {user.image ? (
-                  <img src={user.image} alt="" />
-                ) : (
-                  <div className="user-pill-avatar">{user.name.charAt(0).toUpperCase()}</div>
-                )}
-                <span className="user-pill-name">{user.name}</span>
-              </div>
-            )}
-          </div>
-        </nav>
+        <Sidebar
+          view={view}
+          history={history}
+          setHistory={setHistory}
+          user={user}
+        />
 
         <div className="main-area">
           <div className={"main-scroll" + (isMac ? " macos-main-scroll" : "")}>
             {renderScreen()}
           </div>
         </div>
-      </div>
 
-      <div className="player-bar">
-        <div className="player-track">
-          <div className="player-art">
-            {track?.imageUrl ? <img src={track.imageUrl} alt="" /> : null}
-          </div>
-          <div className="player-meta">
-            <div className="player-title" style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.name || "No track"}</div>
-            <div className="player-artist" style={{ fontSize: 12, color: 'var(--fg-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.artist || "—"}</div>
-          </div>
-          <button
-            className={likedTrack.value ? "player-like-btn liked" : "player-like-btn"}
-            onClick={handleToggleLike}
-            aria-label={likedTrack.value ? "Remove from liked" : "Add to liked"}
-            role="button"
-            tabIndex={0}
-          >
-            <IconHeart filled={likedTrack.value} />
-          </button>
-        </div>
-
-        <div className="player-center">
-          <div className="player-controls" role="group" aria-label="Playback controls">
-            <button className="ctrl-btn" onClick={handleShuffle} title="Shuffle" aria-label="Shuffle" role="button" tabIndex={0}><IconShuffle active={shuffle} /></button>
-            <button className="ctrl-btn" onClick={handlePrev} aria-label="Previous track" role="button" tabIndex={0}><IconPrev /></button>
-            <button
-              className={`ctrl-btn ${isPlaying.value ? 'playing' : ''}`}
-              onClick={handlePlayPause}
-              disabled={isPlayActionLoading}
-            >
-              {isPlayActionLoading ? (
-                <span className="spinner-small" />
-              ) : isPlaying.value ? (
-                <IconPause />
-              ) : (
-                <IconPlay />
-              )}
-            </button>
-            <button className="ctrl-btn" onClick={handleNext} aria-label="Next track" role="button" tabIndex={0}><IconNext /></button>
-            <button className="ctrl-btn" onClick={handleRepeat} title="Repeat" aria-label={`Repeat: ${repeat}`} role="button" tabIndex={0}><IconRepeat mode={repeat} /></button>
-          </div>
-          <div className="scrubber">
-            <span className="time current">{formatTime(playbackProgress.value)}</span>
-            <div
-              className="progress-track"
-              ref={progressRef}
-              onClick={handleSeek}
-              role="slider"
-              aria-valuenow={Math.round(progressPct)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Progress"
-              tabIndex={0}
-              style={{ "--progress-width": `${progressPct}%`, "--progress-left": `${progressPct}%` } as CSSProperties}
-            >
-              <div className="progress-fill" />
-              <div className="progress-thumb" />
-            </div>
-            <span className="time total">{formatTime(playbackDuration.value)}</span>
-          </div>
-        </div>
-
-        <div className="player-right">
-          <DeviceSelector
-            onTransfer={handleTransferPlayback}
-            onRefreshLocal={refreshLocalDevices}
-            onTransferLocal={transferToLocalDevice}
+        {contextPanelItem.value && (
+          <ContextPanel
+            onClose={() => { contextPanelItem.value = null; }}
+            onPlayUris={playUrisFn}
+            onNavigate={pushView}
           />
-          <button className="ctrl-btn" aria-label="Volume" role="button" tabIndex={0} onClick={handleMuteToggle}><IconVolume muted={volume === 0} /></button>
-          <div
-            className="volume-track"
-            onClick={handleVolumeClick}
-            role="slider"
-            aria-valuenow={volume}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Volume"
-            tabIndex={0}
-            style={{ "--volume-width": `${volume}%` } as CSSProperties}
-          >
-            <div className="volume-fill" />
-          </div>
-        </div>
+        )}
       </div>
+
+      <PlayerBar
+        track={track}
+        isPlaying={isPlaying.value}
+        likedTrack={likedTrack.value}
+        shuffle={shuffle}
+        repeat={repeat}
+        progress={playbackProgress.value}
+        duration={playbackDuration.value}
+        volume={volume}
+        isPlayActionLoading={isPlayActionLoading}
+        onPlayPause={handlePlayPause}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        onSeek={(ms) => handleSeekPosition(ms)}
+        onVolumeChange={(vol) => {
+          apiSetVolume(vol);
+          playbackVolume.value = vol;
+        }}
+        onToggleLike={handleToggleLike}
+        onShuffle={handleShuffle}
+        onRepeat={handleRepeat}
+        onTransferPlayback={() => {
+          const active = availableDevices.value.find(d => d.is_active);
+          if (active?.id) handleTransferPlayback(active.id);
+        }}
+        onRefreshLocalDevices={refreshLocalDevices}
+        onTransferToLocalDevice={(name) => transferToLocalDevice(name)}
+        onMuteToggle={handleMuteToggle}
+      />
 
       {hotkeyHelpOpen && <HotkeyHelp onClose={() => setHotkeyHelpOpen(false)} />}
     </div>

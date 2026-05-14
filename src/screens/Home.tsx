@@ -5,7 +5,7 @@ import { View } from "../App";
 import type { SpotifyArtist } from "../types";
 
 import NowPlayingHero from "../components/NowPlayingHero";
-import StatsCard from "../components/StatsCard";
+import ContextCard from "../components/StatsCard";
 import ArtistTopSongs from "../components/ArtistTopSongs";
 import RecentGrid from "../components/RecentGrid";
 
@@ -29,8 +29,6 @@ export default function Home({
 }: Props) {
   const [artistDetail, setArtistDetail] = useState<SpotifyArtist | null>(null);
   const [artistTopTracks, setArtistTopTracks] = useState<any[]>([]);
-  const [scrobbleCount, setScrobbleCount] = useState(0);
-  const [trackScrobbleCount, setTrackScrobbleCount] = useState(0);
   const [isLoadingArtist, setIsLoadingArtist] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [, forceUpdate] = useState({});
@@ -74,12 +72,6 @@ export default function Home({
       .finally(() => setIsLoadingArtist(false));
   }, [track?.id, lastPlayedTrack.value?.id]);
 
-  /* Generate mock scrobble counts */
-  useEffect(() => {
-    setScrobbleCount(Math.floor(Math.random() * 800) + 50);
-    setTrackScrobbleCount(Math.floor(Math.random() * 50) + 5);
-  }, [track?.id]);
-
   const loadData = async () => {
     try {
       await loadRecentActivity();
@@ -92,8 +84,6 @@ export default function Home({
     }
   };
 
-  const artistName = displayTrack?.artistName || displayTrack?.artist || "Unknown";
-  const trackName = displayTrack?.name || "Unknown Track";
   const tags = artistDetail?.genres?.slice(0, 5) || MOCK_TAGS;
 
   return (
@@ -106,11 +96,9 @@ export default function Home({
         onToggleLike={onToggleLike}
       />
 
-      <StatsCard
-        artistName={artistName}
-        trackName={trackName}
-        scrobbleCount={scrobbleCount}
-        trackScrobbleCount={trackScrobbleCount}
+      <ContextCard
+        albumName={displayTrack?.album || displayTrack?.albumName}
+        contextLabel="Now Playing"
       />
 
       <ArtistTopSongs

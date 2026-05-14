@@ -71,6 +71,12 @@ export const artistAlbums = signal<any[]>([]);
 export const appError = signal<string | null>(null);
 export const navigationHistory = signal<any[]>([]);
 
+// Context panel state
+export const contextPanelItem = signal<{
+  type: 'artist' | 'album' | 'playlist' | 'track';
+  id: string;
+} | null>(null);
+
 // Recent containers
 export interface RecentContainer {
   id: string;

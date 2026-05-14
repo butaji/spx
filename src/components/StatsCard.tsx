@@ -1,39 +1,27 @@
-interface StatsCardProps {
-  artistName: string;
-  trackName: string;
-  scrobbleCount: number;
-  trackScrobbleCount: number;
+interface ContextCardProps {
+  albumName?: string;
+  contextLabel?: string;
 }
 
-export default function StatsCard({
-  artistName,
-  trackName,
-  scrobbleCount,
-  trackScrobbleCount,
-}: StatsCardProps) {
+export default function ContextCard({
+  albumName,
+  contextLabel,
+}: ContextCardProps) {
+  // Only show if we have meaningful real data
+  if (!albumName && !contextLabel) {
+    return null;
+  }
+
   return (
-    <div
-      style={{
-        background: "var(--glass)",
-        borderRadius: "var(--radius-lg)",
-        padding: "16px 20px",
-        marginTop: 16,
-      }}
-    >
-      <p
-        style={{
-          fontSize: 14,
-          color: "var(--fg-dim)",
-          margin: 0,
-          lineHeight: 1.5,
-        }}
-      >
-        You've listened to{" "}
-        <strong style={{ color: "var(--fg)" }}>{artistName}</strong>{" "}
-        {scrobbleCount.toLocaleString()} times and{" "}
-        <strong style={{ color: "var(--fg)" }}>{trackName}</strong>{" "}
-        {trackScrobbleCount.toLocaleString()} times.
-      </p>
+    <div className="context-card">
+      {contextLabel && (
+        <span className="context-label">{contextLabel}</span>
+      )}
+      {albumName && (
+        <span className="context-value">
+          From the album <strong>{albumName}</strong>
+        </span>
+      )}
     </div>
   );
 }

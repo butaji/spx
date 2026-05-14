@@ -3,7 +3,7 @@ import type { KeyboardEvent } from "preact/compat";
 import { getAlbum } from "../lib/spotify";
 import { View } from "../App";
 import { formatTime } from "../lib/utils";
-import { IconPlay } from "../App";
+import { IconPlay } from "../components/icons";
 import { SpotifyAlbum } from "../types";
 
 interface Props {

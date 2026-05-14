@@ -3,6 +3,7 @@ import { formatTime, formatFollowers } from "../lib/utils";
 import { playUris } from "../lib/spotify";
 import { IconFlame, IconPlay } from "./icons";
 import type { SpotifyArtist } from "../types";
+import { Artwork } from "./Artwork";
 
 interface Track {
   id: string;
@@ -34,15 +35,7 @@ export default function ArtistTopSongs({
   const popularity = artist?.popularity;
 
   return (
-    <div
-      style={{
-        background: "var(--glass)",
-        borderRadius: "var(--radius-md)",
-        border: "1px solid var(--edge)",
-        marginTop: 24,
-        overflow: "hidden",
-      }}
-    >
+    <div className="artist-panel">
       <ArtistHeader
         name={artistName}
         image={artistImage}
@@ -51,7 +44,7 @@ export default function ArtistTopSongs({
         tags={tags}
       />
 
-      <div style={{ padding: "8px 16px" }}>
+      <div className="artist-tracks">
         {topTracks.map((track, i) => (
           <SongRow key={track.id} track={track} index={i} />
         ))}
@@ -74,61 +67,26 @@ function ArtistHeader({
   tags: string[];
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "48px 1fr",
-        alignItems: "center",
-        gap: 12,
-        padding: "12px 20px 12px 16px",
-        borderBottom: "1px solid var(--edge)",
-      }}
-    >
-      <img
+    <div className="artist-header">
+      <Artwork
         src={image}
         alt={name}
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: "50%",
-          objectFit: "cover",
-        }}
+        size={160}
+        className="artist-header-image"
       />
 
-      <div style={{ minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            color: "var(--fg)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+      <div className="artist-header-info">
+        <div className="artist-header-name">
           <span>{name}</span>
           {popularity != null && <PopularityBadge value={popularity} />}
         </div>
 
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--fg-muted)",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            marginTop: 2,
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="artist-header-meta">
           <span>{formatFollowers(followers)} followers</span>
           {tags.length > 0 && (
             <>
-              <span style={{ color: "var(--fg-faint)" }}>·</span>
-              <span style={{ color: "var(--accent)" }}>{tags.slice(0, 2).join(", ")}</span>
+              <span className="artist-header-meta-sep">·</span>
+              <span className="artist-header-meta-genre">{tags.slice(0, 2).join(", ")}</span>
             </>
           )}
         </div>
@@ -139,22 +97,7 @@ function ArtistHeader({
 
 function PopularityBadge({ value }: { value: number }) {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 3,
-        padding: "1px 5px",
-        borderRadius: 9999,
-        background: "oklch(72% 0.17 145 / 0.12)",
-        border: "1px solid oklch(72% 0.17 145 / 0.2)",
-        fontSize: 10,
-        color: "var(--accent)",
-        fontWeight: 600,
-        cursor: "default",
-        flexShrink: 0,
-      }}
-    >
+    <span className="popularity-badge">
       <IconFlame size={8} />
       {value}/100
     </span>
@@ -173,69 +116,25 @@ function SongRow({ track, index }: { track: Track; index: number }) {
 
   return (
     <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "36px 40px 1fr auto 44px",
-        alignItems: "center",
-        gap: 12,
-        padding: "8px 16px",
-        cursor: "pointer",
-        transition: "background 0.15s ease",
-      }}
-      onMouseEnter={(e) =>
-        ((e.currentTarget as HTMLElement).style.background = "oklch(100% 0 0 / 0.04)")
-      }
-      onMouseLeave={(e) =>
-        ((e.currentTarget as HTMLElement).style.background = "transparent")
-      }
+      className="song-row"
       onClick={handleClick}
     >
-      <div
-        style={{
-          fontSize: 12,
-          color: "var(--fg-faint)",
-          textAlign: "center",
-          fontFamily: "var(--font-mono)",
-        }}
-      >
+      <div className="song-row-index">
         {index + 1}
       </div>
 
       <AlbumArtwork image={track.album?.images?.[0]?.url} />
 
-      <div style={{ minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 500,
-            color: "var(--fg)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
+      <div className="song-row-info">
+        <div className="song-row-title">
           {track.name}
         </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--fg-faint)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
+        <div className="song-row-album">
           {track.album?.name}
         </div>
       </div>
 
-      <div
-        style={{
-          fontSize: 11,
-          color: "var(--fg-faint)",
-          fontFamily: "var(--font-mono)",
-        }}
-      >
+      <div className="song-row-duration">
         {formatTime(track.duration_ms)}
       </div>
 
@@ -246,12 +145,8 @@ function SongRow({ track, index }: { track: Track; index: number }) {
 
 function AlbumArtwork({ image }: { image?: string }) {
   return (
-    <div style={{ width: 40, height: 40, borderRadius: 4, overflow: "hidden" }}>
-      {image ? (
-        <img src={image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-      ) : (
-        <div style={{ width: "100%", height: "100%", background: "var(--bg-elevated)" }} />
-      )}
+    <div className="song-row-art">
+      <Artwork src={image} alt="" size={40} className="song-row-art-img" />
     </div>
   );
 }
@@ -261,19 +156,10 @@ function PlayButton({ onClick }: { onClick: (e: Event) => void }) {
 
   return (
     <button
+      className="song-play-btn"
       style={{
-        width: 28,
-        height: 28,
-        borderRadius: "50%",
-        background: hovered ? "var(--accent)" : "oklch(100% 0 0 / 0.06)",
-        border: "none",
-        color: hovered ? "#000" : "var(--fg-dim)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        cursor: "pointer",
-        opacity: hovered ? 1 : 0,
-        transition: "opacity 0.15s, background 0.15s, color 0.15s",
+        background: hovered ? "var(--accent)" : undefined,
+        color: hovered ? "#000" : undefined,
       }}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
@@ -283,5 +169,3 @@ function PlayButton({ onClick }: { onClick: (e: Event) => void }) {
     </button>
   );
 }
-
-

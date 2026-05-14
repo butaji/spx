@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getArtist, getArtistTopTracks, getArtistAlbums } from "../lib/spotify";
-import { IconPlay } from "../App";
+import { IconPlay } from "../components/icons";
 import { SpotifyArtist, SpotifyTrack } from "../types";
 
 interface Props {

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getPlaylist, getPlaylistTracks } from "../lib/spotify";
 import { formatTime } from "../lib/utils";
-import { IconPlay } from "../App";
+import { IconPlay } from "../components/icons";
 import { SpotifyTrack, SpotifyPlaylist } from "../types";
 
 interface Props {

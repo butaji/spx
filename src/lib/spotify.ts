@@ -5,6 +5,37 @@ interface AccessTokenWithScope extends AccessToken {
   scope?: string;
 }
 
+/** Audio features response */
+interface AudioFeaturesResponse {
+  id: string;
+  danceability: number;
+  energy: number;
+  valence: number;
+  acousticness: number;
+  tempo: number;
+  loudness: number;
+  speechiness: number;
+  instrumentalness: number;
+  liveness: number;
+  key: number;
+  mode: number;
+  time_signature: number;
+  duration_ms: number;
+  type: string;
+  uri: string;
+  track_href: string;
+  analysis_url: string;
+}
+
+/** Audio analysis response */
+interface AudioAnalysisResponse {
+  bars: Array<{ start: number; duration: number; confidence: number }>;
+  beats: Array<{ start: number; duration: number; confidence: number }>;
+  sections: Array<{ start: number; duration: number; loudness: number; tempo: number; key: number; mode: number; time_signature: number }>;
+  segments: Array<{ start: number; duration: number; loudness: number; tempo: number; tempo_confidence: number; key: number; key_confidence: number; mode: number; mode_confidence: number }>;
+  track: { duration: number; sample_end: number; sample_start: number; fade_in: number; fade_out: number; };
+}
+
 import { invoke } from "@tauri-apps/api/core";
 import { load, type Store } from '@tauri-apps/plugin-store';
 import type { LocalDevice, SpotifyArtist, SpotifyTrack } from "../types";
@@ -929,6 +960,13 @@ export async function getArtistAlbums(artistId: string) {
   return getSpotifyApi().artists.albums(artistId, undefined, undefined, 20);
 }
 
+export async function getArtistRelatedArtists(artistId: string) {
+  if (isMockMode()) {
+    return { artists: [{ id: "mock-related-1", name: "Related Artist 1", images: [{ url: "" }], genres: ["electronic"] }] };
+  }
+  return getSpotifyApi().artists.relatedArtists(artistId);
+}
+
 export async function getPlaylist(playlistId: string) {
   if (isMockMode()) {
     return { id: playlistId, name: "Mock Playlist", images: [{ url: "" }], tracks: { total: 1 }, owner: { display_name: "Mock User" }, description: "" };
@@ -1261,6 +1299,78 @@ export async function getNewReleases(
     image: album.images?.[0]?.url || '',
     uri: album.uri,
   }));
+}
+
+/**
+ * Get audio features for a track.
+ * @see https://developer.spotify.com/documentation/web-api/reference/get-audio-features
+ */
+export async function getAudioFeatures(trackId: string): Promise<AudioFeaturesResponse | null> {
+  if (isMockMode()) {
+    return {
+      id: trackId,
+      danceability: 0.7,
+      energy: 0.8,
+      valence: 0.6,
+      acousticness: 0.2,
+      tempo: 120,
+      loudness: -5,
+      speechiness: 0.1,
+      instrumentalness: 0.0,
+      liveness: 0.3,
+      key: 5,
+      mode: 1,
+      time_signature: 4,
+      duration_ms: 180000,
+      type: "audio_features",
+      uri: `spotify:track:${trackId}`,
+      track_href: "",
+      analysis_url: "",
+    };
+  }
+  const token = getAccessToken();
+  if (!token) throw new Error('Not authenticated');
+  const url = `https://api.spotify.com/v1/audio-features/${trackId}`;
+  const response = await withRetry(() =>
+    fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    try {
+      const errorData = JSON.parse(text);
+      throw new Error(errorData.error?.message || `Audio features failed: ${response.status}`);
+    } catch (e) {
+      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
+      throw new Error(text || `Audio features failed: ${response.status}`);
+    }
+  }
+  const data = await response.json();
+  await recordFetch(url, { method: 'GET' }, response, data);
+  return data;
+}
+
+/**
+ * Get audio analysis for a track (detailed breakdown).
+ * @see https://developer.spotify.com/documentation/web-api/reference/get-audio-analysis
+ */
+export async function getAudioAnalysis(trackId: string): Promise<AudioAnalysisResponse | null> {
+  if (isMockMode()) return null;
+  const token = getAccessToken();
+  if (!token) throw new Error('Not authenticated');
+  const url = `https://api.spotify.com/v1/audio-analysis/${trackId}`;
+  const response = await withRetry(() =>
+    fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  );
+  if (!response.ok) {
+    return null;
+  }
+  const data = await response.json();
+  await recordFetch(url, { method: 'GET' }, response, data);
+  return data;
 }
 
 /**

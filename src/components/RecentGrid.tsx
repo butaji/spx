@@ -1,5 +1,6 @@
 import { homeFeed } from "../stores/spotify";
 import type { View } from "../App";
+import { Artwork } from "./Artwork";
 
 interface RecentGridProps {
   onNavigate: (v: View) => void;
@@ -54,15 +55,26 @@ function FeedItem({
       role="button"
       tabIndex={0}
       onClick={handleClick}
-      aria-label={item.name}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
+      aria-label={
+        item.type === "artist"
+          ? `View artist ${item.name}`
+          : item.type === "playlist"
+          ? `Open playlist ${item.name}`
+          : `Play ${item.name}${item.subtitle ? ` by ${item.subtitle}` : ""}`
+      }
     >
-      <div
+      <Artwork
+        src={item.image}
+        alt={item.name}
+        size={160}
+        shape={item.type === "artist" ? "round" : "square"}
         className="lib-item-img"
-        style={{
-          background: item.image
-            ? `url(${item.image}) center/cover`
-            : undefined,
-        }}
       />
       <div className="lib-item-title">{item.name}</div>
       <div className="lib-item-sub">{item.subtitle}</div>
