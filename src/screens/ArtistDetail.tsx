@@ -67,11 +67,10 @@ export default function ArtistDetail({ id, name, onPlayUris }: Props) {
   return (
     <div>
       <div className="detail-hero">
-        <div className="detail-hero-top">
-          <div className="detail-hero-img" style={{
-            background: artist?.images?.[0]?.url ? `url(${artist.images[0].url}) center/cover` : undefined
-          }} />
-          <div className="detail-hero-info">
+        <div className="detail-hero-img" style={{
+          background: artist?.images?.[0]?.url ? `url(${artist.images[0].url}) center/cover` : undefined
+        }} />
+        <div className="detail-hero-info">
             <div className="eyebrow">Artist</div>
             <h1>{artist?.name || name}</h1>
             <p className="body-text">{artist?.followers?.total?.toLocaleString()} followers</p>
@@ -97,7 +96,6 @@ export default function ArtistDetail({ id, name, onPlayUris }: Props) {
               </button>
             </div>
           </div>
-        </div>
       </div>
 
       {loading ? (

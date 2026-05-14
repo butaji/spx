@@ -25,10 +25,10 @@
   --fg-muted: #666666;
   --fg-faint: #555555;
 
-  /* Accent - Last.fm red */
-  --accent: #d51007;
-  --accent-subtle: rgba(213, 16, 7, 0.1);
-  --accent-dim: rgba(213, 16, 7, 0.2);
+  /* Accent - Spotify green */
+  --accent: #1DB954;
+  --accent-subtle: rgba(29, 185, 84, 0.1);
+  --accent-dim: rgba(29, 185, 84, 0.2);
 
   /* Danger */
   --danger: #ff4444;
@@ -75,9 +75,9 @@
     --fg-secondary: #666666;
     --fg-muted: #888888;
     --fg-faint: #aaaaaa;
-    --accent: #d51007;
-    --accent-subtle: rgba(213, 16, 7, 0.08);
-    --accent-dim: rgba(213, 16, 7, 0.15);
+    --accent: #1DB954;
+    --accent-subtle: rgba(29, 185, 84, 0.08);
+    --accent-dim: rgba(29, 185, 84, 0.15);
     --danger: #cc0000;
     --edge: rgba(0, 0, 0, 0.08);
     --edge-light: rgba(0, 0, 0, 0.12);
@@ -330,7 +330,7 @@ h3, .h3 {
   border: none;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(213, 16, 7, 0.3);
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
 }
 .btn-primary:hover { transform: scale(1.04); filter: brightness(1.08); }
 .btn-primary:active { transform: scale(0.96); }
@@ -1209,7 +1209,7 @@ h3, .h3 {
   border: 1px solid var(--edge);
 }
 .player-art img { width: 100%; height: 100%; object-fit: cover; }
-.player-meta { min-width: 0; }
+.player-meta { min-width: 0; max-width: 160px; }
 .player-title {
   font-size: 12px;
   font-weight: 600;
@@ -1222,6 +1222,9 @@ h3, .h3 {
   font-size: 11px;
   color: var(--fg-secondary);
   margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .player-like-btn {
   background: none; border: none;
@@ -1358,11 +1361,6 @@ h3, .h3 {
   gap: 20px;
   margin-bottom: 24px;
 }
-.detail-hero-top {
-  display: flex;
-  align-items: flex-end;
-  gap: 20px;
-}
 .detail-hero-img {
   width: 240px; height: 240px;
   border-radius: var(--radius-sm);
@@ -1400,7 +1398,7 @@ h3, .h3 {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(213, 16, 7, 0.3);
+  box-shadow: 0 2px 8px rgba(29, 185, 84, 0.3);
 }
 .play-btn-lg:hover { transform: scale(1.06); filter: brightness(1.08); }
 .play-btn-lg:active { transform: scale(0.96); }
@@ -1423,7 +1421,7 @@ h3, .h3 {
   height: 100%;
   width: 100%;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(213, 16, 7, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 0%, rgba(29, 185, 84, 0.15) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 80%, rgba(100, 100, 255, 0.08) 0%, transparent 50%),
     var(--bg);
   color: var(--fg);
@@ -1473,7 +1471,7 @@ h3, .h3 {
   content: '';
   position: absolute;
   inset: -24px;
-  background: radial-gradient(circle, rgba(213, 16, 7, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(29, 185, 84, 0.3) 0%, transparent 70%);
   border-radius: 50%;
   z-index: -1;
   opacity: 0.5;

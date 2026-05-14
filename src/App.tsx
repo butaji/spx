@@ -32,6 +32,8 @@ import {
   availableDevices,
   refreshSpotifyDevices,
   refreshLocalDevices,
+  startDevicePolling,
+  stopDevicePolling,
 } from "./stores/devices";
 import {
   playbackTrack,
@@ -116,6 +118,12 @@ function App() {
   hotkeyHelpOpenRef.current = hotkeyHelpOpen;
   const historyRef = useRef(history);
   historyRef.current = history;
+
+  // Shuffle/Repeat debounce refs (avoid re-renders with useRef)
+  const shufflePendingRef = useRef(false);
+  const shuffleTimeoutRef = useRef<number | null>(null);
+  const repeatPendingRef = useRef(false);
+  const repeatTimeoutRef = useRef<number | null>(null);
 
   // Derived state from signals
   const track = useDerivedTrack();
@@ -238,6 +246,12 @@ function App() {
   useEffect(() => {
     const cleanup = startPlaybackPolling();
     return cleanup;
+  }, []);
+
+  // Start device polling (refreshes device list every 10s)
+  useEffect(() => {
+    startDevicePolling();
+    return () => stopDevicePolling();
   }, []);
 
   // Listen for Web Playback SDK ready event - just refresh state, don't transfer
@@ -460,15 +474,32 @@ function App() {
   }, []);
 
   const handleShuffle = useCallback(async () => {
-    try {
-      const newShuffle = !playbackShuffle.value;
-      await apiSetShuffle(newShuffle);
-      playbackShuffle.value = newShuffle;
-      refreshPlayback();
-    } catch (e) {
-      console.error("Failed to set shuffle:", e);
-      showError(e instanceof Error ? e.message : String(e));
+    // Cancel any pending API call
+    if (shuffleTimeoutRef.current) {
+      clearTimeout(shuffleTimeoutRef.current);
     }
+
+    const originalValue = playbackShuffle.value;
+    const newValue = !originalValue;
+
+    // Optimistic update
+    playbackShuffle.value = newValue;
+    shufflePendingRef.current = true;
+
+    // Debounce: wait 300ms before calling API
+    shuffleTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        await apiSetShuffle(newValue);
+        // Success - state already updated optimistically
+        shufflePendingRef.current = false;
+      } catch (e) {
+        // Revert on error
+        playbackShuffle.value = originalValue;
+        shufflePendingRef.current = false;
+        console.error("Failed to set shuffle:", e);
+        showError(e instanceof Error ? e.message : String(e));
+      }
+    }, 300);
   }, []);
 
   const handleMuteToggle = useCallback(async () => {
@@ -482,16 +513,33 @@ function App() {
   }, []);
 
   const handleRepeat = useCallback(async () => {
+    // Cancel any pending API call
+    if (repeatTimeoutRef.current) {
+      clearTimeout(repeatTimeoutRef.current);
+    }
+
     const current = playbackRepeat.value;
     const next = current === "off" ? "context" : current === "context" ? "track" : "off";
-    try {
-      await apiSetRepeat(next);
-      playbackRepeat.value = next;
-      refreshPlayback();
-    } catch (e) {
-      console.error("Failed to set repeat:", e);
-      showError(e instanceof Error ? e.message : String(e));
-    }
+    const originalValue = current;
+
+    // Optimistic update
+    playbackRepeat.value = next;
+    repeatPendingRef.current = true;
+
+    // Debounce: wait 300ms before calling API
+    repeatTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        await apiSetRepeat(next);
+        // Success - state already updated optimistically
+        repeatPendingRef.current = false;
+      } catch (e) {
+        // Revert on error
+        playbackRepeat.value = originalValue;
+        repeatPendingRef.current = false;
+        console.error("Failed to set repeat:", e);
+        showError(e instanceof Error ? e.message : String(e));
+      }
+    }, 300);
   }, []);
 
   const playContextFn = useCallback(async (uri: string, offsetUri?: string) => {
