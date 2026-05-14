@@ -1,5 +1,5 @@
 import { homeFeed } from "../stores/spotify";
-import type { View } from "../App";
+import type { View } from "../types";
 
 interface RecentGridProps {
   onNavigate: (v: View) => void;

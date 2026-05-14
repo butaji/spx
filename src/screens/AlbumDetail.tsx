@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getAlbum } from "../lib/spotify";
-import { View } from "../App";
-import { formatTime } from "../lib/utils";
+import type { View } from "../types";
 import { IconPlay } from "../App";
-import { SpotifyAlbum } from "../types";
+import type { SpotifyAlbum } from "../types";
+import { TrackRow } from "../components/TrackRow";
 
 interface Props {
   id: string;
@@ -94,25 +94,17 @@ export default function AlbumDetail({ id, name, onPlayContext, onPlayUris, onNav
       ) : (
         <div className="tracklist">
           {album?.tracks?.items?.map((track, i) => (
-            <div
+            <TrackRow
               key={track.id}
-              className="track"
-              role="button"
-              tabIndex={0}
+              index={i}
+              name={track.name}
+              artists={track.artists?.map((a) => a.name).join(", ")}
+              durationMs={track.duration_ms}
+              showArt={false}
               onClick={() => playTrack(i)}
               onKeyDown={(e) => handleTrackKeyDown(e, i)}
-              aria-label={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
-            >
-              <div className="track-num">{i + 1}</div>
-              <div className="track-art" />
-              <div className="track-info">
-                <div className="track-title">{track.name}</div>
-                <div className="track-album">{track.artists?.map((a) => a.name).join(", ")}</div>
-              </div>
-              <div />
-              <div />
-              <div className="track-dur">{formatTime(track.duration_ms || 0)}</div>
-            </div>
+              ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
+            />
           ))}
         </div>
       )}

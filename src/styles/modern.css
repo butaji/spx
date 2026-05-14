@@ -7,22 +7,39 @@
   /* Default to dark */
   --bg:              #0d0d0d;
   --bg-elevated:     #151515;
+  --glass:           #3d3d3d; /* fallback */
   --glass:           oklch(24%  0.005 0 / 0.45);
+  --glass-solid:     #3d3d3db3; /* fallback */
   --glass-solid:     oklch(24%  0.005 0 / 0.70);
+  --glass-hover:     #4d4d4d80; /* fallback */
   --glass-hover:     oklch(30%  0.006 0 / 0.50);
+  --fg:              #f0f0f0; /* fallback */
   --fg:              oklch(94%  0.003 0);
+  --fg-dim:          #b8b8b8; /* fallback */
   --fg-dim:          oklch(72%  0.006 0);
+  --fg-muted:        #999999; /* fallback */
   --fg-muted:        oklch(60%  0.006 0);
+  --fg-faint:        #858585; /* fallback */
   --fg-faint:        oklch(52%  0.008 0);
+  --accent:          #4ade80; /* fallback */
   --accent:          oklch(72%  0.17  145);
+  --accent-glow:     #4ade804d; /* fallback */
   --accent-glow:     oklch(72%  0.17  145 / 0.30);
+  --accent-dim:      #4ade801a; /* fallback */
   --accent-dim:      oklch(72%  0.17  145 / 0.10);
+  --danger:          #e05a5a; /* fallback */
   --danger:          oklch(60%  0.15  25);
+  --edge:            rgba(255, 255, 255, 0.06); /* fallback */
   --edge:            oklch(100% 0 0 / 0.06);
+  --edge-light:      rgba(255, 255, 255, 0.12); /* fallback */
   --edge-light:      oklch(100% 0 0 / 0.12);
+  --edge-accent:     #4ade8059; /* fallback */
   --edge-accent:     oklch(72%  0.17  145 / 0.35);
+  --inner-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.07); /* fallback */
   --inner-highlight: inset 0 1px 0 0 oklch(100% 0 0 / 0.07);
+  --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.25); /* fallback */
   --shadow-sm:       0 1px 2px oklch(0% 0 0 / 0.25);
+  --shadow-md:       0 4px 16px -4px rgba(0, 0, 0, 0.45); /* fallback */
   --shadow-md:       0 4px 16px -4px oklch(0% 0 0 / 0.45);
   --font:            -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
   --font-mono:       'SF Mono', ui-monospace, Menlo, monospace;
@@ -37,28 +54,51 @@
   --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 300;
+  --z-tooltip: 400;
+  --spotify-green: #1DB954;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     --bg:              #f5f5f5;
     --bg-elevated:     #ffffff;
+    --glass:           #f2f2f273; /* fallback */
     --glass:           oklch(95%  0.005 0 / 0.45);
+    --glass-solid:     #f2f2f2b3; /* fallback */
     --glass-solid:     oklch(95%  0.005 0 / 0.70);
+    --glass-hover:     #e6e6e680; /* fallback */
     --glass-hover:     oklch(90%  0.006 0 / 0.50);
+    --fg:              #333333; /* fallback */
     --fg:              oklch(20%  0.003 0);
+    --fg-dim:          #737373; /* fallback */
     --fg-dim:          oklch(45%  0.006 0);
+    --fg-muted:        #999999; /* fallback */
     --fg-muted:        oklch(60%  0.006 0);
+    --fg-faint:        #8c8c8c; /* fallback */
     --fg-faint:        oklch(55%  0.008 0);
+    --accent:          #1a9e54; /* fallback */
     --accent:          oklch(60%  0.17  145);
+    --accent-glow:     #1a9e5433; /* fallback */
     --accent-glow:     oklch(60%  0.17  145 / 0.20);
+    --accent-dim:      #1a9e541a; /* fallback */
     --accent-dim:      oklch(60%  0.17  145 / 0.10);
+    --danger:          #c75a5a; /* fallback */
     --danger:          oklch(55%  0.15  25);
+    --edge:            rgba(0, 0, 0, 0.08); /* fallback */
     --edge:            oklch(0% 0 0 / 0.08);
+    --edge-light:      rgba(0, 0, 0, 0.15); /* fallback */
     --edge-light:      oklch(0% 0 0 / 0.15);
+    --edge-accent:     #1a9e5459; /* fallback */
     --edge-accent:     oklch(60%  0.17  145 / 0.35);
+    --inner-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.50); /* fallback */
     --inner-highlight: inset 0 1px 0 0 oklch(100% 0 0 / 0.50);
+    --shadow-sm:       0 1px 2px rgba(0, 0, 0, 0.10); /* fallback */
     --shadow-sm:       0 1px 2px oklch(0% 0 0 / 0.10);
+    --shadow-md:       0 4px 16px -4px rgba(0, 0, 0, 0.20); /* fallback */
     --shadow-md:       0 4px 16px -4px oklch(0% 0 0 / 0.20);
   }
 }
@@ -99,6 +139,25 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Glass Card Utility ─── */
+.glass-card {
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
+}
+
 /* ─── App Shell ─── */
 .app-window {
   width: 100%; height: 100%;
@@ -131,7 +190,7 @@ html, body, #root {
   -webkit-backdrop-filter: blur(30px) saturate(160%);
   border-right: 1px solid var(--edge);
   box-shadow: var(--inner-highlight);
-  z-index: 50;
+  z-index: var(--z-sticky);
   flex-shrink: 0;
 }
 
@@ -481,6 +540,7 @@ h3, .h3 {
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.3);
   margin-bottom: 20px;
+  position: relative;
 }
 
 .np-artwork-large img {
@@ -554,14 +614,17 @@ h3, .h3 {
 /* Progress — thin, centered */
 .np-progress {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
   width: 100%;
   max-width: 320px;
   margin-bottom: 16px;
+  margin-top: 12px;
 }
 
 .np-time {
+  font-family: var(--font-mono);
   font-size: 10px;
   color: var(--fg-faint);
   min-width: 32px;
@@ -673,7 +736,7 @@ h3, .h3 {
   display: block;
 }
 
-.np-artwork-placeholder {
+.np-hero-artwork-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -722,7 +785,7 @@ h3, .h3 {
   margin-bottom: 4px;
 }
 
-.np-title {
+.np-hero-title {
   font-size: 28px;
   font-weight: 800;
   color: var(--fg);
@@ -743,21 +806,7 @@ h3, .h3 {
   margin: 0;
 }
 
-.np-progress {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-}
 
-.np-time {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--fg-faint);
-  min-width: 36px;
-  font-variant-numeric: tabular-nums;
-}
 
 .np-progress-bar {
   flex: 1;
@@ -769,7 +818,7 @@ h3, .h3 {
   overflow: hidden;
 }
 
-.np-progress-fill {
+.np-hero-progress-fill {
   height: 100%;
   background: var(--accent);
   border-radius: 2px;
@@ -822,21 +871,7 @@ h3, .h3 {
   padding: 32px;
 }
 
-.np-artwork-large {
-  width: 200px;
-  height: 200px;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-  margin-bottom: 20px;
-}
 
-.np-artwork-large img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
 
 .np-empty-title {
   font-size: 16px;
@@ -851,17 +886,7 @@ h3, .h3 {
 }
 
 /* ─── Now Playing: Skeleton ─── */
-.skeleton-text {
-  height: 14px;
-  background: oklch(100% 0 0 / 0.06);
-  border-radius: 4px;
-}
-
-.skeleton-text {
-  height: 14px;
-  background: oklch(100% 0 0 / 0.06);
-  border-radius: 4px;
-}
+/* Uses skeleton-text from Skeleton Loading section below */
 
 /* ─── Info Bubble (liquid glass) ─── */
 .info-bubble {
@@ -1091,6 +1116,7 @@ h3, .h3 {
   flex-shrink: 0;
   cursor: pointer;
   transition: transform 0.15s ease;
+  position: relative;
 }
 .lib-item:hover { transform: translateY(-2px); }
 .lib-item-img {
@@ -1127,9 +1153,6 @@ h3, .h3 {
 }
 
 /* ─── Play Count Badge ─── */
-.lib-item {
-  position: relative;
-}
 
 .lib-item-img-wrapper {
   position: relative;
@@ -1178,7 +1201,7 @@ h3, .h3 {
   padding: 0 18px;
   gap: 16px;
   flex-shrink: 0;
-  z-index: 50;
+  z-index: var(--z-sticky);
 }
 
 .player-track {
@@ -1395,7 +1418,7 @@ h3, .h3 {
 /* ─── Auth Screen ─── */
 .auth-screen {
   position: relative;
-  z-index: 100;
+  z-index: var(--z-modal);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1403,8 +1426,8 @@ h3, .h3 {
   height: 100%;
   width: 100%;
   background:
-    radial-gradient(ellipse at 50% 0%, oklch(30% 0.12 145 / 0.15) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 80%, oklch(25% 0.08 250 / 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 50%, var(--glass-hover) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, var(--glass) 0%, transparent 50%),
     var(--bg);
   color: var(--fg);
   padding: 40px 24px;
@@ -1496,7 +1519,7 @@ h3, .h3 {
 }
 
 .auth-subtitle-accent {
-  color: #1DB954;
+  color: var(--spotify-green);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -1819,7 +1842,7 @@ h3, .h3 {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   padding: 8px 0;
-  z-index: 100;
+  z-index: var(--z-dropdown);
 }
 
 .device-dropdown-header {
@@ -2320,4 +2343,14 @@ div:hover > .song-play-btn {
   opacity: 1 !important;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 

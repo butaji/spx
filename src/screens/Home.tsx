@@ -1,8 +1,7 @@
 import { useEffect, useState } from "preact/compat";
 import { getArtist, getArtistTopTracks } from "../lib/spotify";
 import { loadRecentActivity, lastPlayedTrack } from "../stores/spotify";
-import { View } from "../App";
-import type { SpotifyArtist } from "../types";
+import type { View, SpotifyArtist, SpotifyTrack, TrackInfo } from "../types";
 
 import NowPlayingHero from "../components/NowPlayingHero";
 import StatsCard from "../components/StatsCard";
@@ -12,7 +11,7 @@ import RecentGrid from "../components/RecentGrid";
 const MOCK_TAGS = ["electro swing", "trip hop", "nu jazz", "chillout", "electronic"];
 
 interface Props {
-  track: any | null;
+  track: TrackInfo | null;
   onPlayContext: (uri: string, offsetUri?: string) => void;
   onNavigate: (v: View) => void;
   onSeek: (ms: number) => void;
@@ -20,15 +19,10 @@ interface Props {
   onToggleLike: () => void | Promise<void>;
 }
 
-export default function Home({
-  track,
-  onPlayContext,
-  onNavigate,
-  liked,
-  onToggleLike,
-}: Props) {
+export default function Home({ track, onNavigate, liked, onToggleLike, ...rest }: Props) {
+  const { onPlayContext } = rest;
   const [artistDetail, setArtistDetail] = useState<SpotifyArtist | null>(null);
-  const [artistTopTracks, setArtistTopTracks] = useState<any[]>([]);
+  const [artistTopTracks, setArtistTopTracks] = useState<SpotifyTrack[]>([]);
   const [scrobbleCount, setScrobbleCount] = useState(0);
   const [trackScrobbleCount, setTrackScrobbleCount] = useState(0);
   const [isLoadingArtist, setIsLoadingArtist] = useState(true);
@@ -92,7 +86,7 @@ export default function Home({
     }
   };
 
-  const artistName = displayTrack?.artistName || displayTrack?.artist || "Unknown";
+  const artistName = displayTrack?.artistName || "Unknown";
   const trackName = displayTrack?.name || "Unknown Track";
   const tags = artistDetail?.genres?.slice(0, 5) || MOCK_TAGS;
 

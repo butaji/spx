@@ -10,12 +10,29 @@ import { load, type Store } from '@tauri-apps/plugin-store';
 import type { LocalDevice, SpotifyArtist, SpotifyTrack } from "../types";
 import { withRetry } from "./retry";
 
+/**
+ * Parse a Spotify API error response into a meaningful Error.
+ * Handles both structured JSON errors and raw text responses.
+ */
+function parseSpotifyError(response: Response, text: string, context: string = 'Request'): Error {
+  try {
+    const data = JSON.parse(text);
+    throw new Error(data.error?.message || `${context} failed: ${response.status}`);
+  } catch (e) {
+    if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
+    throw new Error(text || `${context} failed: ${response.status}`);
+  }
+}
+
 const TOKEN_STORAGE_KEY = 'spx_spotify_token';
 const STORE_PATH = 'spotify-auth.bin';
 
 // Recording config
 const RECORD_API = typeof import.meta.env !== 'undefined' && import.meta.env.VITE_SPX_RECORD === '1';
 
+
+const DEBUG = false;
+function debug(...args: any[]) { if (DEBUG) console.log(...args); }
 
 async function recordFetch(url: string, options: any, response: Response, data: any) {
   if (!RECORD_API) return;
@@ -30,7 +47,7 @@ async function recordFetch(url: string, options: any, response: Response, data: 
   };
   
   // Save via Tauri FS or console for manual extraction
-  console.log(`[API_RECORD] ${filename}:`, JSON.stringify(recording, null, 2).slice(0, 300));
+  debug(`[API_RECORD] ${filename}:`, JSON.stringify(recording, null, 2).slice(0, 300));
 }
 
 let _store: Store | null = null;
@@ -170,10 +187,10 @@ const REQUIRED_SCOPES = [
 let clientId: string | null = null;
 
 async function getClientId(): Promise<string> {
-  console.log("Getting Spotify client ID...");
+  debug("Getting Spotify client ID...");
   if (clientId) return clientId;
   clientId = await invoke<string>("get_spotify_client_id");
-  console.log("Resolved client ID:", clientId);
+  debug("Resolved client ID:", clientId);
   return clientId;
 }
 
@@ -249,7 +266,7 @@ export async function clearToken() {
 }
 
 export async function startAuthFlow(): Promise<void> {
-  console.log("Starting auth flow...");
+  debug("Starting auth flow...");
   // Start callback server in background
   const serverPromise = invoke<[string, string] | null>("start_callback_server");
 
@@ -470,6 +487,7 @@ export async function handleCallbackUrl(url: string): Promise<boolean> {
 }
 
 export async function isAuthenticated(): Promise<boolean> {
+  await checkMockMode(); // Ensure mock mode is determined first
   if (mockModeValue) return true;
   if (!!accessToken && !!spotify) return true;
   // Check if we have a stored token that could be restored
@@ -482,6 +500,13 @@ export async function logout() {
   spotify = null;
   tokenVerifier = null;
   await clearToken();
+  // Clear all cached data on logout
+  try {
+    const { clearCache } = await import('./cache');
+    await clearCache();
+  } catch (e) {
+    console.error('Failed to clear cache on logout:', e);
+  }
 }
 
 export function getAccessToken(): string | null {
@@ -508,19 +533,13 @@ export async function play(deviceId?: string) {
   }
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch('https://api.spotify.com/v1/me/player/play' + (deviceId ? `?device_id=${deviceId}` : ''), {
+  const response = await withRetry(() => fetch('https://api.spotify.com/v1/me/player/play' + (deviceId ? `?device_id=${deviceId}` : ''), {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'Play');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -542,19 +561,13 @@ export async function pause() {
   }
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch('https://api.spotify.com/v1/me/player/pause', {
+  const response = await withRetry(() => fetch('https://api.spotify.com/v1/me/player/pause', {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'Pause');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -575,13 +588,13 @@ export async function next() {
   }
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch('https://api.spotify.com/v1/me/player/next', {
+  const response = await withRetry(() => fetch('https://api.spotify.com/v1/me/player/next', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Skip next failed: ${response.status}`);
+    throw parseSpotifyError(response, text, 'Skip next');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -597,13 +610,13 @@ export async function previous() {
   }
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch('https://api.spotify.com/v1/me/player/previous', {
+  const response = await withRetry(() => fetch('https://api.spotify.com/v1/me/player/previous', {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Skip previous failed: ${response.status}`);
+    throw parseSpotifyError(response, text, 'Skip previous');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -615,19 +628,13 @@ export async function seek(positionMs: number) {
   if (isMockMode()) return;
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(`https://api.spotify.com/v1/me/player/seek?position_ms=${positionMs}`, {
+  const response = await withRetry(() => fetch(`https://api.spotify.com/v1/me/player/seek?position_ms=${positionMs}`, {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'Seek');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -644,19 +651,13 @@ export async function setVolume(volumePercent: number) {
   if (isMockMode()) return;
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(`https://api.spotify.com/v1/me/player/volume?volume_percent=${volumePercent}`, {
+  const response = await withRetry(() => fetch(`https://api.spotify.com/v1/me/player/volume?volume_percent=${volumePercent}`, {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'SetVolume');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -680,20 +681,14 @@ export async function transferPlayback(deviceId: string, play?: boolean) {
   }
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch('https://api.spotify.com/v1/me/player', {
+  const response = await withRetry(() => fetch('https://api.spotify.com/v1/me/player', {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ device_ids: [deviceId], play: play ?? true }),
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'TransferPlayback');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -882,13 +877,7 @@ export async function getTopTracks(
 
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'GetTopTracks');
   }
 
   const text = await response.text();
@@ -940,13 +929,13 @@ export async function setShuffle(state: boolean) {
   if (isMockMode()) return;
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(`https://api.spotify.com/v1/me/player/shuffle?state=${state}`, {
+  const response = await withRetry(() => fetch(`https://api.spotify.com/v1/me/player/shuffle?state=${state}`, {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Set shuffle failed: ${response.status}`);
+    throw parseSpotifyError(response, text, 'Set shuffle');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -958,13 +947,13 @@ export async function setRepeat(state: "off" | "context" | "track") {
   if (isMockMode()) return;
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(`https://api.spotify.com/v1/me/player/repeat?state=${state}`, {
+  const response = await withRetry(() => fetch(`https://api.spotify.com/v1/me/player/repeat?state=${state}`, {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Set repeat failed: ${response.status}`);
+    throw parseSpotifyError(response, text, 'Set repeat');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -978,20 +967,14 @@ export async function playContext(contextUri: string, offsetUri?: string) {
   if (!token) throw new Error('Not authenticated');
   const body: any = { context_uri: contextUri };
   if (offsetUri) body.offset = { uri: offsetUri };
-  const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+  const response = await withRetry(() => fetch('https://api.spotify.com/v1/me/player/play', {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'PlayContext');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -1010,20 +993,14 @@ export async function playUris(uris: string[], offset?: number, deviceId?: strin
   if (!token) throw new Error('Not authenticated');
   const body: any = { uris };
   if (offset !== undefined) body.offset = { position: offset };
-  const response = await fetch('https://api.spotify.com/v1/me/player/play' + (deviceId ? `?device_id=${deviceId}` : ''), {
+  const response = await withRetry(() => fetch('https://api.spotify.com/v1/me/player/play' + (deviceId ? `?device_id=${deviceId}` : ''), {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'PlayUris');
   }
   if (response.status === 204) return;
   const text = await response.text();
@@ -1055,13 +1032,13 @@ export async function saveTracks(trackIds: string[]): Promise<void> {
   if (isMockMode()) return;
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackIds.join(',')}`, {
+  const response = await withRetry(() => fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackIds.join(',')}`, {
     method: 'PUT',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Save tracks failed: ${response.status} ${text}`);
+    throw parseSpotifyError(response, text, 'Save tracks');
   }
 }
 
@@ -1069,13 +1046,13 @@ export async function removeSavedTracks(trackIds: string[]): Promise<void> {
   if (isMockMode()) return;
   const token = getAccessToken();
   if (!token) throw new Error('Not authenticated');
-  const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackIds.join(',')}`, {
+  const response = await withRetry(() => fetch(`https://api.spotify.com/v1/me/tracks?ids=${trackIds.join(',')}`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` },
-  });
+  }));
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Remove saved tracks failed: ${response.status} ${text}`);
+    throw parseSpotifyError(response, text, 'Remove saved tracks');
   }
 }
 
@@ -1153,13 +1130,7 @@ export async function getRecommendations(options: {
 
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'GetRecommendations');
   }
 
   const text = await response.text();
@@ -1233,13 +1204,7 @@ export async function getNewReleases(
 
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'GetNewReleases');
   }
 
   const text = await response.text();
@@ -1298,13 +1263,7 @@ export async function getBrowseCategories(
 
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'GetBrowseCategories');
   }
 
   const text = await response.text();
@@ -1362,13 +1321,7 @@ export async function getCategoryPlaylists(
 
   if (!response.ok) {
     const text = await response.text();
-    try {
-      const errorData = JSON.parse(text);
-      throw new Error(errorData.error?.message || `Request failed: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && !e.message.includes(response.status.toString())) throw e;
-      throw new Error(text || `Request failed: ${response.status}`);
-    }
+    throw parseSpotifyError(response, text, 'GetCategoryPlaylists');
   }
 
   const text = await response.text();

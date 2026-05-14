@@ -56,29 +56,7 @@ import {
   startPlaybackPolling,
   validateToken,
 } from "./stores/spotify";
-
-
-export type View =
-  | { type: "home" }
-  | { type: "search" }
-  | { type: "library"; tab?: string }
-  | { type: "queue" }
-  | { type: "playlist"; id: string; name: string }
-  | { type: "album"; id: string; name: string }
-  | { type: "artist"; id: string; name: string };
-
-export interface TrackInfo {
-  id: string;
-  name: string;
-  artist: string;
-  artistIds?: string[];
-  album: string;
-  durationMs: number;
-  progressMs: number;
-  isPlaying: boolean;
-  imageUrl?: string;
-  uri: string;
-}
+import type { View, TrackInfo } from './types';
 
 /* ── Icons ── */
 function IconHome({ active }: { active?: boolean }) {
@@ -137,12 +115,12 @@ function useDerivedTrack(): TrackInfo | null {
     id: track.id,
     name: track.name,
     artist: track.artists?.map(a => a.name).join(", ") || "Unknown",
-    artistIds: track.artists?.map(a => a.id) || [],
+    artistId: track.artists?.[0]?.id || null,
     album: track.album?.name || "",
-    durationMs: track.duration_ms,
-    progressMs: playbackProgress.value,
-    isPlaying: isPlaying.value,
-    imageUrl: track.album?.images?.[0]?.url,
+    albumId: track.album?.id || null,
+    art: track.album?.images?.[0]?.url || "",
+    duration: track.duration_ms || 0,
+    durationMs: track.duration_ms || 0,
     uri: track.uri,
   };
 }
@@ -939,7 +917,7 @@ function App() {
       <div className="player-bar">
         <div className="player-track">
           <div className="player-art">
-            {track?.imageUrl ? <img src={track.imageUrl} alt="" /> : null}
+            {track?.art ? <img src={track.art} alt="" /> : null}
           </div>
           <div className="player-meta">
             <div className="player-title" style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{track?.name || "No track"}</div>

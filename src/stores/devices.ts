@@ -13,13 +13,17 @@ let activeScanPromise: Promise<void> | null = null;
 let lastLocalScanAt = 0;
 const LOCAL_SCAN_COOLDOWN_MS = 30_000; // minimum 30s between scans
 
+// Shared scan lock to prevent concurrent scans across refresh functions
+let _scanLock: Promise<void> | null = null;
+
 export async function refreshDevices() {
   // If already scanning, wait for it instead of starting a new one
-  if (activeScanPromise) {
+  if (activeScanPromise || _scanLock) {
+    await _scanLock;
     return activeScanPromise;
   }
 
-  activeScanPromise = (async () => {
+  _scanLock = (async () => {
     isScanning.value = true;
     scanError.value = null;
 
@@ -55,9 +59,11 @@ export async function refreshDevices() {
     } finally {
       isScanning.value = false;
       activeScanPromise = null;
+      _scanLock = null;
     }
   })();
 
+  activeScanPromise = _scanLock;
   return activeScanPromise;
 }
 
@@ -88,7 +94,8 @@ export async function refreshSpotifyDevices() {
  */
 export async function refreshLocalDevices(force = false) {
   // Skip if already running
-  if (activeScanPromise) {
+  if (activeScanPromise || _scanLock) {
+    await _scanLock;
     return activeScanPromise;
   }
 
@@ -97,7 +104,7 @@ export async function refreshLocalDevices(force = false) {
     return;
   }
 
-  activeScanPromise = (async () => {
+  _scanLock = (async () => {
     isScanning.value = true;
     try {
       const local = await scanLocalDevices();
@@ -108,19 +115,17 @@ export async function refreshLocalDevices(force = false) {
 
       // Match local mDNS devices with Spotify Connect devices
       const matched = local.map((device) => {
-        // Try to find a Spotify device by ID or by name similarity
-        const byId = spotifyDevices.find((sd) => sd.id === device.id);
+        // mDNS device IDs ≠ Spotify device IDs, so only match by name
         const byName = spotifyDevices.find(
-          (sd) => sd.name?.toLowerCase() === device.name.toLowerCase()
+          (sd) => sd.name?.toLowerCase().trim() === device.name.toLowerCase().trim()
         );
-        const spotifyMatch = byId || byName;
 
-        if (spotifyMatch && spotifyMatch.id) {
+        if (byName && byName.id) {
           // Has Spotify Connect — can transfer
           return {
             ...device,
-            id: spotifyMatch.id, // prefer Spotify device ID
-            is_active: spotifyMatch.is_active,
+            id: byName.id, // prefer Spotify device ID
+            is_active: byName.is_active,
             canTransfer: true,
           };
         } else {
@@ -140,8 +145,10 @@ export async function refreshLocalDevices(force = false) {
     } finally {
       isScanning.value = false;
       activeScanPromise = null;
+      _scanLock = null;
     }
   })();
 
+  activeScanPromise = _scanLock;
   return activeScanPromise;
 }

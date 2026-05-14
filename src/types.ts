@@ -291,3 +291,31 @@ export interface SpotifyAPIError {
 }
 
 export type SpotifyError = SpotifyAPIError | string | unknown;
+
+// ─── View & TrackInfo ─────────────────────────────────────────────────────────
+
+export type View =
+  | { type: "home" }
+  | { type: "search" }
+  | { type: "library"; tab?: string }
+  | { type: "queue" }
+  | { type: "playlist"; id: string; name: string }
+  | { type: "album"; id: string; name: string }
+  | { type: "artist"; id: string; name: string };
+
+export interface TrackInfo {
+  id: string;
+  name: string;
+  artist: string;
+  artistIds?: string[];
+  artistId?: string | null;
+  artists?: Array<{ name: string; id: string }>;
+  artistName?: string;
+  album: string;
+  albumId?: string | null;
+  art: string;
+  duration: number;
+  durationMs: number;
+  uri: string;
+  url?: string;
+}

@@ -2,8 +2,9 @@ import { useEffect, useState, useCallback, useRef } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getUserPlaylists, getSavedTracks, getSavedAlbums, getTopTracks } from "../lib/spotify";
 import { getCached, setCache } from "../lib/cache";
-import { View } from "../App";
+import type { View } from "../types";
 import { SpotifyPlaylist, SpotifyTrack, SpotifyAlbum } from "../types";
+import { TrackRow } from "../components/TrackRow";
 
 type Tab = "playlists" | "tracks" | "albums" | "top";
 
@@ -212,27 +213,16 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
       ) : (
         <div className="tracklist">
           {items.map((item, i) => (
-            <div
+            <TrackRow
               key={item.id}
-              className="track"
-              role="button"
-              tabIndex={0}
+              index={i}
+              name={item.name}
+              artists={(item as SpotifyTrack).artists?.map((a) => a.name).join(", ")}
+              imageUrl={(item as SpotifyTrack).album?.images?.[0]?.url}
               onClick={() => handleTrackClick(item as SpotifyTrack)}
               onKeyDown={(e) => handleTrackKeyDown(e, item as SpotifyTrack)}
-              aria-label={`${item.name} by ${(item as SpotifyTrack).artists?.map((a) => a.name).join(", ")}`}
-            >
-              <div className="track-num">{i + 1}</div>
-              <div className="track-art" style={{
-                background: (item as SpotifyTrack).album?.images?.[0]?.url ? `url(${(item as SpotifyTrack).album?.images?.[0]?.url}) center/cover` : undefined
-              }} />
-              <div className="track-info">
-                <div className="track-title">{item.name}</div>
-                <div className="track-album">{(item as SpotifyTrack).artists?.map((a) => a.name).join(", ")}</div>
-              </div>
-              <div />
-              <div />
-              <div className="track-dur" />
-            </div>
+              ariaLabel={`${item.name} by ${(item as SpotifyTrack).artists?.map((a) => a.name).join(", ")}`}
+            />
           ))}
           {items.length === 0 && (
             <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} role="status">

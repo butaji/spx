@@ -2,21 +2,13 @@ import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getArtist, getArtistTopTracks, getArtistAlbums } from "../lib/spotify";
 import { IconPlay } from "../App";
-import { SpotifyArtist, SpotifyTrack } from "../types";
+import { SpotifyArtist, SpotifyTrack, SpotifyAlbum } from "../types";
 
 interface Props {
   id: string;
   name: string;
   onPlayContext: (uri: string, offsetUri?: string) => void;
   onPlayUris: (uris: string[], offset?: number) => void;
-}
-
-interface SpotifyAlbum {
-  id: string;
-  name: string;
-  images?: { url: string }[];
-  album_type: string;
-  release_date?: string;
 }
 
 export default function ArtistDetail({ id, name, onPlayUris }: Props) {

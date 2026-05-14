@@ -8,7 +8,7 @@ interface Track {
   id: string;
   name: string;
   uri?: string;
-  duration_ms: number;
+  duration_ms?: number;
   album?: {
     name?: string;
     images?: { url: string }[];
