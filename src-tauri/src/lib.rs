@@ -348,17 +348,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .invoke_handler(tauri::generate_handler![get_spotify_client_id, start_callback_server, is_mock_mode, scan_spotify_devices, wake_cast_device])
-        .on_window_event(|window, event| {
-            #[cfg(target_os = "macos")]
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
-            }
-        })
-        .build(tauri::generate_context!())
-        .expect("error while building tauri application")
-        .run(|app, event| {
-            // Build and set the menu bar on macOS
+        .setup(|app| {
             #[cfg(target_os = "macos")]
             {
                 let app_menu = Submenu::with_items(
@@ -429,7 +419,18 @@ pub fn run() {
                     }
                 });
             }
-
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
             #[cfg(target_os = "macos")]
             match event {
                 tauri::RunEvent::ExitRequested { api, .. } => {

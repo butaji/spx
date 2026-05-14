@@ -78,8 +78,8 @@ export const effectiveDeviceId = computed(() => {
     return active.id;
   }
   // Fall back to Web Playback SDK device (SPX Player)
-  if (currentDeviceId.value) {
-    return currentDeviceId.value;
+  if (currentDeviceId) {
+    return currentDeviceId;
   }
   const first = devices.find(d => d.id && !d.is_restricted);
   return first?.id ?? null;

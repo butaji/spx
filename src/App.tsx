@@ -30,7 +30,6 @@ import {
 import { initPlayer, onPlaybackEvent } from "./lib/playback";
 import {
   availableDevices,
-  localDevices,
   refreshSpotifyDevices,
   refreshLocalDevices,
 } from "./stores/devices";
@@ -234,56 +233,6 @@ function App() {
 
     return () => { ignore = true; };
   }, []);
-
-  const handleTransferPlayback = useCallback(async (deviceId: string) => {
-    console.log("[Play Debug] Transferring to device:", deviceId);
-
-    // Retry up to 3 times with delay (Spotify servers may need time)
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await transferPlayback(deviceId, false);
-        console.log("[Play Debug] Transfer succeeded on attempt", attempt);
-        // Refresh devices after successful transfer
-        setTimeout(() => refreshSpotifyDevices(), 1000);
-        return;
-      } catch (e: any) {
-        const msg = e?.message || String(e);
-        console.warn(`[Play Debug] Transfer attempt ${attempt} failed:`, msg);
-
-        if (attempt < 3) {
-          // Wait longer between retries
-          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-        } else {
-          // All retries failed
-          // If this is a server error, tell user to try again
-          if (msg.includes("500") || msg.includes("503")) {
-            showError("Spotify servers are having issues. Please try again.");
-          } else {
-            showError("Could not transfer playback. Device may be offline.");
-          }
-        }
-      }
-    }
-
-    // Refresh device list regardless
-    refreshSpotifyDevices();
-  }, []);
-
-  const transferToLocalDevice = useCallback(async (deviceName: string) => {
-    const device = localDevices.value.find((d) => d.name === deviceName);
-    if (!device) {
-      showError("Device not found");
-      return;
-    }
-    if (device.canTransfer && device.id) {
-      await handleTransferPlayback(device.id);
-    } else {
-      await message("To control this device, open Spotify on it first", {
-        title: "SPX",
-        kind: "info",
-      });
-    }
-  }, [handleTransferPlayback]);
 
   // Start playback polling
   useEffect(() => {
@@ -844,12 +793,7 @@ function App() {
         onToggleLike={handleToggleLike}
         onShuffle={handleShuffle}
         onRepeat={handleRepeat}
-        onTransferPlayback={() => {
-          const active = availableDevices.value.find(d => d.is_active);
-          if (active?.id) handleTransferPlayback(active.id);
-        }}
         onRefreshLocalDevices={refreshLocalDevices}
-        onTransferToLocalDevice={(name) => transferToLocalDevice(name)}
         onMuteToggle={handleMuteToggle}
       />
 

@@ -33,7 +33,16 @@ export default function Stats() {
           getTopTracks(5, "medium_term"),
         ]);
         setTopArtists(artists.slice(0, 5));
-        setTopTracks(tracks.slice(0, 5));
+        setTopTracks(tracks.slice(0, 5).map(t => ({
+          id: t.id,
+          name: t.name,
+          artists: t.artists?.map(a => ({ id: a.id ?? '', name: a.name })),
+          album: t.album ? {
+            id: t.album.id ?? '',
+            name: t.album.name,
+            images: t.album.images
+          } : undefined
+        })));
       } catch (e) {
         console.error("Failed to load stats", e);
       } finally {

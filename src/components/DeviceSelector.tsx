@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "preact/compat";
-import { availableDevices, localDevices, activeDevice, isScanning, isTransferring, allDevices, selectDevice } from "../stores/devices";
+import { activeDevice, isScanning, isTransferring, allDevices, selectDevice } from "../stores/devices";
 
 interface Props {
   onRefreshLocal: () => void;

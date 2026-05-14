@@ -31,9 +31,7 @@ interface PlayerBarProps {
   onToggleLike: () => void;
   onShuffle: () => void;
   onRepeat: () => void;
-  onTransferPlayback: () => void;
   onRefreshLocalDevices: () => void;
-  onTransferToLocalDevice: (name: string) => void | Promise<void>;
   onMuteToggle: () => void;
 }
 
@@ -55,9 +53,7 @@ export function PlayerBar({
   onToggleLike,
   onShuffle,
   onRepeat,
-  onTransferPlayback,
   onRefreshLocalDevices,
-  onTransferToLocalDevice,
   onMuteToggle,
 }: PlayerBarProps) {
   const progressPct = track && duration > 0 ? (progress / duration) * 100 : 0;
@@ -149,9 +145,7 @@ export function PlayerBar({
 
       <div className="player-right">
         <DeviceSelector
-          onTransfer={onTransferPlayback}
           onRefreshLocal={onRefreshLocalDevices}
-          onTransferLocal={onTransferToLocalDevice}
         />
         <button className="ctrl-btn" aria-label="Volume" role="button" tabIndex={0} onClick={onMuteToggle}>
           <IconVolume muted={volume === 0} />
