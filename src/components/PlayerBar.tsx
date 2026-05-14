@@ -97,7 +97,7 @@ export function PlayerBar({
 
       <div className="player-center">
         <div className="player-controls" role="group" aria-label="Playback controls">
-          <button className="ctrl-btn" onClick={onShuffle} title="Shuffle" aria-label="Shuffle" role="button" tabIndex={0}>
+          <button className={`ctrl-btn ${shuffle ? "active" : ""}`} onClick={onShuffle} title="Shuffle" aria-label="Shuffle" role="button" tabIndex={0}>
             <IconShuffle active={shuffle} />
           </button>
           <button className="ctrl-btn" onClick={onPrev} aria-label="Previous track" role="button" tabIndex={0}>
@@ -119,7 +119,7 @@ export function PlayerBar({
           <button className="ctrl-btn" onClick={onNext} aria-label="Next track" role="button" tabIndex={0}>
             <IconNext />
           </button>
-          <button className="ctrl-btn" onClick={onRepeat} title="Repeat" aria-label={`Repeat: ${repeat}`} role="button" tabIndex={0}>
+          <button className={`ctrl-btn ${repeat !== "off" ? "active" : ""}`} onClick={onRepeat} title="Repeat" aria-label={`Repeat: ${repeat}`} role="button" tabIndex={0}>
             <IconRepeat mode={repeat} />
           </button>
         </div>

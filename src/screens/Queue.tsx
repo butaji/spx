@@ -37,7 +37,7 @@ export default function Queue({ onPlayUris }: Props) {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 20 }}>Up Next</h2>
+      <h1 className="screen-title">Up Next</h1>
 
       {current && (
         <div style={{ marginBottom: 24 }}>

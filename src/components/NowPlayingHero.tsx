@@ -1,4 +1,4 @@
-import { IconHeart } from "./icons";
+import { IconHeart, IconTag, IconShare } from "./icons";
 import { Artwork } from "./Artwork";
 import { AudioFeatures } from "./AudioFeatures";
 
@@ -27,6 +27,20 @@ export default function NowPlayingHero({
   tags,
   onToggleLike,
 }: NowPlayingHeroProps) {
+  const handleShare = () => {
+    if (track?.id) {
+      const url = `https://open.spotify.com/track/${track.id}`;
+      navigator.clipboard.writeText(url).then(() => {
+        // Could show a toast notification here
+      });
+    }
+  };
+
+  const handleAddToPlaylist = () => {
+    // Placeholder - would open a playlist selection dialog
+    alert("Add to Playlist coming soon!");
+  };
+
   if (!track) {
     return (
       <div className="np-hero">
@@ -72,6 +86,20 @@ export default function NowPlayingHero({
             onClick={onToggleLike}
           >
             <IconHeart filled={liked} size={20} />
+          </button>
+          <button
+            className="np-action-btn"
+            onClick={handleAddToPlaylist}
+            title="Add to Playlist"
+          >
+            <IconTag size={20} />
+          </button>
+          <button
+            className="np-action-btn"
+            onClick={handleShare}
+            title="Share"
+          >
+            <IconShare size={20} />
           </button>
         </div>
       </div>

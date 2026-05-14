@@ -138,7 +138,7 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
   if (initialLoading && items.length === 0) {
     return (
       <div>
-        <h2 style={{ marginBottom: 20 }}>Your Library</h2>
+        <h1 className="screen-title">Your Library</h1>
         <div className="filter-tabs" role="tablist" aria-label="Library tabs">
           {tabs.map((t) => (
             <button
@@ -161,7 +161,7 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <h2 style={{ marginBottom: 0 }}>Your Library</h2>
+        <h1 className="screen-title" style={{ marginBottom: 0 }}>Your Library</h1>
         {isRefreshing && (
           <span className="text-sm text-muted" style={{ opacity: 0.6 }} aria-live="polite">Updating...</span>
         )}

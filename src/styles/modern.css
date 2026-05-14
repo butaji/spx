@@ -256,7 +256,7 @@ button:focus-visible, [tabindex]:focus-visible {
 .main-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 26px 28px 28px 24px;
+  padding: 16px 28px 28px 24px;
   box-sizing: border-box;
 }
 
@@ -1262,6 +1262,8 @@ h3, .h3 {
 .ctrl-btn:active { transform: scale(0.93); }
 .ctrl-btn svg { width: 16px; height: 16px; }
 .ctrl-btn.play svg { width: 22px; height: 22px; color: var(--fg); }
+.ctrl-btn.active { color: var(--accent); }
+.ctrl-btn.active svg { color: var(--accent); }
 
 .scrubber {
   width: 100%;
@@ -1371,7 +1373,7 @@ h3, .h3 {
   border: 1px solid var(--edge);
 }
 .detail-hero-img img { width: 100%; height: 100%; object-fit: cover; }
-.detail-hero-info { flex: 1; }
+.detail-hero-info { width: 100%; }
 .detail-hero-info h1 { font-size: 32px; margin-bottom: 8px; letter-spacing: -0.02em; line-height: 1.15; font-weight: 700; color: var(--fg); }
 .eyebrow {
   font-size: 11px;
@@ -2791,10 +2793,10 @@ div:hover > .song-play-btn {
 }
 
 .screen-title {
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 700;
   color: var(--fg);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .stats-grid {

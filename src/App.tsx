@@ -286,9 +286,9 @@ function App() {
       console.log("Auth flow completed successfully");
       isAuthSignal.value = true;
       authError.value = false;
-      loadRecentActivity();
-      refreshPlayback();
-      refreshSpotifyDevices();
+        loadRecentActivity();
+        refreshPlayback();
+        await refreshSpotifyDevices();
     } catch (e) {
       console.error("Failed to start auth:", e);
       authError.value = true;
