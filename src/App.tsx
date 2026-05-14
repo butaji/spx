@@ -60,6 +60,7 @@ import {
   startPlaybackPolling,
   validateToken,
 } from "./stores/spotify";
+import { recordPlay } from "./stores/playCounts";
 
 
 export type View =
@@ -124,6 +125,11 @@ function App() {
   const shuffleTimeoutRef = useRef<number | null>(null);
   const repeatPendingRef = useRef(false);
   const repeatTimeoutRef = useRef<number | null>(null);
+
+  // Play count tracking refs
+  const playCountRecordedRef = useRef(false);
+  const playCountTimerRef = useRef<number | null>(null);
+  const currentTrackIdRef = useRef<string | null>(null);
 
   // Derived state from signals
   const track = useDerivedTrack();
@@ -275,6 +281,45 @@ function App() {
       likedTrack.value = false;
     }
   }, [playbackTrack.value?.id]);
+
+  // Track play counts - record after 30 seconds of playback
+  useEffect(() => {
+    const track = playbackTrack.value;
+    const playing = isPlaying.value;
+    const trackId = track?.id;
+    const artistName = track?.artists?.map(a => a.name).join(", ") || "Unknown";
+    const trackName = track?.name || "Unknown";
+
+    // Clear any existing timer
+    if (playCountTimerRef.current) {
+      clearTimeout(playCountTimerRef.current);
+      playCountTimerRef.current = null;
+    }
+
+    // If track changed or play was already recorded, reset
+    if (trackId !== currentTrackIdRef.current) {
+      playCountRecordedRef.current = false;
+      currentTrackIdRef.current = trackId ?? null;
+    }
+
+    // If playing and haven't recorded yet, set timer for 30 seconds
+    if (playing && trackId && !playCountRecordedRef.current) {
+      playCountTimerRef.current = window.setTimeout(() => {
+        if (isPlaying.value && playbackTrack.value?.id === trackId) {
+          recordPlay(artistName, trackName);
+          playCountRecordedRef.current = true;
+          console.log(`[PlayCount] Recorded play: ${artistName} - ${trackName}`);
+        }
+      }, 30000);
+    }
+
+    return () => {
+      if (playCountTimerRef.current) {
+        clearTimeout(playCountTimerRef.current);
+        playCountTimerRef.current = null;
+      }
+    };
+  }, [playbackTrack.value?.id, isPlaying.value, playbackTrack.value?.artists, playbackTrack.value?.name]);
 
   const handleStartAuth = useCallback(async () => {
     if (isAuthLoading.value || isAuthSignal.value) return;

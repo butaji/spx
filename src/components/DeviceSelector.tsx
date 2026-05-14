@@ -111,7 +111,7 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
       {isOpen && (
         <div className="device-dropdown">
           <div className="device-dropdown-header">
-            <span>{scanning ? "Searching..." : "Connect to a device"}</span>
+            <span>{scanning && unifiedDevices.length === 0 ? "Searching..." : "Connect to a device"}</span>
             <button
               className={`device-refresh-btn ${scanning ? 'spinning' : ''}`}
               onClick={onRefreshLocal}

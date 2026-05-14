@@ -1,6 +1,7 @@
 import { IconHeart, IconTag, IconShare } from "./icons";
 import { Artwork } from "./Artwork";
 import { AudioFeatures } from "./AudioFeatures";
+import { playCounts } from "../stores/playCounts";
 
 interface Track {
   id?: string;
@@ -57,6 +58,11 @@ export default function NowPlayingHero({
   const artistName = track.artist || track.artistName || "Start playback on Spotify";
   const albumName = track.album || track.albumName;
 
+  // Get play counts for current track/artist
+  const artistPlayCount = playCounts.value.artists[artistName] || 0;
+  const trackPlayCount = playCounts.value.tracks[trackName] || 0;
+  const hasListeningStats = artistPlayCount > 0 || trackPlayCount > 0;
+
   return (
     <div className={`np-hero${isLoading ? " no-animation" : ""}`}>
       <Artwork src={track.imageUrl} alt="" size="hero" />
@@ -65,6 +71,12 @@ export default function NowPlayingHero({
         <div className="np-track-name">{trackName}</div>
         <div className="np-artist-name">{artistName}</div>
         {albumName && <div className="np-album-name">from {albumName}</div>}
+
+        {hasListeningStats && (
+          <div className="np-listening-info">
+            You've listened to <strong>{artistName}</strong> {artistPlayCount} times and <strong>{trackName}</strong> {trackPlayCount} times.
+          </div>
+        )}
 
         {tags.length > 0 && (
           <div className="np-tags">
