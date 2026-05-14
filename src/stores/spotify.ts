@@ -33,7 +33,7 @@ export interface TrackInfo {
   id: string;
   name: string;
   artists: Array<{ name: string; id: string }>;
-  album: { name: string; images: Array<{ url: string }> };
+  album: { id?: string; name: string; images: Array<{ url: string }> };
   duration_ms: number;
   uri: string;
 }
@@ -193,60 +193,114 @@ export async function loadSavedAlbums() {
 }
 
 /**
- * Build the Recent home feed from top tracks.
- * Extracts unique albums from the user's short-term top tracks.
+ * Build the Recent home feed from the user's top tracks (short_term).
+ * Groups by album, supplemented with radios from top artists and playlists from recently-played.
  */
-export function buildHomeFeed() {
+export async function buildHomeFeed(): Promise<void> {
+  console.log('[HomeFeed] Building from top/tracks...');
+
   const items: HomeFeedItem[] = [];
-  // Source: albums from top tracks (the user's actual recent listening)
-  const seenAlbums = new Set<string>();
-  topTracks.value.forEach((track: any) => {
-    if (track.album && !seenAlbums.has(track.album.id) && items.length < 8) {
-      seenAlbums.add(track.album.id);
-      items.push({
-        id: track.album.id,
-        name: track.album.name,
-        image: track.album.images?.[0]?.url || '',
-        type: 'album' as const,
-        uri: track.album.uri,
-        subtitle: track.artists?.map((a: any) => a.name).join(', ') || 'Album'
-      });
+
+  // ── 1. Albums: from top/tracks short_term (~4 weeks, Spotify-weighted) ──
+  try {
+    const tracks = await withRetry(() => getTopTracks(50, 'short_term'));
+    const albumMap = new Map<string, { name: string; image: string; uri: string; artist: string; count: number }>();
+
+    for (const track of tracks) {
+      const a = track.album;
+      if (!a?.id) continue;
+      const entry = albumMap.get(a.id);
+      if (entry) { entry.count++; } else {
+        albumMap.set(a.id, {
+          name: a.name || 'Unknown', image: a.images?.[0]?.url || '',
+          uri: a.uri || `spotify:album:${a.id}`,
+          artist: track.artists?.map((x: any) => x.name).join(', ') || '',
+          count: 1,
+        });
+      }
     }
-  });
 
-  homeFeed.value = items;
-  console.log('[Store] Built home feed:', items.length, 'items');
-  items.forEach((item, i) => console.log(`  ${i+1}. [${item.type}] ${item.name}`));
-}
+    const albums = Array.from(albumMap.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 8)
+      .map(([id, a]) => ({
+        id, name: a.name, image: a.image, type: 'album' as const,
+        uri: a.uri, subtitle: a.artist,
+      }));
+    items.push(...albums);
+    console.log('[HomeFeed] Albums from top/tracks:', albums.length);
+  } catch (e) {
+    console.warn('[HomeFeed] top/tracks failed:', e);
+  }
 
-/**
- * Build home feed directly from recent containers only.
- * This is the true "Recent" view matching Spotify's behavior.
- */
-export function buildRecentFeed() {
-  const items: HomeFeedItem[] = [];
-  const seenIds = new Set<string>();
+  // ── 2. Radios: from top artists short_term ──
+  try {
+    const artists = await getTopArtists(3, 'short_term');
+    const radios = artists.map((a: SpotifyArtist) => ({
+      id: `radio-${a.id}`,
+      name: `${a.name} Radio`,
+      image: a.images?.[0]?.url || '',
+      type: 'radio' as const,
+      uri: `spotify:artist:${a.id}`,
+      subtitle: 'Radio',
+    }));
+    items.push(...radios);
+    console.log('[HomeFeed] Radios from top artists:', radios.length);
+  } catch (e) {
+    console.warn('[HomeFeed] top artists failed:', e);
+  }
 
-  for (const container of recentContainers.value.slice(0, 8)) {
-    if (seenIds.has(container.id)) continue;
-    seenIds.add(container.id);
+  // ── 3. Playlists: from recently-played contexts that are actually playlists ──
+  try {
+    const existingIds = new Set(items.map(i => i.id));
+    const recent = await withRetry(() => getRecentlyPlayedTracks(50));
+    const rItems = (recent as any).items ?? [];
+    const playlistMap = new Map<string, { count: number }>();
 
-    items.push({
-      id: container.id,
-      name: container.name,
-      image: container.images?.[0]?.url || '',
-      type: container.type as 'album' | 'playlist' | 'artist' | 'radio',
-      uri: container.uri || `spotify:${container.type}:${container.id}`,
-      subtitle: container.type === 'playlist' ? (container.owner || 'Playlist')
-        : container.type === 'artist' ? 'Artist'
-        : container.type === 'radio' ? 'Radio'
-        : (container.artistName || 'Album'),
-    });
+    for (const item of rItems) {
+      const ctx = item.context;
+      if (ctx?.type !== 'playlist' || !ctx.uri) continue;
+      const pid = ctx.uri.split(':')[2];
+      if (!pid || existingIds.has(pid)) continue;
+      const entry = playlistMap.get(pid);
+      if (entry) { entry.count++; } else { playlistMap.set(pid, { count: 1 }); }
+    }
+
+    const playlistIds = Array.from(playlistMap.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, Math.max(0, 12 - items.length))
+      .map(([id]) => id);
+
+    for (const pid of playlistIds) {
+      // Try cached user playlists first
+      const cached = (userPlaylists.value as any[])?.find((p: any) => p.id === pid);
+      if (cached) {
+        items.push({
+          id: pid, name: cached.name, image: cached.images?.[0]?.url || '',
+          type: 'playlist', uri: `spotify:playlist:${pid}`,
+          subtitle: cached.owner?.display_name || 'Playlist',
+        });
+        continue;
+      }
+      try {
+        const pl = await getPlaylist(pid);
+        items.push({
+          id: pid, name: pl.name || 'Playlist', image: (pl as any).images?.[0]?.url || '',
+          type: 'playlist', uri: `spotify:playlist:${pid}`,
+          subtitle: (pl as any).owner?.display_name || 'Playlist',
+        });
+      } catch {
+        // Skip unresolvable playlists
+      }
+    }
+    console.log('[HomeFeed] Playlists from recently-played contexts:', items.filter(i => i.type === 'playlist').length);
+  } catch (e) {
+    console.warn('[HomeFeed] recently-played playlists failed:', e);
   }
 
   homeFeed.value = items;
-  console.log('[Store] Built RECENT feed:', items.length, 'items');
-  items.forEach((item, i) => console.log(`  ${i+1}. [${item.type}] ${item.name}`));
+  console.log('[Store] Built home feed:', items.length, 'items');
+  items.forEach((item, i) => console.log(`  ${i+1}. [${item.type}] ${item.name} (${item.subtitle})`));
 }
 
 /**
@@ -254,9 +308,13 @@ export function buildRecentFeed() {
  * then build the feed. Call this from Home screen init.
  */
 export async function loadRecentActivity(): Promise<void> {
-  console.log('[RecentActivity] Loading top tracks...');
-  await loadTopTracks();
-  buildHomeFeed();
+  console.log('[RecentActivity] Building heavy rotation feed...');
+  // Load recently played containers FIRST (populates recentContainers with playlists/albums/radios)
+  await loadRecentContainers();
+  // Load user playlists for metadata enrichment
+  await loadUserPlaylists();
+  // Build home feed from recentContainers + top/tracks supplement
+  await buildHomeFeed();
   console.log('[RecentActivity] Complete');
 }
 
@@ -304,7 +362,7 @@ const CACHE_TTL = {
   followedArtists: 10 * 60 * 1000,
   savedAlbums: 10 * 60 * 1000,
 };
-const RECENT_CACHE_KEY = 'recent_containers_v3'; // bumped to invalidate stale cache
+const RECENT_CACHE_KEY = 'recent_containers_v4'; // bumped — playlist/radio fallback fix, radio generation
 
 // Internal polling state
 let playbackPollInterval: ReturnType<typeof setInterval> | null = null;
@@ -618,19 +676,36 @@ export async function loadRecentContainers(): Promise<void> {
                 }
               } catch (err) {
                 failedPlaylists.add(playlistId);
-                // Fallback: show album since playlist is inaccessible
-                addAlbumFromTrack(track, playedAt, track.album?.uri);
+                // Keep as playlist with best-effort metadata
+                containerMap.set(playlistId, {
+                  container: {
+                    id: playlistId,
+                    type: 'playlist',
+                    name: track.album?.name || 'Spotify Mix',
+                    images: track.album?.images || [],
+                    played_at: playedAt,
+                    owner: track.artists?.map((a: any) => a.name).join(', ') || '',
+                    uri: ctxUri,
+                  },
+                  playCount: 1,
+                });
               }
             }
           } else {
-            // Already know this playlist is inaccessible → fallback to album
-            addAlbumFromTrack(track, playedAt, track.album?.uri);
+            // Already know this playlist is inaccessible → increment play count
+            const existing = containerMap.get(playlistId);
+            if (existing) {
+              existing.playCount++;
+              if (playedAt > existing.container.played_at) {
+                existing.container.played_at = playedAt;
+              }
+            }
           }
         }
       } else if (ctxType === 'artist' && ctxUri) {
         // Played from an artist page/radio → show artist + artist radio
         const artistId = ctxUri.split(':')[2];
-        const artistName = track.artists?.[0]?.name || 'Unknown Artist';
+        const artistName = track.artists?.[0]?.name || '';
         const artistImage = track.artists?.[0]?.images?.[0]?.url || track.album?.images?.[0]?.url || '';
 
         if (artistId) {

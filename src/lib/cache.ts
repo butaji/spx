@@ -61,8 +61,8 @@ export async function setCache<T>(key: string, data: T, ttlMs: number): Promise<
  */
 export async function clearCache(): Promise<void> {
   try {
-    _store = null; // Force reload
     const store = await getCacheStore();
+    _store = null;
     await store.clear();
     await store.save();
   } catch (e) {

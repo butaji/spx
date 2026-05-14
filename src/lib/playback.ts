@@ -283,6 +283,9 @@ export async function disconnectPlayer(): Promise<void> {
       positionMs: 0,
       durationMs: 0,
     };
+    // Clear all listeners to prevent leaks on reconnect
+    eventListeners.clear();
+    signalListeners.clear();
     emitSignal(currentState);
   }
 }

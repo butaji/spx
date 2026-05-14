@@ -4,9 +4,9 @@ export function HotkeyHelp({ onClose }: { onClose: () => void }) {
   const hotkeys = getHotkeyList();
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <h2>Keyboard Shortcuts</h2>
+    <div className="hotkey-overlay" role="dialog" aria-modal="true" aria-labelledby="hotkey-title" onClick={onClose}>
+      <div className="hotkey-panel" onClick={e => e.stopPropagation()}>
+        <h2 id="hotkey-title">Keyboard Shortcuts</h2>
         <div className="hotkey-list">
           {hotkeys.map((hk, i) => (
             <div key={i} className="hotkey-row">
