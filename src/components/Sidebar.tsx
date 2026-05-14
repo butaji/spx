@@ -4,7 +4,6 @@ import {
   IconSearch,
   IconLibrary,
   IconQueue,
-  IconChart,
 } from "./icons";
 
 interface SidebarProps {
@@ -19,7 +18,6 @@ const navItems: { view: View; label: string; icon: (active: boolean) => preact.J
   { view: { type: "search" }, label: "Search", icon: () => <IconSearch /> },
   { view: { type: "library", tab: "playlists" }, label: "Library", icon: () => <IconLibrary /> },
   { view: { type: "queue" }, label: "Queue", icon: () => <IconQueue /> },
-  { view: { type: "stats" }, label: "Stats", icon: () => <IconChart /> },
 ];
 
 export function Sidebar({ view, history, setHistory, user }: SidebarProps) {

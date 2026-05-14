@@ -11,7 +11,7 @@ import Home from "./screens/Home";
 import Search from "./screens/Search";
 import Library from "./screens/Library";
 import Queue from "./screens/Queue";
-import Stats from "./screens/Stats";
+
 import PlaylistDetail from "./screens/PlaylistDetail";
 import AlbumDetail from "./screens/AlbumDetail";
 import ArtistDetail from "./screens/ArtistDetail";
@@ -68,7 +68,7 @@ export type View =
   | { type: "search" }
   | { type: "library"; tab?: string }
   | { type: "queue" }
-  | { type: "stats" }
+
   | { type: "playlist"; id: string; name: string }
   | { type: "album"; id: string; name: string }
   | { type: "artist"; id: string; name: string };
@@ -191,7 +191,8 @@ function App() {
         }
         loadRecentActivity();
         refreshPlayback();
-        refreshSpotifyDevices();
+        await refreshSpotifyDevices();
+        await refreshLocalDevices(true);
       }
     }
     init();
@@ -832,7 +833,7 @@ function App() {
       case "search": return <Search {...common} initialQuery="" />;
       case "library": return <Library {...common} />;
       case "queue": return <Queue onPlayUris={playUrisFn} />;
-      case "stats": return <Stats />;
+
       case "playlist": return <PlaylistDetail id={view.id} name={view.name} {...common} />;
       case "album": return <AlbumDetail id={view.id} name={view.name} {...common} />;
       case "artist": return <ArtistDetail id={view.id} name={view.name} {...common} />;
