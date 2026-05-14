@@ -1,4 +1,5 @@
 use std::println;
+use std::str::FromStr;
 use std::time::Duration;
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -298,7 +299,7 @@ async fn wake_cast_v2(ip: &str) -> Result<String, String> {
             return Err(format!("Failed to install crypto provider: {:?}", e));
         }
 
-        let mut cast_device = rust_cast::CastDevice::connect_without_host_verification(&ip_owned, 8009)
+        let cast_device = rust_cast::CastDevice::connect_without_host_verification(&ip_owned, 8009)
             .map_err(|e| format!("Cast V2 connect failed: {}", e))?;
 
         let spotify_app = rust_cast::channels::receiver::CastDeviceApp::from_str("CC320225")
