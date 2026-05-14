@@ -1,0 +1,150 @@
+/* ─── Animations ─── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeIn 0.3s ease forwards; }
+
+@keyframes authCardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Heart Like Animation ─── */
+@keyframes heart-like-bounce {
+  0%   { transform: scale(1); }
+  25%  { transform: scale(1.3); }
+  45%  { transform: scale(0.95); }
+  65%  { transform: scale(1.1); }
+  80%  { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+@keyframes heart-unlike-squish {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(0.85); }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--danger)) drop-shadow(0 0 6px rgba(255, 68, 68, 0.4)); }
+  50%       { filter: drop-shadow(0 0 6px var(--danger)) drop-shadow(0 0 12px rgba(255, 68, 68, 0.6)); }
+}
+
+/* Shared particle base — hidden by default */
+.player-like-btn::before,
+.player-like-btn::after,
+.np-action-btn::before,
+.np-action-btn::after {
+  content: '';
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--danger);
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* 8-particle burst — only when .animate class is present */
+.player-like-btn.animate::before,
+.np-action-btn.animate::before {
+  box-shadow:
+    var(--danger) 0 0 0 0,
+    var(--danger) -10px -14px 0 0,
+    var(--danger) 10px -14px 0 0,
+    var(--danger) -16px -6px 0 0,
+    var(--danger) 16px -6px 0 0,
+    var(--danger) -8px 2px 0 0,
+    var(--danger) 8px 2px 0 0;
+  animation: particle-burst-boxshadow 0.5s ease-out forwards;
+}
+
+.player-like-btn.animate::after,
+.np-action-btn.animate::after {
+  box-shadow:
+    var(--danger) -4px -18px 0 0,
+    var(--danger) 4px -18px 0 0;
+  animation: particle-burst-boxshadow 0.5s ease-out 0.06s forwards;
+}
+
+@keyframes particle-burst-boxshadow {
+  0%   { opacity: 1; transform: scale(1); }
+  50%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.2); }
+}
+
+/* Like bounce + glow on SVG - only when .animate class is added via JS */
+.player-like-btn.liked.animate svg,
+.np-action-like.liked.animate svg {
+  animation: heart-like-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+             pulse-glow 1.2s ease-in-out 0.35s infinite;
+}
+
+/* Unlike squish - only when .animate class is added via JS */
+.player-like-btn:not(.liked).animate svg,
+.np-action-like:not(.liked).animate svg {
+  animation: heart-unlike-squish 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+}
+
+/* Color + fill transition - only on action buttons, not player bar */
+.np-action-btn {
+  transition: color 0.2s ease;
+}
+.player-like-btn.liked,
+.np-action-btn.liked {
+  color: var(--danger);
+}
+.player-like-btn.liked svg,
+.np-action-btn.liked svg {
+  fill: var(--danger);
+}
+
+/* Subtle scale on hover for unliked state - only action buttons */
+.np-action-btn:not(.liked):hover svg {
+  transform: scale(1.15);
+  transition: transform 0.15s ease;
+}
+
+/* ─── Disable animations during loading ─── */
+.np-action-like.no-animation,
+.np-action-like.no-animation svg,
+.np-action-like.no-animation.liked,
+.np-action-like.no-animation.liked svg,
+.np-action-like.no-animation:not(.liked) svg {
+  animation: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+.np-action-like.no-animation::before,
+.np-action-like.no-animation::after {
+  display: none !important;
+}
+
+/* Ensure button is positioned for absolute pseudo-elements */
+.player-like-btn,
+.np-action-btn {
+  position: relative;
+}
+
+/* Device Refresh Spinning */
+.device-refresh-btn.spinning svg {
+  animation: spin 1s linear infinite;
+}
+
+.device-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
