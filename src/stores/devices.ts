@@ -23,6 +23,8 @@ export const allDevices = computed(() => {
   const spotify = availableDevices.value;
   const local = localDevices.value;
 
+  console.log("[Devices] allDevices computed - spotify:", spotify.length, "local:", local.length);
+
   // Start with Spotify API devices
   const merged: Array<SpotifyDevice & { isLocal?: boolean; localNote?: string; canTransfer?: boolean; needsWakeUp?: boolean; deviceIp?: string }> =
     spotify.map(d => ({ ...d, isLocal: false }));
@@ -61,6 +63,7 @@ export const allDevices = computed(() => {
     }
   }
 
+  console.log("[Devices] allDevices returning:", merged.length, "devices");
   return merged;
 });
 
@@ -99,8 +102,10 @@ let devicePollingInterval: ReturnType<typeof setInterval> | null = null;
  * Includes local mDNS scan on each poll.
  */
 export function startDevicePolling(intervalMs = 10_000) {
+  console.log("[Devices] startDevicePolling called");
   stopDevicePolling();
   devicePollingInterval = setInterval(() => {
+    console.log("[Devices] Polling interval tick");
     refreshDevices({ includeLocal: true }).catch(console.warn);
   }, intervalMs);
   refreshDevices({ includeLocal: true }).catch(console.warn);
@@ -239,6 +244,7 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
   }
 
   const shouldScanLocal = includeLocal && (force || Date.now() - lastLocalScanAt >= LOCAL_SCAN_COOLDOWN_MS);
+  console.log("[Devices] shouldScanLocal:", shouldScanLocal, "includeLocal:", includeLocal, "force:", force, "timeSinceLastScan:", Date.now() - lastLocalScanAt);
 
   activeScanPromise = (async () => {
     isScanning.value = true;
@@ -268,6 +274,7 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
       // Optionally scan local devices
       if (shouldScanLocal) {
         const local = await scanLocalDevices();
+        console.log("[Devices] scanLocalDevices returned:", local.length, "devices");
         const matched = local.map((device) => {
           const displayName = device.friendly_name || device.name;
           const byId = device.id ? spotifyDevices.find(sd => sd.id === device.id) : null;
@@ -314,5 +321,6 @@ export async function refreshSpotifyDevices(): Promise<void> {
  * @deprecated Use refreshDevices({ includeLocal: true, force: true }) instead
  */
 export async function refreshLocalDevices(force = false): Promise<void> {
+  console.log("[Devices] refreshLocalDevices called, force:", force);
   await refreshDevices({ includeLocal: true, force });
 }

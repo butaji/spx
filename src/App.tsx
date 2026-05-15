@@ -26,6 +26,7 @@ import {
   userProfile,
   appError,
   contextPanelItem,
+  lastPlayedTrack,
 } from "./stores/spotify";
 import { refreshLocalDevices } from "./stores/devices";
 
@@ -59,19 +60,38 @@ export interface TrackInfo {
 // Derived track info for components expecting flattened structure
 function useDerivedTrack(): TrackInfo | null {
   const track = playbackTrack.value;
-  if (!track) return null;
-  return {
-    id: track.id,
-    name: track.name,
-    artist: track.artists?.map(a => a.name).join(", ") || "Unknown",
-    artistIds: track.artists?.map(a => a.id) || [],
-    album: track.album?.name || "",
-    durationMs: track.duration_ms,
-    progressMs: playbackProgress.value,
-    isPlaying: isPlaying.value,
-    imageUrl: track.album?.images?.[0]?.url,
-    uri: track.uri,
-  };
+  if (track) {
+    return {
+      id: track.id,
+      name: track.name,
+      artist: track.artists?.map(a => a.name).join(", ") || "Unknown",
+      artistIds: track.artists?.map(a => a.id) || [],
+      album: track.album?.name || "",
+      durationMs: track.duration_ms,
+      progressMs: playbackProgress.value,
+      isPlaying: isPlaying.value,
+      imageUrl: track.album?.images?.[0]?.url,
+      uri: track.uri,
+    };
+  }
+
+  const lastPlayed = lastPlayedTrack.value;
+  if (lastPlayed) {
+    return {
+      id: lastPlayed.id || lastPlayed.uri,
+      name: lastPlayed.name,
+      artist: lastPlayed.artistName,
+      artistIds: lastPlayed.artistId ? [lastPlayed.artistId] : [],
+      album: lastPlayed.albumName,
+      durationMs: 0,
+      progressMs: 0,
+      isPlaying: false,
+      imageUrl: lastPlayed.imageUrl,
+      uri: lastPlayed.uri,
+    };
+  }
+
+  return null;
 }
 
 function App() {

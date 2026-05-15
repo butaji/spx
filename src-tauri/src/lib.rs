@@ -145,6 +145,70 @@ async fn scan_spotify_devices() -> Result<Vec<LocalDevice>, String> {
     Ok(devices)
 }
 
+/// Resolve a `.local` hostname to an IPv4 address using `dns-sd -G v4`.
+async fn resolve_hostname_to_ip(hostname: &str) -> Option<String> {
+    let hostname = hostname.trim_end_matches('.');
+    println!("Resolving hostname: {}", hostname);
+
+    let mut child = tokio::process::Command::new("dns-sd")
+        .args(["-G", "v4", hostname])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .ok()?;
+
+    // Wait a bit for responses, then kill the process
+    tokio::time::sleep(Duration::from_millis(1500)).await;
+    let _ = child.kill().await;
+
+    let output = match child.wait_with_output().await {
+        Ok(output) => String::from_utf8_lossy(&output.stdout).into_owned(),
+        _ => return None,
+    };
+
+    println!("dns-sd output:\n{}", output);
+
+    // Parse IP from "Add" lines - look for valid IPv4 addresses
+    for line in output.lines() {
+        if !line.contains(" Add ") {
+            continue;
+        }
+        
+        // Find IP by looking for 4 octets separated by dots
+        // Pattern: digit sequences separated by dots, e.g. "192.168.1.12"
+        let mut chars = line.chars().peekable();
+        while let Some(c) = chars.next() {
+            if c.is_ascii_digit() {
+                let mut octets: Vec<String> = vec![c.to_string()];
+                let mut dots = 0;
+                
+                while let Some(&nc) = chars.peek() {
+                    if nc == '.' && dots < 3 {
+                        chars.next();
+                        dots += 1;
+                        octets.push(String::new());
+                    } else if nc.is_ascii_digit() && dots < 4 {
+                        if octets.is_empty() || dots as usize >= octets.len() {
+                            octets.push(String::new());
+                        }
+                        octets.last_mut().unwrap().push(nc);
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                }
+                
+                // Check if we found exactly 4 valid octets
+                if octets.len() == 4 && octets.iter().all(|o| o.parse::<u8>().is_ok()) {
+                    return Some(octets.join("."));
+                }
+            }
+        }
+    }
+
+    None
+}
+
 async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, String> {
     let mut devices = Vec::new();
     
@@ -251,11 +315,15 @@ async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, String> 
             if let Some(colon_pos) = address.rfind(':') {
                 let hostname = &address[..colon_pos];
                 let port_str = &address[colon_pos + 1..];
-                
+
                 if let Ok(port) = port_str.parse::<u16>() {
+                    // Resolve .local hostname to actual IP
+                    let ip = resolve_hostname_to_ip(hostname).await
+                        .unwrap_or_else(|| hostname.to_string());
+
                     let device = LocalDevice {
                         name: friendly_name,
-                        ip: hostname.to_string(),
+                        ip,
                         port,
                     };
                     println!("  Found device: {} at {}:{}", device.name, device.ip, device.port);
@@ -264,7 +332,7 @@ async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, String> 
             }
         }
     }
-    
+
     Ok(devices)
 }
 
@@ -274,8 +342,14 @@ async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, String> 
 async fn wake_cast_device(ip: String) -> Result<String, String> {
     println!("Waking Cast device at {}", ip);
 
-    // Try Cast V2 first (port 8009, TLS)
-    match wake_cast_v2(&ip).await {
+    // Validate we have an actual IP address, not a .local hostname
+    if ip.ends_with(".local") || ip.ends_with(".local.") {
+        println!("Error: Received .local hostname '{}' instead of IP. DNS resolution may have failed.", ip);
+        return Err(format!("Invalid address: '{}'. DNS resolution failed.", ip));
+    }
+
+    // Try Cast V2 with TLS (port 8009)
+    match wake_cast_v2(&ip, 8009, true).await {
         Ok(result) => {
             println!("Cast V2 wake successful: {}", result);
             return Ok(result);
@@ -289,17 +363,10 @@ async fn wake_cast_device(ip: String) -> Result<String, String> {
     wake_cast_dial(&ip).await
 }
 
-async fn wake_cast_v2(ip: &str) -> Result<String, String> {
+async fn wake_cast_v2(ip: &str, port: u16, _use_tls: bool) -> Result<String, String> {
     let ip_owned = ip.to_string();
     tokio::task::spawn_blocking(move || {
-        use rustls::crypto::aws_lc_rs;
-
-        // Install aws_lc_rs crypto provider
-        if let Err(e) = aws_lc_rs::default_provider().install_default() {
-            return Err(format!("Failed to install crypto provider: {:?}", e));
-        }
-
-        let cast_device = rust_cast::CastDevice::connect_without_host_verification(&ip_owned, 8009)
+        let cast_device = rust_cast::CastDevice::connect_without_host_verification(&ip_owned, port)
             .map_err(|e| format!("Cast V2 connect failed: {}", e))?;
 
         let spotify_app = rust_cast::channels::receiver::CastDeviceApp::from_str("CC320225")
@@ -343,6 +410,10 @@ async fn wake_cast_dial(ip: &str) -> Result<String, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Install aws_lc_rs crypto provider at startup, before any network operations
+    use rustls::crypto::aws_lc_rs;
+    let _ = aws_lc_rs::default_provider().install_default();
+
     dotenvy::dotenv().ok();
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())

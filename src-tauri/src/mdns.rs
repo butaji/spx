@@ -3,6 +3,53 @@ use tracing::{info, warn};
 
 use crate::commands::LocalDevice;
 
+/// Resolve a `.local` hostname to an IPv4 address using `dns-sd -G v4`.
+async fn resolve_hostname_to_ip(hostname: &str) -> Option<String> {
+    let hostname = hostname.trim_end_matches('.');
+
+    let resolve_future = tokio::process::Command::new("dns-sd")
+        .args(["-G", "v4", hostname])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn dns-sd resolve: {}", e))?;
+
+    let resolve_result = tokio::time::timeout(Duration::from_secs(3), async {
+        let mut child = resolve_future;
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        let _ = child.kill().await;
+        child.wait_with_output().await
+    }).await?;
+
+    let output = match resolve_result {
+        Ok(Ok(output)) => String::from_utf8_lossy(&output.stdout).into_owned(),
+        Ok(Err(e)) => {
+            warn!("dns-sd -G v4 for {} failed: {}", hostname, e);
+            return None;
+        }
+        Err(_) => {
+            warn!("dns-sd -G v4 for {} timed out", hostname);
+            return None;
+        }
+    };
+
+    // Parse IP from "Add" lines - format:
+    // DATE: ---Thu 14 May 2026---
+    //  9:32:42.123  Add     2  4 local.           MyDevice.local.          192.168.1.100
+    for line in output.lines() {
+        if line.contains("Add") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if let Some(ip) = parts.last() {
+                if ip.contains('.') && !ip.ends_with(".local") {
+                    return Some(ip.to_string());
+                }
+            }
+        }
+    }
+
+    None
+}
+
 pub async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, String> {
     let mut devices = Vec::new();
 
@@ -133,9 +180,13 @@ pub async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, Stri
                 let port_str = &address[colon_pos + 1..];
 
                 if let Ok(port) = port_str.parse::<u16>() {
+                    // Resolve .local hostname to actual IP
+                    let ip = resolve_hostname_to_ip(hostname).await
+                        .unwrap_or_else(|| hostname.to_string());
+
                     let device = LocalDevice {
                         name: friendly_name,
-                        ip: hostname.to_string(),
+                        ip,
                         port,
                     };
                     info!("  Found device: {} at {}:{}", device.name, device.ip, device.port);

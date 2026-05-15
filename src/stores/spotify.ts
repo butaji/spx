@@ -86,6 +86,7 @@ export interface RecentContainer {
   played_at: string;
   owner?: string;
   artistName?: string; // for albums
+  artistId?: string; // for albums
   playCount?: number;
   uri?: string;
 }
@@ -558,15 +559,21 @@ export async function loadRecentContainers(): Promise<void> {
     recentContainers.value = cached;
     if (await isCacheFresh(RECENT_CACHE_KEY)) {
       console.log('[Recent] Cache fresh, skipping API');
-      const first = cached[0];
-      lastPlayedTrack.value = {
-        name: first.name,
-        artistName: first.artistName || '',
-        albumName: first.name,
-        imageUrl: first.images?.[0]?.url || '',
-        uri: first.id,
-        played_at: first.played_at,
-      };
+      // Cache is fresh for containers, but we need actual track data for lastPlayedTrack
+      const data = await getRecentlyPlayedTracks(1);
+      const items = (data as any).items ?? [];
+      if (items[0]?.track) {
+        const track = items[0].track;
+        lastPlayedTrack.value = {
+          name: track.name,
+          artistName: track.artists?.map((a: any) => a.name).join(', ') || '',
+          artistId: track.artists?.[0]?.id,
+          albumName: track.album?.name || '',
+          imageUrl: track.album?.images?.[0]?.url || '',
+          uri: track.uri,
+          played_at: items[0].played_at,
+        };
+      }
       return;
     }
   }
@@ -580,12 +587,14 @@ export async function loadRecentContainers(): Promise<void> {
 
     // Extract most recently played individual track
     if (items[0]?.track) {
+      const track = items[0].track;
       lastPlayedTrack.value = {
-        name: items[0].track.name,
-        artistName: items[0].track.artists.map((a: any) => a.name).join(', '),
-        albumName: items[0].track.album.name,
-        imageUrl: items[0].track.album.images?.[0]?.url || '',
-        uri: items[0].track.uri,
+        name: track.name,
+        artistName: track.artists?.[0]?.name || '',
+        artistId: track.artists?.[0]?.id,
+        albumName: track.album?.name || '',
+        imageUrl: track.album?.images?.[0]?.url || '',
+        uri: track.uri,
         played_at: items[0].played_at,
       };
     }
@@ -765,15 +774,16 @@ export async function loadRecentContainers(): Promise<void> {
 
     console.log('[Recent] Final containers:', result.length, result.map(c => `${c.type}:${c.name}`));
     recentContainers.value = result;
-    if (result.length > 0) {
-      const first = result[0];
+    if (result.length > 0 && items[0]?.track) {
+      const track = items[0].track;
       lastPlayedTrack.value = {
-        name: first.name,
-        artistName: first.artistName || '',
-        albumName: first.name,
-        imageUrl: first.images?.[0]?.url || '',
-        uri: first.id,
-        played_at: first.played_at,
+        name: track.name,
+        artistName: track.artists?.[0]?.name || '',
+        artistId: track.artists?.[0]?.id,
+        albumName: track.album?.name || '',
+        imageUrl: track.album?.images?.[0]?.url || '',
+        uri: track.uri,
+        played_at: items[0].played_at,
       };
     }
     setCache(RECENT_CACHE_KEY, result, CACHE_TTL.recentContainers);

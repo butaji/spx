@@ -8,8 +8,10 @@ import {
 import { transferPlayback } from "../lib/spotify";
 
 export function useDevices() {
+  console.log("[Devices] useDevices hook initialized");
   // Start device polling on mount
   useEffect(() => {
+    console.log("[Devices] useDevices useEffect running");
     startDevicePolling();
     return () => stopDevicePolling();
   }, []);

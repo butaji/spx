@@ -5,7 +5,7 @@ import { View } from "../App";
 import type { SpotifyArtist } from "../types";
 
 import NowPlayingHero from "../components/NowPlayingHero";
-import ContextCard from "../components/StatsCard";
+import { playCounts } from "../stores/playCounts";
 import ArtistTopSongs from "../components/ArtistTopSongs";
 import RecentGrid from "../components/RecentGrid";
 
@@ -34,6 +34,11 @@ export default function Home({
   const [, forceUpdate] = useState({});
 
   const displayTrack = track || lastPlayedTrack.value;
+  const displayArtist = displayTrack?.artistName
+    || displayTrack?.artists?.map((a: any) => a.name).join(", ")
+    || displayTrack?.artist
+    || "Unknown";
+  const displayTrackName = displayTrack?.name || "Unknown";
 
   /* Load data on mount */
   useEffect(() => {
@@ -96,10 +101,11 @@ export default function Home({
         onToggleLike={onToggleLike}
       />
 
-      <ContextCard
-        albumName={displayTrack?.album || displayTrack?.albumName}
-        contextLabel="Now Playing"
-      />
+      {displayTrack?.id && (
+        <div className="np-listening-info">
+          You've listened to <strong>{displayArtist}</strong> {(playCounts.value.artists[displayArtist] || 0)} times and <strong>{displayTrackName}</strong> {(playCounts.value.tracks[displayTrackName] || 0)} times.
+        </div>
+      )}
 
       <ArtistTopSongs
         artist={artistDetail}
