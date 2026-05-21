@@ -15,15 +15,16 @@ export async function withRetry<T>(
     try {
       return await fn();
     } catch (error: any) {
-      // Only retry on 429 or 5xx errors
+      // Retry on 429, 5xx, or network errors (no status = connection failure)
       const status = error?.statusCode || error?.status || error?.response?.status;
       const retryAfter = error?.headers?.['Retry-After'] || error?.response?.headers?.['Retry-After'];
       
       const isRateLimited = status === 429;
-      const isServerError = status >= 500 && status < 600;
+      const isServerError = typeof status === 'number' && status >= 500 && status < 600;
+      const isNetworkError = status == null; // fetch threw, no HTTP status
       
-      if (!isRateLimited && !isServerError) {
-        throw error; // Don't retry non-retryable errors
+      if (!isRateLimited && !isServerError && !isNetworkError) {
+        throw error; // Don't retry non-retryable errors (4xx except 429)
       }
       
       if (attempt === maxRetries) {

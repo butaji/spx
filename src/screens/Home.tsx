@@ -1,13 +1,17 @@
 import { useEffect, useState } from "preact/compat";
 import { getArtist, getArtistTopTracks } from "../lib/spotify";
 import { loadRecentActivity, lastPlayedTrack } from "../stores/spotify";
-import { View } from "../App";
+import { View } from "../types";
 import type { SpotifyArtist } from "../types";
 
 import NowPlayingHero from "../components/NowPlayingHero";
-import { playCounts } from "../stores/playCounts";
 import ArtistTopSongs from "../components/ArtistTopSongs";
 import RecentGrid from "../components/RecentGrid";
+import {
+  syncWithSpotifyCounts,
+  getSpotifyArtistCount,
+  hasSpotifyCounts,
+} from "../stores/spotifyPlayCounts";
 
 const MOCK_TAGS = ["electro swing", "trip hop", "nu jazz", "chillout", "electronic"];
 
@@ -22,7 +26,7 @@ interface Props {
 
 export default function Home({
   track,
-  onPlayContext,
+  onPlayContext: _unused,
   onNavigate,
   liked,
   onToggleLike,
@@ -38,8 +42,6 @@ export default function Home({
     || displayTrack?.artists?.map((a: any) => a.name).join(", ")
     || displayTrack?.artist
     || "Unknown";
-  const displayTrackName = displayTrack?.name || "Unknown";
-
   /* Load data on mount */
   useEffect(() => {
     loadData();
@@ -79,7 +81,10 @@ export default function Home({
 
   const loadData = async () => {
     try {
-      await loadRecentActivity();
+      await Promise.all([
+        loadRecentActivity(),
+        syncWithSpotifyCounts(),
+      ]);
       setFeedError(null);
     } catch (e) {
       console.error("[Home] Failed to load recent activity:", e);
@@ -103,7 +108,11 @@ export default function Home({
 
       {displayTrack?.id && (
         <div className="np-listening-info">
-          You've listened to <strong>{displayArtist}</strong> {(playCounts.value.artists[displayArtist] || 0)} times and <strong>{displayTrackName}</strong> {(playCounts.value.tracks[displayTrackName] || 0)} times.
+          {hasSpotifyCounts() ? (
+            <>You've listened to <strong>{displayArtist}</strong> {getSpotifyArtistCount(displayArtist)} times (from Spotify).</>
+          ) : (
+            <>Play something to see stats.</>
+          )}
         </div>
       )}
 
@@ -126,10 +135,7 @@ export default function Home({
         </div>
       )}
 
-      <RecentGrid
-        onNavigate={onNavigate}
-        onPlayContext={onPlayContext}
-      />
+      <RecentGrid onNavigate={onNavigate} />
     </div>
   );
 }

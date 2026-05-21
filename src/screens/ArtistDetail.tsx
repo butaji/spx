@@ -19,7 +19,7 @@ interface SpotifyAlbum {
   release_date?: string;
 }
 
-export default function ArtistDetail({ id, name, onPlayUris }: Props) {
+export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Props) {
   const [artist, setArtist] = useState<SpotifyArtist | null>(null);
   const [topTracks, setTopTracks] = useState<SpotifyTrack[]>([]);
   const [albums, setAlbums] = useState<SpotifyAlbum[]>([]);
@@ -66,45 +66,43 @@ export default function ArtistDetail({ id, name, onPlayUris }: Props) {
 
   return (
     <div>
-      <div className="detail-hero">
-        <div className="detail-hero-image-wrap">
+      <div className="detail-hero detail-hero--artist">
+        <div className="detail-hero-image-wrap detail-hero-image-wrap--round">
           {artist?.images?.[0]?.url ? (
             <img
               src={artist.images[0].url}
               alt={artist.name || name}
               className="detail-hero-img"
-              style={{ objectFit: 'cover' }}
             />
           ) : (
-            <div className="detail-hero-img" style={{ background: 'var(--surface)' }} />
+            <div className="detail-hero-img detail-hero-img--placeholder" />
           )}
         </div>
         <div className="detail-hero-info">
-            <div className="eyebrow">Artist</div>
-            <h1>{artist?.name || name}</h1>
-            <p className="body-text">{artist?.followers?.total?.toLocaleString()} followers</p>
+          <div className="eyebrow">Artist</div>
+          <h1>{artist?.name || name}</h1>
+          <div className="artist-meta">
+            <span className="artist-meta-item">{artist?.followers?.total?.toLocaleString()} followers</span>
             {artist?.genres && artist.genres.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-                {artist.genres.map((g) => (
-                  <span key={g} style={{ background: "var(--bg-3)", padding: "2px 8px", borderRadius: 12, fontSize: 11, textTransform: "capitalize" }}>{g}</span>
-                ))}
-              </div>
+              <>
+                <span className="artist-meta-sep">·</span>
+                <span className="artist-meta-genres">{artist.genres.slice(0, 3).join(", ")}</span>
+              </>
             )}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Popularity</span>
-                <div style={{ width: 80, height: 4, background: "var(--bg-3)", borderRadius: 2 }}>
-                  <div style={{ width: `${popularityPct}%`, height: "100%", background: "var(--accent)", borderRadius: 2 }} />
-                </div>
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{popularityPct}%</span>
-              </div>
-            </div>
-            <div className="station-actions">
-              <button className="play-btn-lg" onClick={playTopTracks} aria-label="Play popular tracks">
-                <IconPlay />
-              </button>
-            </div>
           </div>
+          <div className="artist-popularity">
+            <span className="artist-popularity-label">Popularity</span>
+            <div className="artist-popularity-bar">
+              <div className="artist-popularity-fill" style={{ width: `${popularityPct}%` }} />
+            </div>
+            <span className="artist-popularity-value">{popularityPct}%</span>
+          </div>
+          <div className="station-actions">
+            <button className="play-btn-lg" onClick={playTopTracks} aria-label="Play popular tracks">
+              <IconPlay />
+            </button>
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -146,13 +144,13 @@ export default function ArtistDetail({ id, name, onPlayUris }: Props) {
                   <div
                     key={album.id}
                     className="lib-item"
-                    onClick={() => onPlayUris([`spotify:album:${album.id}`])}
+                    onClick={() => onPlayContext(`spotify:album:${album.id}`)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        onPlayUris([`spotify:album:${album.id}`]);
+                        onPlayContext(`spotify:album:${album.id}`);
                       }
                     }}
                   >

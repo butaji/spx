@@ -35,30 +35,11 @@ import { usePlayback } from "./hooks/usePlayback";
 import { useDevices } from "./hooks/useDevices";
 import { useKeyboard } from "./hooks/useKeyboard";
 
-export type View =
-  | { type: "home" }
-  | { type: "search" }
-  | { type: "library"; tab?: string }
-  | { type: "queue" }
-  | { type: "playlist"; id: string; name: string }
-  | { type: "album"; id: string; name: string }
-  | { type: "artist"; id: string; name: string };
-
-export interface TrackInfo {
-  id: string;
-  name: string;
-  artist: string;
-  artistIds?: string[];
-  album: string;
-  durationMs: number;
-  progressMs: number;
-  isPlaying: boolean;
-  imageUrl?: string;
-  uri: string;
-}
+import type { View, TrackInfo } from "./types";
+export type { View, TrackInfo } from "./types";
 
 // Derived track info for components expecting flattened structure
-function useDerivedTrack(): TrackInfo | null {
+function getDerivedTrack(): TrackInfo | null {
   const track = playbackTrack.value;
   if (track) {
     return {
@@ -67,7 +48,7 @@ function useDerivedTrack(): TrackInfo | null {
       artist: track.artists?.map(a => a.name).join(", ") || "Unknown",
       artistIds: track.artists?.map(a => a.id) || [],
       album: track.album?.name || "",
-      durationMs: track.duration_ms,
+      durationMs: track.duration_ms ?? 0,
       progressMs: playbackProgress.value,
       isPlaying: isPlaying.value,
       imageUrl: track.album?.images?.[0]?.url,
@@ -107,7 +88,7 @@ function App() {
   historyRef.current = history;
 
   // Hooks
-  const { isAuthed, authErr, isAuthLoad, handleStartAuth } = useAuth();
+  const { isAuthed, authErr, isAuthLoad, isRestoring, handleStartAuth } = useAuth();
   const { ensureActiveDevice } = useDevices();
   const {
     isPlayActionLoading,
@@ -126,7 +107,7 @@ function App() {
   } = usePlayback({ ensureActiveDevice });
 
   // Derived state from signals
-  const track = useDerivedTrack();
+  const track = getDerivedTrack();
   const volume = playbackVolume.value;
   const shuffle = playbackShuffle.value;
   const repeat = playbackRepeat.value;
@@ -159,6 +140,7 @@ function App() {
     handleShuffle,
     handleRepeat,
     handleToggleLike,
+    handleMuteToggle,
     focusSearch,
     handleEscape,
     setHotkeyHelpOpen,
@@ -166,8 +148,9 @@ function App() {
     setHistory,
   });
 
-  // Debug: Press Ctrl+Shift+T to print access token to console
+  // Debug: Press Ctrl+Shift+T to print access token to console (dev only)
   useEffect(() => {
+    if (!import.meta.env.DEV) return;
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'T') {
         const token = getAccessToken();
@@ -176,9 +159,6 @@ function App() {
           console.log('Spotify Access Token (copy this):');
           console.log(token);
           console.log('Expires in: ~1 hour from issue');
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('Test command:');
-          console.log(`curl -H "Authorization: Bearer ${token}" https://api.spotify.com/v1/me/player/recently-played?limit=5`);
           console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         } else {
           console.warn('No access token available. Please authenticate first.');
@@ -217,6 +197,32 @@ function App() {
       navigator.mediaSession.playbackState = isPlaying.value ? 'playing' : 'paused';
     }
   }, [handlePlayPause, handlePrev, handleNext, playbackTrack.value?.id, isPlaying.value]);
+
+  // Show loading screen while restoring session
+  if (isRestoring.value) {
+    return (
+      <div className="app-window">
+        <div className="auth-screen">
+          <div className="auth-content">
+            <div className="auth-logo-wrap">
+              <Logo size={140} />
+            </div>
+            <h1 className="auth-title">SPX</h1>
+            <p className="auth-subtitle">
+              <span className="auth-subtitle-accent">Spotify</span> Remote Control
+            </p>
+            <div className="auth-instructions">
+              <p>Restoring session...</p>
+            </div>
+            <div className="auth-btn-placeholder">
+              <span className="spinner-small" />
+              Connecting...
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if ((!isAuthed || authErr) && !mockMode) {
     return (

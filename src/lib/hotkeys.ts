@@ -7,13 +7,23 @@ export interface HotkeyConfig {
 }
 
 const hotkeys: HotkeyConfig[] = [];
+let keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
 export function registerHotkey(config: HotkeyConfig) {
   hotkeys.push(config);
 }
 
+export function clearHotkeys() {
+  hotkeys.length = 0;
+}
+
 export function setupHotkeys() {
-  document.addEventListener('keydown', (e) => {
+  // Remove existing listener to prevent duplicate registrations
+  if (keydownHandler) {
+    document.removeEventListener('keydown', keydownHandler);
+  }
+
+  keydownHandler = (e: KeyboardEvent) => {
     // Skip if user is typing in an input
     if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
 
@@ -30,7 +40,16 @@ export function setupHotkeys() {
       e.preventDefault();
       pressed.handler();
     }
-  });
+  };
+
+  document.addEventListener('keydown', keydownHandler);
+}
+
+export function teardownHotkeys() {
+  if (keydownHandler) {
+    document.removeEventListener('keydown', keydownHandler);
+    keydownHandler = null;
+  }
 }
 
 export function getHotkeyList(): HotkeyConfig[] {

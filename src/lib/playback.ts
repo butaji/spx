@@ -130,7 +130,7 @@ export function loadSpotifySDK(): Promise<void> {
  * Initialize the Spotify player with an access token
  */
 export async function initPlayer(token: string): Promise<any> {
-  console.log("[Play Debug] Web Playback SDK loaded, initializing player...");
+
   await loadSpotifySDK();
 
   if (!window.Spotify) {
@@ -203,7 +203,7 @@ export async function initPlayer(token: string): Promise<any> {
 
   // Ready event with device API polling
   player.addListener('ready', async ({ device_id }: SpotifyDevice) => {
-    console.log("[Play Debug] SDK ready event, device ID:", device_id);
+
     deviceId = device_id;
     currentDeviceId = device_id;
 
@@ -217,7 +217,7 @@ export async function initPlayer(token: string): Promise<any> {
       try {
         const devices = await getAvailableDevices();
         if (devices.devices?.some((d: any) => d.id === device_id)) {
-          console.log('[Play Debug] Device confirmed in API');
+
           found = true;
           break;
         }
@@ -227,7 +227,6 @@ export async function initPlayer(token: string): Promise<any> {
     }
 
     if (!found) {
-      console.warn('[Play Debug] Device not found in API after 30s');
       console.warn('[Playback] SPX Player not visible in API. You can still use other Spotify devices.');
       emitEvent('device_not_registered', {
         message: 'SPX Player not registered. Use another device for playback.'
@@ -243,11 +242,11 @@ export async function initPlayer(token: string): Promise<any> {
 
   async function tryConnect(): Promise<boolean> {
     connectAttempts++;
-    console.log(`[Play Debug] Connection attempt ${connectAttempts}/${maxAttempts}`);
+
 
     const success = await player.connect();
     if (!success) {
-      console.warn('[Play Debug] player.connect() returned false');
+
       if (connectAttempts < maxAttempts) {
         console.log('[Play Debug] Retrying in 2s...');
         await new Promise(r => setTimeout(r, 2000));

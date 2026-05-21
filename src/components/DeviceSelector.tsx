@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "preact/compat";
-import { activeDevice, isScanning, isTransferring, allDevices, selectDevice } from "../stores/devices";
+import { activeDevice, isScanning, isTransferring, allDevices, selectDevice, selectedDeviceId } from "../stores/devices";
 
 interface Props {
   onRefreshLocal: () => void;
 }
+
+type TransferStage = "waking" | "starting" | "transferring" | null;
 
 function getDeviceIcon(type: string) {
   const iconClass = "device-type-icon";
@@ -59,12 +61,38 @@ function getDeviceIcon(type: string) {
 export default function DeviceSelector({ onRefreshLocal }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorFade, setErrorFade] = useState(false);
+  const [transferStage, setTransferStage] = useState<TransferStage>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const errorTimerRef = useRef<number | null>(null);
 
   const active = activeDevice.value;
   const scanning = isScanning.value;
   const transferring = isTransferring.value;
+  const transferringToId = selectedDeviceId.value;
   const unifiedDevices = allDevices.value;
+
+  // Auto-clear error after 3 seconds
+  useEffect(() => {
+    if (error) {
+      setErrorFade(false);
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+      }
+      errorTimerRef.current = window.setTimeout(() => {
+        setErrorFade(true);
+        errorTimerRef.current = window.setTimeout(() => {
+          setError(null);
+          setErrorFade(false);
+        }, 300);
+      }, 3000);
+    }
+    return () => {
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+      }
+    };
+  }, [error]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -83,12 +111,44 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
     }
   }, [isOpen]);
 
+  // Simulate transfer stage progress
+  useEffect(() => {
+    if (!transferring) {
+      setTransferStage(null);
+      return;
+    }
+    // Start with waking stage
+    setTransferStage("waking");
+    const startingTimer = setTimeout(() => setTransferStage("starting"), 800);
+    const transferringTimer = setTimeout(() => setTransferStage("transferring"), 2000);
+
+    return () => {
+      clearTimeout(startingTimer);
+      clearTimeout(transferringTimer);
+    };
+  }, [transferring]);
+
   const handleSelectDevice = async (deviceId: string, deviceIp?: string) => {
     if (transferring) return;
     setError(null);
-    const success = await selectDevice(deviceId, deviceIp);
-    if (!success) {
-      setError("Could not connect to device. Make sure it's on the same network.");
+    setErrorFade(false);
+    const result = await selectDevice(deviceId, deviceIp);
+    if (!result.success && result.error) {
+      setError(result.error);
+    }
+  };
+
+  const getTransferStatusText = (deviceId: string) => {
+    if (!transferring || transferringToId !== deviceId) return null;
+    switch (transferStage) {
+      case "waking":
+        return "Waking device...";
+      case "starting":
+        return "Starting Spotify...";
+      case "transferring":
+        return "Transferring...";
+      default:
+        return "Connecting...";
     }
   };
 
@@ -114,7 +174,7 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
             <span>{scanning && unifiedDevices.length === 0 ? "Searching..." : "Connect to a device"}</span>
             <button
               className={`device-refresh-btn ${scanning ? 'spinning' : ''}`}
-              onClick={onRefreshLocal}
+              onClick={() => { onRefreshLocal(); }}
               title="Scan for local devices"
               disabled={scanning}
             >
@@ -126,27 +186,37 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
           </div>
 
           {error && (
-            <div className="device-error">{error}</div>
+            <div className={`device-error ${errorFade ? 'fading' : ''}`}>{error}</div>
           )}
 
           {unifiedDevices.length === 0 && !scanning && (
             <div className="device-empty">
               <span className="device-empty-title">No devices found</span>
               <span className="device-empty-hint">
-                Make sure Spotify is open on a device and you're on the same network.
+                Start playing music in the official Spotify app on your speaker, computer, or phone first. Then it will appear here.
               </span>
+              <button
+                className="device-scan-btn"
+                onClick={() => onRefreshLocal()}
+                disabled={scanning}
+              >
+                {scanning ? "Scanning..." : "Scan for devices"}
+              </button>
             </div>
           )}
 
           <div className="device-list">
             {unifiedDevices.map((device) => {
               const isActiveDevice = device.is_active;
-              const isDisabled = !device.canTransfer || transferring;
+              const isTransferringTo = transferring && transferringToId === device.id;
+              // Only disable the specific device being transferred to, or if device can't accept transfers
+              const isDisabled = !device.canTransfer || isTransferringTo;
+              const statusText = getTransferStatusText(device.id!);
 
               return (
                 <button
                   key={device.id || device.name}
-                  className={`device-item ${isActiveDevice ? "active" : ""} ${transferring && isActiveDevice ? "transferring" : ""}`}
+                  className={`device-item ${isActiveDevice ? "active" : ""} ${isTransferringTo ? "transferring" : ""}`}
                   onClick={() => !isDisabled && handleSelectDevice(device.id!, (device as any).deviceIp)}
                   disabled={isDisabled}
                 >
@@ -157,24 +227,30 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
                       {isActiveDevice && <span className="device-playing-badge">Playing</span>}
                     </div>
                     <div className="device-meta">
-                      {(device as any).isLocal && (device as any).needsWakeUp && (
-                        <span className="device-transfer-wake">Tap to connect</span>
-                      )}
-                      {(device as any).isLocal && !(device as any).needsWakeUp && !(device as any).canTransfer && (
-                        <span className="device-transfer-none">{(device as any).localNote || "Network Device"}</span>
-                      )}
-                      {(device as any).isLocal && (device as any).canTransfer && !(device as any).needsWakeUp && (
-                        <span className="device-transfer-ok">Spotify Connect</span>
-                      )}
-                      {!device.is_active && device.is_restricted && (
-                        <span className="device-transfer-none">Restricted</span>
+                      {isTransferringTo && statusText ? (
+                        <span className="device-transfer-status">{statusText}</span>
+                      ) : (
+                        <>
+                          {(device as any).isLocal && (device as any).needsWakeUp && (
+                            <span className="device-transfer-wake">{(device as any).localNote || "Tap to connect"}</span>
+                          )}
+                          {(device as any).isLocal && !(device as any).needsWakeUp && !(device as any).canTransfer && (
+                            <span className="device-transfer-none">{(device as any).localNote || "Network Device"}</span>
+                          )}
+                          {(device as any).isLocal && (device as any).canTransfer && !(device as any).needsWakeUp && (
+                            <span className="device-transfer-ok">Spotify Connect</span>
+                          )}
+                          {!device.is_active && device.is_restricted && (
+                            <span className="device-transfer-none">Restricted</span>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
-                  {isActiveDevice && (
+                  {isActiveDevice && !isTransferringTo && (
                     <span className="device-active-dot" />
                   )}
-                  {transferring && isActiveDevice && (
+                  {isTransferringTo && (
                     <span className="device-transferring-spinner" />
                   )}
                 </button>

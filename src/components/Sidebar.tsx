@@ -1,4 +1,4 @@
-import type { View } from "../App";
+import type { View } from "../types";
 import {
   IconHome,
   IconSearch,
@@ -52,7 +52,7 @@ export function Sidebar({ view, history, setHistory, user }: SidebarProps) {
             <button
               key={i}
               className="sidebar-btn breadcrumb"
-              onClick={() => setHistory(history.slice(0, history.indexOf(h) + 1))}
+              onClick={() => setHistory(history.slice(0, i + 2))}
             >
               <span className="breadcrumb-label">
                 {h.type === "playlist" || h.type === "album" || h.type === "artist"

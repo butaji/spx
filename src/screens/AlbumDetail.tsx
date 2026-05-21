@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getAlbum } from "../lib/spotify";
-import { View } from "../App";
+import { View } from "../types";
 import { formatTime } from "../lib/utils";
 import { IconPlay } from "../components/icons";
 import { SpotifyAlbum } from "../types";
@@ -63,9 +63,18 @@ export default function AlbumDetail({ id, name, onPlayContext, onPlayUris, onNav
   return (
     <div>
       <div className="detail-hero">
-        <div className="detail-hero-img" style={{
-          background: album?.images?.[0]?.url ? `url(${album.images[0].url}) center/cover` : undefined
-        }} />
+        <div className="detail-hero-image-wrap">
+          {album?.images?.[0]?.url ? (
+            <img
+              src={album.images[0].url}
+              alt={album?.name || name}
+              className="detail-hero-img"
+              style={{ objectFit: 'cover' }}
+            />
+          ) : (
+            <div className="detail-hero-img" style={{ background: 'var(--surface)' }} />
+          )}
+        </div>
         <div className="detail-hero-info">
           <div className="eyebrow">Album</div>
           <h1>{album?.name || name}</h1>
@@ -104,7 +113,9 @@ export default function AlbumDetail({ id, name, onPlayContext, onPlayUris, onNav
               aria-label={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
             >
               <div className="track-num">{i + 1}</div>
-              <div className="track-art" />
+              <div className="track-art" style={{
+                background: album?.images?.[0]?.url ? `url(${album.images[0].url}) center/cover` : undefined
+              }} />
               <div className="track-info">
                 <div className="track-title">{track.name}</div>
                 <div className="track-album">{track.artists?.map((a) => a.name).join(", ")}</div>

@@ -1,12 +1,18 @@
 import { useState, useCallback, useEffect, useRef } from "preact/compat";
 import { message } from "@tauri-apps/plugin-dialog";
+import { debug } from "../lib/utils";
 import {
-  next, previous,
-  seek, setVolume as apiSetVolume, setShuffle as apiSetShuffle, setRepeat as apiSetRepeat,
+  setShuffle as apiSetShuffle, setRepeat as apiSetRepeat,
   playContext, playUris, transferPlayback,
   saveTracks,
   removeSavedTracks,
 } from "../lib/spotify";
+import {
+  controllerNext,
+  controllerPrevious,
+  controllerSeek,
+  controllerSetVolume,
+} from "../lib/playerController";
 import {
   playbackTrack,
   playbackVolume,
@@ -43,6 +49,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
   const playCountRecordedRef = useRef(false);
   const playCountTimerRef = useRef<number | null>(null);
   const currentTrackIdRef = useRef<string | null>(null);
+  const wasPlayingRef = useRef(false);
 
   // Error helper using dialog
   const showError = useCallback(async (msg: string) => {
@@ -75,8 +82,6 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
     const track = playbackTrack.value;
     const playing = isPlaying.value;
     const trackId = track?.id;
-    const artistName = track?.artists?.map(a => a.name).join(", ") || "Unknown";
-    const trackName = track?.name || "Unknown";
 
     // Clear any existing timer
     if (playCountTimerRef.current) {
@@ -84,19 +89,23 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       playCountTimerRef.current = null;
     }
 
-    // If track changed or play was already recorded, reset
-    if (trackId !== currentTrackIdRef.current) {
+    // If track changed or playback stopped then started again, reset
+    if (trackId !== currentTrackIdRef.current || (!wasPlayingRef.current && playing)) {
       playCountRecordedRef.current = false;
       currentTrackIdRef.current = trackId ?? null;
     }
+    wasPlayingRef.current = playing;
 
     // If playing and haven't recorded yet, set timer for 30 seconds
     if (playing && trackId && !playCountRecordedRef.current) {
       playCountTimerRef.current = window.setTimeout(() => {
-        if (isPlaying.value && playbackTrack.value?.id === trackId) {
+        const currentTrack = playbackTrack.value;
+        if (isPlaying.value && currentTrack?.id === trackId) {
+          const artistName = currentTrack?.artists?.map(a => a.name).join(", ") || "Unknown";
+          const trackName = currentTrack?.name || "Unknown";
           recordPlay(artistName, trackName);
           playCountRecordedRef.current = true;
-          console.log(`[PlayCount] Recorded play: ${artistName} - ${trackName}`);
+          debug(`[PlayCount] Recorded play: ${artistName} - ${trackName}`);
         }
       }, 30000);
     }
@@ -107,59 +116,59 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
         playCountTimerRef.current = null;
       }
     };
-  }, [playbackTrack.value?.id, isPlaying.value, playbackTrack.value?.artists, playbackTrack.value?.name]);
+  }, [playbackTrack.value?.id, isPlaying.value]);
 
   const handlePlayPause = useCallback(async () => {
-    console.log('[Play/Pause] Button clicked');
+    debug('[Play/Pause] Button clicked');
 
     if (isPlayActionLoadingRef.current) {
-      console.log('[Play/Pause] Already loading, ignoring');
+      debug('[Play/Pause] Already loading, ignoring');
       return;
     }
 
     setIsPlayActionLoading(true);
-    console.log('[Play/Pause] Loading state set to true');
+    debug('[Play/Pause] Loading state set to true');
 
     const track = playbackTrack.value;
     const playing = isPlaying.value;
-    console.log('[Play/Pause] Current track:', track?.name, 'isPlaying signal:', playing);
+    debug('[Play/Pause] Current track:', track?.name, 'isPlaying signal:', playing);
 
     // OPTIMISTIC UPDATE
     if (track) {
       isPlaying.value = !playing;
-      console.log('[Play/Pause] Optimistic update: isPlaying =', !playing);
+      debug('[Play/Pause] Optimistic update: isPlaying =', !playing);
     }
 
     try {
       if (playing) {
-        console.log('[Play/Pause] Calling pauseTrack()...');
+        debug('[Play/Pause] Calling pauseTrack()...');
         await pauseTrack();
-        console.log('[Play/Pause] pauseTrack() succeeded');
+        debug('[Play/Pause] pauseTrack() succeeded');
       } else {
-        console.log('[Play/Pause] Need to play, checking devices...');
+        debug('[Play/Pause] Need to play, checking devices...');
 
         await refreshSpotifyDevices();
-        console.log('[Play/Pause] Devices:', availableDevices.value.length, 'found');
-        console.log('[Play/Pause] Devices list:', availableDevices.value.map(d => ({ name: d.name, id: d.id, is_active: d.is_active })));
+        debug('[Play/Pause] Devices:', availableDevices.value.length, 'found');
+        debug('[Play/Pause] Devices list:', availableDevices.value.map(d => ({ name: d.name, id: d.id, is_active: d.is_active })));
 
         const activeDevice = availableDevices.value.find(d => d.is_active);
-        console.log('[Play/Pause] Active device:', activeDevice);
+        debug('[Play/Pause] Active device:', activeDevice);
 
         let deviceId: string | null = null;
 
         if (activeDevice?.id) {
           deviceId = activeDevice.id;
-          console.log('[Play/Pause] Using active device:', deviceId);
+          debug('[Play/Pause] Using active device:', deviceId);
         } else {
-          console.log('[Play/Pause] No active device, trying first available...');
+          debug('[Play/Pause] No active device, trying first available...');
           const firstDevice = availableDevices.value[0];
           if (firstDevice?.id) {
-            console.log('[Play/Pause] Transferring to:', firstDevice.id);
+            debug('[Play/Pause] Transferring to:', firstDevice.id);
             try {
               await transferPlayback(firstDevice.id, false);
               await new Promise(r => setTimeout(r, 500));
               deviceId = firstDevice.id;
-              console.log('[Play/Pause] Transfer succeeded');
+              debug('[Play/Pause] Transfer succeeded');
             } catch (e) {
               console.warn('[Play/Pause] Transfer failed:', e);
             }
@@ -177,13 +186,13 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
           return;
         }
 
-        console.log('[Play/Pause] Calling playTrack(', deviceId, ')...');
+        debug('[Play/Pause] Calling playTrack(', deviceId, ')...');
         await playTrack(deviceId);
-        console.log('[Play/Pause] playTrack() succeeded');
+        debug('[Play/Pause] playTrack() succeeded');
       }
 
       setTimeout(() => {
-        console.log('[Play/Pause] Refreshing playback state...');
+        debug('[Play/Pause] Refreshing playback state...');
         refreshPlayback();
       }, 500);
     } catch (error) {
@@ -192,7 +201,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
         isPlaying.value = playing;
       }
     } finally {
-      console.log('[Play/Pause] Setting loading to false');
+      debug('[Play/Pause] Setting loading to false');
       setIsPlayActionLoading(false);
     }
   }, [ensureActiveDevice, showError]);
@@ -204,7 +213,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
         showError("No active device. Please open Spotify on a device first.");
         return;
       }
-      await next();
+      await controllerNext();
       refreshPlayback();
     } catch (e) {
       console.error("Failed to skip next:", e);
@@ -219,7 +228,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
         showError("No active device. Please open Spotify on a device first.");
         return;
       }
-      await previous();
+      await controllerPrevious();
       refreshPlayback();
     } catch (e) {
       console.error("Failed to skip previous:", e);
@@ -229,7 +238,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
 
   const handleSeekPosition = useCallback(async (pos: number) => {
     try {
-      await seek(pos);
+      await controllerSeek(pos);
       refreshPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
@@ -268,7 +277,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
   const handleMuteToggle = useCallback(async () => {
     const v = playbackVolume.value > 0 ? 0 : 74;
     try {
-      await apiSetVolume(v);
+      await controllerSetVolume(v);
       playbackVolume.value = v;
     } catch (e) {
       console.error("Failed to toggle mute:", e);
@@ -306,28 +315,38 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
 
   const playContextFn = useCallback(async (uri: string, offsetUri?: string) => {
     try {
-      await playContext(uri, offsetUri);
+      const deviceId = await ensureActiveDevice();
+      if (!deviceId) {
+        showError("No active device. Please open Spotify on a device first.");
+        return;
+      }
+      await playContext(uri, offsetUri, deviceId);
       refreshPlayback();
     } catch (e) {
       console.error("Failed to play context:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [showError]);
+  }, [ensureActiveDevice, showError]);
 
   const playUrisFn = useCallback(async (uris: string[], offset?: number) => {
     try {
-      await playUris(uris, offset);
+      const deviceId = await ensureActiveDevice();
+      if (!deviceId) {
+        showError("No active device. Please open Spotify on a device first.");
+        return;
+      }
+      await playUris(uris, offset, deviceId);
       refreshPlayback();
     } catch (e) {
       console.error("Failed to play URIs:", e);
       showError(e instanceof Error ? e.message : String(e));
     }
-  }, [showError]);
+  }, [ensureActiveDevice, showError]);
 
   const adjustVolume = useCallback(async (delta: number) => {
     const v = Math.max(0, Math.min(100, playbackVolume.value + delta));
     try {
-      await apiSetVolume(v);
+      await controllerSetVolume(v);
       playbackVolume.value = v;
     } catch (ev) {
       console.error("Failed to adjust volume:", ev);
@@ -353,7 +372,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
 
   const handleVolumeChange = useCallback(async (vol: number) => {
     try {
-      await apiSetVolume(vol);
+      await controllerSetVolume(vol);
       playbackVolume.value = vol;
     } catch (e) {
       console.error("Failed to set volume:", e);

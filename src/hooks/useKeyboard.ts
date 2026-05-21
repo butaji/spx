@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "preact/compat";
 import { listen } from "@tauri-apps/api/event";
-import { registerHotkey, setupHotkeys } from "../lib/hotkeys";
+import { registerHotkey, setupHotkeys, clearHotkeys, teardownHotkeys } from "../lib/hotkeys";
 
 interface KeyboardHandlers {
   handlePlayPause: () => void;
@@ -10,6 +10,7 @@ interface KeyboardHandlers {
   handleShuffle: () => void;
   handleRepeat: () => void;
   handleToggleLike: () => void;
+  handleMuteToggle: () => void;
   focusSearch: () => void;
   handleEscape: () => void;
   setHotkeyHelpOpen: (open: boolean) => void;
@@ -26,6 +27,7 @@ export function useKeyboard(handlers: KeyboardHandlers) {
     handleShuffle,
     handleRepeat,
     handleToggleLike,
+    handleMuteToggle,
     focusSearch,
     handleEscape,
     setHotkeyHelpOpen,
@@ -43,6 +45,8 @@ export function useKeyboard(handlers: KeyboardHandlers) {
 
   /* ── Keyboard Shortcuts ── */
   useEffect(() => {
+    clearHotkeys();
+
     // Navigation
     registerHotkey({ key: '1', modifiers: ['meta'], handler: () => setHistory([{ type: "home" }]), description: 'Now Playing' });
     registerHotkey({ key: '2', modifiers: ['meta'], handler: () => setHistory([{ type: "search" }]), description: 'Search' });
@@ -60,7 +64,7 @@ export function useKeyboard(handlers: KeyboardHandlers) {
     registerHotkey({ key: 'l', handler: handleToggleLike, description: 'Like/Unlike' });
     registerHotkey({ key: 's', handler: handleShuffle, description: 'Shuffle' });
     registerHotkey({ key: 'r', handler: handleRepeat, description: 'Repeat' });
-    registerHotkey({ key: 'm', handler: () => {/* mute handled in playback */}, description: 'Mute' });
+    registerHotkey({ key: 'm', handler: handleMuteToggle, description: 'Mute' });
 
     // Quick nav
     registerHotkey({ key: '/', handler: focusSearch, description: 'Focus Search' });
@@ -71,7 +75,11 @@ export function useKeyboard(handlers: KeyboardHandlers) {
     registerHotkey({ key: 'w', modifiers: ['meta'], handler: hideWindow, description: 'Hide Window' });
 
     setupHotkeys();
-  }, [handlePlayPause, handleNext, handlePrev, adjustVolume, handleShuffle, handleRepeat, handleToggleLike, focusSearch, handleEscape, setHotkeyHelpOpen, setHistory, hideWindow]);
+
+    return () => {
+      teardownHotkeys();
+    };
+  }, [handlePlayPause, handleNext, handlePrev, adjustVolume, handleShuffle, handleRepeat, handleToggleLike, handleMuteToggle, focusSearch, handleEscape, setHotkeyHelpOpen, setHistory, hideWindow]);
 
   /* ── macOS Native Menu Events ── */
   useEffect(() => {

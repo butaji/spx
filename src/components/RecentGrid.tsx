@@ -1,13 +1,12 @@
 import { homeFeed } from "../stores/spotify";
-import type { View } from "../App";
+import type { View } from "../types";
 import { Artwork } from "./Artwork";
 
 interface RecentGridProps {
   onNavigate: (v: View) => void;
-  onPlayContext: (uri: string, offsetUri?: string) => void;
 }
 
-export default function RecentGrid({ onNavigate, onPlayContext }: RecentGridProps) {
+export default function RecentGrid({ onNavigate }: RecentGridProps) {
   if (!homeFeed.value.length) return null;
 
   return (
@@ -19,7 +18,6 @@ export default function RecentGrid({ onNavigate, onPlayContext }: RecentGridProp
             key={item.id}
             item={item}
             onNavigate={onNavigate}
-            onPlayContext={onPlayContext}
           />
         ))}
       </div>
@@ -30,11 +28,9 @@ export default function RecentGrid({ onNavigate, onPlayContext }: RecentGridProp
 function FeedItem({
   item,
   onNavigate,
-  onPlayContext,
 }: {
   item: (typeof homeFeed.value)[0];
   onNavigate: (v: View) => void;
-  onPlayContext: (uri: string, offsetUri?: string) => void;
 }) {
   const handleClick = () => {
     if (item.type === "artist") {
@@ -42,10 +38,20 @@ function FeedItem({
       onNavigate({ type: "artist", id: artistId, name: item.name });
     } else if (item.type === "playlist") {
       onNavigate({ type: "playlist", id: item.id, name: item.name });
+    } else if (item.type === "album") {
+      onNavigate({ type: "album", id: item.id, name: item.name });
     } else if (item.type === "radio") {
-      if (item.uri) onPlayContext(item.uri);
-    } else {
-      if (item.uri) onPlayContext(item.uri);
+      // Radio items are based on artists — navigate to the artist page
+      const artistId = item.id.replace("radio-", "");
+      onNavigate({ type: "artist", id: artistId, name: item.name.replace(" Radio", "") });
+    } else if (item.uri) {
+      // Fallback: parse URI to determine navigation type
+      const parts = item.uri.split(":");
+      const type = parts[1];
+      const id = parts[2];
+      if (type && id) {
+        onNavigate({ type: type as View["type"], id, name: item.name });
+      }
     }
   };
 
@@ -62,11 +68,13 @@ function FeedItem({
         }
       }}
       aria-label={
-        item.type === "artist"
+        item.type === "artist" || item.type === "radio"
           ? `View artist ${item.name}`
           : item.type === "playlist"
           ? `Open playlist ${item.name}`
-          : `Play ${item.name}${item.subtitle ? ` by ${item.subtitle}` : ""}`
+          : item.type === "album"
+          ? `Open album ${item.name}`
+          : `Open ${item.name}`
       }
     >
       <Artwork

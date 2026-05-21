@@ -1,21 +1,11 @@
-import { useCallback, useEffect } from "preact/compat";
+import { useCallback } from "preact/compat";
 import {
   refreshSpotifyDevices,
-  startDevicePolling,
-  stopDevicePolling,
   availableDevices,
 } from "../stores/devices";
 import { transferPlayback } from "../lib/spotify";
 
 export function useDevices() {
-  console.log("[Devices] useDevices hook initialized");
-  // Start device polling on mount
-  useEffect(() => {
-    console.log("[Devices] useDevices useEffect running");
-    startDevicePolling();
-    return () => stopDevicePolling();
-  }, []);
-
   const ensureActiveDevice = useCallback(async () => {
     // Refresh device list
     await refreshSpotifyDevices();

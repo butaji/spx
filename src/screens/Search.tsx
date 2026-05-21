@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { search } from "../lib/spotify";
-import { View } from "../App";
+import { View } from "../types";
 import { SpotifyTrack, SpotifyAlbum, SpotifyArtist, SpotifyPlaylist, SpotifySearchResults } from "../types";
 import { formatTime } from "../lib/utils";
 

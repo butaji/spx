@@ -56,9 +56,18 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
   return (
     <div>
       <div className="detail-hero">
-        <div className="detail-hero-img" style={{
-          background: playlist?.images?.[0]?.url ? `url(${playlist.images[0].url}) center/cover` : undefined
-        }} />
+        <div className="detail-hero-image-wrap">
+          {playlist?.images?.[0]?.url ? (
+            <img
+              src={playlist.images[0].url}
+              alt={playlist?.name || name}
+              className="detail-hero-img"
+              style={{ objectFit: 'cover' }}
+            />
+          ) : (
+            <div className="detail-hero-img" style={{ background: 'var(--surface)' }} />
+          )}
+        </div>
         <div className="detail-hero-info">
           <div className="eyebrow">Playlist</div>
           <h1>{playlist?.name || name}</h1>

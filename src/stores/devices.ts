@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getAvailableDevices, scanLocalDevices, transferPlayback } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
+import { debug } from "../lib/utils";
 
 export const availableDevices = signal<SpotifyDevice[]>([]);
 export const localDevices = signal<LocalDevice[]>([]);
@@ -23,11 +24,11 @@ export const allDevices = computed(() => {
   const spotify = availableDevices.value;
   const local = localDevices.value;
 
-  console.log("[Devices] allDevices computed - spotify:", spotify.length, "local:", local.length);
+
 
   // Start with Spotify API devices
   const merged: Array<SpotifyDevice & { isLocal?: boolean; localNote?: string; canTransfer?: boolean; needsWakeUp?: boolean; deviceIp?: string }> =
-    spotify.map(d => ({ ...d, isLocal: false }));
+    spotify.map(d => ({ ...d, isLocal: false, canTransfer: true }));
 
   // Add local devices that aren't already in the Spotify list
   for (const ld of local) {
@@ -47,15 +48,25 @@ export const allDevices = computed(() => {
         });
       }
     } else {
+      // Cast-only device - check if Spotify already has a matching device (by name)
+      const displayName = ld.friendly_name || ld.name;
+      const fuzzyMatch = merged.find(d =>
+        d.name?.toLowerCase().includes(displayName.toLowerCase()) ||
+        displayName.toLowerCase().includes(d.name?.toLowerCase() ?? "")
+      );
+      // Skip if Spotify already exposes this device under a similar name
+      if (fuzzyMatch) {
+        continue;
+      }
       // Cast-only device - can wake up and transfer
       merged.push({
         id: ld.ip, // Use IP as ID for local-only devices
-        name: ld.friendly_name || ld.name,
+        name: displayName,
         type: ld.service_type?.includes("googlecast") ? "cast_video" : "speaker",
         is_active: false,
         is_restricted: false, // Cast devices CAN be used after wake-up
         isLocal: true,
-        localNote: "Tap to connect",
+        localNote: "Open Spotify on this speaker first",
         canTransfer: true,
         needsWakeUp: true,
         deviceIp: ld.ip,
@@ -63,7 +74,6 @@ export const allDevices = computed(() => {
     }
   }
 
-  console.log("[Devices] allDevices returning:", merged.length, "devices");
   return merged;
 });
 
@@ -93,6 +103,21 @@ export const effectiveDeviceId = computed(() => {
 let activeScanPromise: Promise<void> | null = null;
 let lastLocalScanAt = 0;
 const LOCAL_SCAN_COOLDOWN_MS = 15_000;
+
+/**
+ * Resets all module-level state. Used by tests to ensure clean state between tests.
+ */
+export function __resetDeviceStore() {
+  availableDevices.value = [];
+  localDevices.value = [];
+  activeDevice.value = null;
+  isScanning.value = false;
+  scanError.value = null;
+  isTransferring.value = false;
+  selectedDeviceId.value = null;
+  lastLocalScanAt = 0;
+  activeScanPromise = null;
+}
 let devicePollingInterval: ReturnType<typeof setInterval> | null = null;
 
 // ─── Device Polling ──────────────────────────────────────────────────────────
@@ -102,10 +127,9 @@ let devicePollingInterval: ReturnType<typeof setInterval> | null = null;
  * Includes local mDNS scan on each poll.
  */
 export function startDevicePolling(intervalMs = 10_000) {
-  console.log("[Devices] startDevicePolling called");
   stopDevicePolling();
   devicePollingInterval = setInterval(() => {
-    console.log("[Devices] Polling interval tick");
+
     refreshDevices({ includeLocal: true }).catch(console.warn);
   }, intervalMs);
   refreshDevices({ includeLocal: true }).catch(console.warn);
@@ -125,8 +149,13 @@ export function stopDevicePolling() {
  */
 async function wakeDevice(ip: string): Promise<string> {
   try {
-    const result = await invoke<string>("wake_cast_device", { ip });
-    console.log("[Devices] Cast device woken:", result);
+    const result = await Promise.race([
+      invoke<string>("wake_cast_device", { ip }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Cast device wake timed out after 15 seconds")), 15000)
+      )
+    ]);
+
     return result;
   } catch (error) {
     throw new Error(`Failed to wake Cast device: ${error}`);
@@ -134,34 +163,108 @@ async function wakeDevice(ip: string): Promise<string> {
 }
 
 /**
- * Poll until a Cast device appears in Spotify Connect (max 5s).
+ * Poll until a Cast device appears in Spotify Connect (max 30s).
+ * Progressively reports waiting state to caller via onStatus callback.
  */
-async function waitForDevice(deviceName: string): Promise<string> {
-  for (let i = 0; i < 10; i++) {
-    await new Promise(resolve => setTimeout(resolve, 500));
+async function waitForDevice(
+  deviceName: string,
+  onStatus?: (msg: string) => void
+): Promise<string> {
+  console.log(`[waitForDevice] Starting poll for "${deviceName}"`);
+  // Poll every 1s for up to 15s - if device doesn't appear quickly, it likely won't at all
+  // (Spotify API limitation with some Cast devices)
+  for (let i = 0; i < 15; i++) {
+    if (i === 3) onStatus?.("Waiting for Spotify to register...");
+    if (i === 8) onStatus?.("Still waiting...");
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const data = await getAvailableDevices();
-    const match = data.devices?.find(d =>
-      d.name?.toLowerCase() === deviceName ||
-      (deviceName && d.name?.toLowerCase()?.includes(deviceName)) ||
-      (deviceName && deviceName.includes(d.name?.toLowerCase() ?? ""))
-    );
-    if (match?.id) return match.id;
+    console.log(`[waitForDevice] Poll ${i + 1}/15: API returned ${data.devices?.length ?? 0} devices`);
+    if (data.devices?.length) {
+      console.log(`[waitForDevice] Device names: ${data.devices.map(d => `"${d.name}" (id=${d.id?.slice(0, 8)}...)`).join(', ')}`);
+    }
+
+    // Try multiple matching strategies
+    const targetName = deviceName.toLowerCase();
+
+    // 1. Exact match
+    let match = data.devices?.find(d => d.name?.toLowerCase() === targetName);
+
+    // 2. Substring match (device name contains target)
+    if (!match) {
+      match = data.devices?.find(d => d.name?.toLowerCase().includes(targetName));
+    }
+
+    // 3. Substring match (target contains device name)
+    if (!match) {
+      match = data.devices?.find(d => targetName.includes(d.name?.toLowerCase() ?? ""));
+    }
+
+    // 4. Word-by-word match (for "Living Room speaker" vs "Living Room")
+    if (!match && targetName.includes(" ")) {
+      const words = targetName.split(" ").filter(w => w.length > 2);
+      match = data.devices?.find(d => {
+        const deviceWords = d.name?.toLowerCase().split(" ") ?? [];
+        return words.some(w => deviceWords.includes(w));
+      });
+    }
+
+    if (match?.id) {
+      console.log(`[waitForDevice] MATCHED: "${match.name}" with id=${match.id}`);
+      return match.id;
+    }
   }
-  throw new Error("Cast device did not appear in Spotify Connect. Please try again.");
+  console.log(`[waitForDevice] TIMEOUT: "${deviceName}" never appeared in Spotify API`);
+  throw new Error("This speaker isn't visible to the Spotify Web API. Please start playing music on it from the official Spotify app first, then it will appear here.");
 }
 
 /**
  * Resolve device ID (handles Cast devices that need wake-up first).
+ * Pre-checks availableDevices before waking. Entire operation is wrapped in a 20s timeout.
  */
-async function resolveDevice(deviceId: string, deviceIp?: string): Promise<string> {
+async function resolveDevice(
+  deviceId: string,
+  deviceIp?: string,
+  onStatus?: (msg: string) => void
+): Promise<string> {
   const device = allDevices.value.find(d => d.id === deviceId);
   const isCastOnly = device?.isLocal && device?.needsWakeUp === true;
+  console.log(`[resolveDevice] deviceId=${deviceId}, isCastOnly=${isCastOnly}, deviceIp=${deviceIp}, name="${device?.name}"`);
 
   if (isCastOnly && deviceIp) {
-    console.log("[Devices] Waking Cast device at", deviceIp);
-    await wakeDevice(deviceIp);
     const deviceName = device?.name?.toLowerCase() ?? "";
-    return await waitForDevice(deviceName);
+
+    // Pre-check: skip wake if device already exists in Spotify's device list
+    const alreadyExists = availableDevices.value.some(d =>
+      d.name?.toLowerCase() === deviceName ||
+      (deviceName && d.name?.toLowerCase()?.includes(deviceName))
+    );
+    console.log(`[resolveDevice] Pre-check: alreadyExists=${alreadyExists}, availableDevices=${availableDevices.value.length}`);
+    if (availableDevices.value.length) {
+      console.log(`[resolveDevice] Available: ${availableDevices.value.map(d => `"${d.name}"`).join(', ')}`);
+    }
+
+    if (alreadyExists) {
+      const match = availableDevices.value.find(d =>
+        d.name?.toLowerCase() === deviceName ||
+        (deviceName && d.name?.toLowerCase()?.includes(deviceName))
+      );
+      console.log(`[resolveDevice] Pre-check MATCH: using Spotify id=${match?.id}`);
+      return match?.id ?? deviceId;
+    }
+
+    // Wrap in 25s timeout (wake takes ~3-5s + polling up to 15s)
+    return await Promise.race([
+      (async () => {
+        onStatus?.("Device is starting up...");
+        console.log(`[resolveDevice] Calling wakeDevice(${deviceIp})...`);
+        await wakeDevice(deviceIp);
+        console.log(`[resolveDevice] Wake done, now polling for "${deviceName}"...`);
+        return await waitForDevice(deviceName, onStatus);
+      })(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Device didn't appear in Spotify. Please start playing music on it from the official Spotify app first.")), 25_000)
+      )
+    ]);
   }
   return deviceId;
 }
@@ -169,16 +272,30 @@ async function resolveDevice(deviceId: string, deviceIp?: string): Promise<strin
 /**
  * Select a device and transfer playback to it.
  * For Cast-only devices: wakes the device first, then transfers.
+ * Returns the actual error message so the UI can show something useful.
  */
-export async function selectDevice(deviceId: string, deviceIp?: string): Promise<boolean> {
-  if (isTransferring.value) return false;
+export async function selectDevice(deviceId: string, deviceIp?: string): Promise<{ success: boolean; error?: string }> {
+  if (isTransferring.value) return { success: false, error: "Transfer already in progress" };
 
   isTransferring.value = true;
   selectedDeviceId.value = deviceId;
+  console.log(`[selectDevice] Starting transfer to deviceId=${deviceId}, deviceIp=${deviceIp}`);
+
+  // Safety net: force-reset isTransferring after 30s no matter what
+  const safetyTimer = setTimeout(() => {
+    if (isTransferring.value) {
+      console.warn("[Devices] Safety timer reset isTransferring");
+      isTransferring.value = false;
+    }
+  }, 30_000);
+
+  let statusMessage = "";
+  const onStatus = (msg: string) => { statusMessage = msg; };
 
   try {
-    // Resolve Cast devices to Spotify Connect IDs
-    const resolvedId = await resolveDevice(deviceId, deviceIp);
+    // Resolve Cast devices to Spotify Connect IDs (40s timeout inside)
+    const resolvedId = await resolveDevice(deviceId, deviceIp, onStatus);
+    console.log(`[selectDevice] Resolved to id=${resolvedId}`);
     selectedDeviceId.value = resolvedId;
 
     // Re-fetch devices before transfer
@@ -186,6 +303,7 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
 
     // Verify device still exists
     let currentDevices = availableDevices.value;
+    console.log(`[selectDevice] Current API devices: ${currentDevices.length}`);
     if (!currentDevices.some(d => d.id === resolvedId)) {
       const name = allDevices.value.find(d => d.id === resolvedId)?.name?.toLowerCase();
       const match = currentDevices.find(d =>
@@ -193,21 +311,50 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
         (name && d.name?.toLowerCase()?.includes(name))
       );
       if (match?.id) {
+        console.log(`[selectDevice] Found match by name: ${match.id}`);
         selectedDeviceId.value = match.id;
       } else {
-        throw new Error("Device not found. It may have gone offline.");
+        console.log(`[selectDevice] Device ${resolvedId} not found in API after refresh`);
+        return { success: false, error: "Device went offline. Please open Spotify on it again." };
       }
     }
 
+    console.log(`[selectDevice] Calling transferPlayback(${selectedDeviceId.value})...`);
     await transferPlayback(selectedDeviceId.value, true);
+    console.log(`[selectDevice] Transfer succeeded!`);
     await refreshSpotifyDevices();
-    return true;
-  } catch (error) {
+    return { success: true };
+  } catch (error: any) {
     console.error("[Devices] Failed to transfer playback:", error);
     selectedDeviceId.value = activeDevice.value?.id ?? null;
-    return false;
+
+    const msg = error?.message || String(error);
+    if (statusMessage && !msg.includes("didn't respond") && !msg.includes("didn't appear") && !msg.includes("isn't visible")) {
+      // Return the staged status message if set (e.g. "Waiting for Spotify to register...")
+      return { success: false, error: statusMessage };
+    }
+    if (msg.includes("isn't visible") || msg.includes("Spotify is not running")) {
+      return { success: false, error: "This speaker needs to be activated from the official Spotify app first. Start playing music on it, then it will appear here." };
+    }
+    if (msg.includes("403") || msg.includes("Premium")) {
+      return { success: false, error: "Spotify Premium required to control playback remotely." };
+    }
+    if (msg.includes("404") || msg.includes("Not Found") || msg.includes("Device not found")) {
+      return { success: false, error: "Device not found. It may have gone offline." };
+    }
+    if (msg.includes("401") || msg.includes("Unauthorized")) {
+      return { success: false, error: "Session expired. Please sign in again." };
+    }
+    if (msg.includes("Network") || msg.includes("fetch") || msg.includes("Failed to wake") || msg.includes("timed out")) {
+      return { success: false, error: "Network error. Make sure the device is on the same network." };
+    }
+    if (msg.includes("didn't respond")) {
+      return { success: false, error: msg };
+    }
+    return { success: false, error: msg };
   } finally {
     isTransferring.value = false;
+    clearTimeout(safetyTimer);
   }
 }
 
@@ -237,44 +384,54 @@ export interface RefreshDevicesOptions {
  * - Optionally scans mDNS for local Cast devices
  */
 export async function refreshDevices(options: RefreshDevicesOptions = {}): Promise<void> {
+
   const { force = false, includeLocal = false } = options;
 
   if (activeScanPromise) {
     return activeScanPromise;
   }
 
-  const shouldScanLocal = includeLocal && (force || Date.now() - lastLocalScanAt >= LOCAL_SCAN_COOLDOWN_MS);
-  console.log("[Devices] shouldScanLocal:", shouldScanLocal, "includeLocal:", includeLocal, "force:", force, "timeSinceLastScan:", Date.now() - lastLocalScanAt);
+  // Only scan if includeLocal=true AND (cooldown passed OR never scanned)
+  const shouldScanLocal = includeLocal && (force || lastLocalScanAt === 0 || (lastLocalScanAt > 0 && Date.now() - lastLocalScanAt >= LOCAL_SCAN_COOLDOWN_MS));
 
-  activeScanPromise = (async () => {
+
+    activeScanPromise = (async () => {
     isScanning.value = true;
     scanError.value = null;
+    let spotifyDevices: any[] = [];
 
     try {
-      // Fetch Spotify devices (always)
-      const spotifyData = await getAvailableDevices();
-      const spotifyDevices = spotifyData.devices ?? [];
+      // Fetch Spotify devices (always) — but don't let auth failures block local scanning
+      try {
+        const spotifyData = await getAvailableDevices();
+        spotifyDevices = spotifyData.devices ?? [];
+        console.log(`[refreshDevices] Spotify API returned ${spotifyDevices.length} devices:`, spotifyDevices.map(d => ({ name: d.name, id: d.id?.slice(0, 8), type: d.type })));
 
-      availableDevices.value = spotifyDevices.map(d => ({
-        ...d,
-        id: d.id ?? undefined,
-        volume_percent: d.volume_percent ?? undefined,
-      }));
+        availableDevices.value = spotifyDevices.map(d => ({
+          ...d,
+          id: d.id ?? undefined,
+          volume_percent: d.volume_percent ?? undefined,
+        }));
 
-      const active = spotifyDevices.find(d => d.is_active) ?? null;
-      activeDevice.value = active
-        ? { ...active, id: active.id ?? undefined, volume_percent: active.volume_percent ?? undefined }
-        : null;
+        const active = spotifyDevices.find(d => d.is_active) ?? null;
+        activeDevice.value = active
+          ? { ...active, id: active.id ?? undefined, volume_percent: active.volume_percent ?? undefined }
+          : null;
 
-      // If selected device disappeared, fall back to active
-      if (selectedDeviceId.value && !availableDevices.value.some(d => d.id === selectedDeviceId.value)) {
-        selectedDeviceId.value = active?.id ?? null;
+        // If selected device disappeared, fall back to active
+        if (selectedDeviceId.value && !availableDevices.value.some(d => d.id === selectedDeviceId.value)) {
+          selectedDeviceId.value = active?.id ?? null;
+        }
+      } catch (spotifyErr) {
+        debug("[Devices] Spotify API unavailable (likely not authenticated yet):", spotifyErr);
+        // Keep spotifyDevices as empty array — local scan will still proceed
       }
 
-      // Optionally scan local devices
+      // Always scan local devices when requested, regardless of Spotify auth state
       if (shouldScanLocal) {
+        console.log(`[refreshDevices] Scanning local devices (force=${force}, cooldown=${Date.now() - lastLocalScanAt}ms ago)`);
         const local = await scanLocalDevices();
-        console.log("[Devices] scanLocalDevices returned:", local.length, "devices");
+        console.log(`[refreshDevices] mDNS found ${local.length} devices:`, local.map(d => ({ name: d.friendly_name || d.name, ip: d.ip, port: d.port })));
         const matched = local.map((device) => {
           const displayName = device.friendly_name || device.name;
           const byId = device.id ? spotifyDevices.find(sd => sd.id === device.id) : null;
@@ -288,13 +445,18 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
           const spotifyMatch = byId || byName || byFuzzyName;
 
           if (spotifyMatch?.id) {
+            console.log(`[refreshDevices] MATCHED local "${displayName}" to Spotify API device "${spotifyMatch.name}" (id=${spotifyMatch.id})`);
             return { ...device, id: spotifyMatch.id, is_active: spotifyMatch.is_active, canTransfer: true, friendly_name: displayName };
           } else {
+            console.log(`[refreshDevices] NO MATCH for local "${displayName}" — will show as Cast-only device`);
             return { ...device, canTransfer: false, friendly_name: displayName, note: "Open Spotify on this device" };
           }
         });
         localDevices.value = matched;
-        lastLocalScanAt = Date.now();
+        // Only update timestamp when scan actually ran (not when blocked by cooldown)
+        if (shouldScanLocal) {
+          lastLocalScanAt = Date.now();
+        }
       }
     } catch (error) {
       console.error("Failed to refresh devices:", error);
@@ -321,6 +483,5 @@ export async function refreshSpotifyDevices(): Promise<void> {
  * @deprecated Use refreshDevices({ includeLocal: true, force: true }) instead
  */
 export async function refreshLocalDevices(force = false): Promise<void> {
-  console.log("[Devices] refreshLocalDevices called, force:", force);
   await refreshDevices({ includeLocal: true, force });
 }

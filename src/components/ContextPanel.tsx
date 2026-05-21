@@ -258,9 +258,9 @@ function PlaylistContext({ data }: { data: any }) {
       {data.description && (
         <div>
           <div className="context-section-title">About</div>
-          <p style={{ fontSize: "12px", color: "var(--fg-secondary)", lineHeight: "1.5" }}
-            dangerouslySetInnerHTML={{ __html: data.description }}
-          />
+          <p style={{ fontSize: "12px", color: "var(--fg-secondary)", lineHeight: "1.5", whiteSpace: "pre-wrap" }}>
+            {data.description.replace(/<[^>]*>/g, '')}
+          </p>
         </div>
       )}
 

@@ -3,7 +3,7 @@ import type { KeyboardEvent } from "preact/compat";
 import { getUserPlaylists, getSavedTracks, getSavedAlbums, getTopTracks } from "../lib/spotify";
 import { getCached, setCache } from "../lib/cache";
 import { formatTime } from "../lib/utils";
-import { View } from "../App";
+import { View } from "../types";
 import { SpotifyPlaylist, SpotifyTrack, SpotifyAlbum } from "../types";
 import { Artwork } from "../components/Artwork";
 
@@ -63,14 +63,7 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
         freshItems = (d.items || []).map((i) => i.album).filter(Boolean) as SpotifyAlbum[];
       } else if (tab === "top") {
         const d = await getTopTracks(50, 'short_term');
-        const seen = new Set<string>();
-        freshItems = [];
-        d.forEach((track) => {
-          if (track.album?.id && !seen.has(track.album.id)) {
-            seen.add(track.album.id);
-            freshItems.push(track.album);
-          }
-        });
+        freshItems = d;
       }
 
       if (isMountedRef.current) {
@@ -182,7 +175,7 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
         ))}
       </div>
 
-      {tab === "playlists" || tab === "albums" || tab === "top" ? (
+      {tab === "playlists" || tab === "albums" ? (
         <div className="lib-grid">
           {items.map((item) => (
             <div
@@ -248,7 +241,7 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
           ))}
           {items.length === 0 && (
             <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} role="status">
-              No tracks found
+              No {tab === "top" ? "top tracks" : "tracks"} found
             </p>
           )}
         </div>

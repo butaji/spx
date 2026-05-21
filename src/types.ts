@@ -317,14 +317,10 @@ export interface TrackInfo {
   name: string;
   artist: string;
   artistIds?: string[];
-  artistId?: string | null;
-  artists?: Array<{ name: string; id: string }>;
-  artistName?: string;
   album: string;
-  albumId?: string | null;
-  imageUrl: string;
-  duration: number;
   durationMs: number;
+  progressMs: number;
+  isPlaying: boolean;
+  imageUrl?: string;
   uri: string;
-  url?: string;
 }

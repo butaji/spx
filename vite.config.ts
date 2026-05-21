@@ -16,7 +16,7 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    allowedHosts: ["a734-2001-1388-661-ff4f-e0a7-5ac1-c603-757a.ngrok-free.app"],
+    allowedHosts: process.env.VITE_ALLOWED_HOST ? [process.env.VITE_ALLOWED_HOST] : [],
     host: host || false,
     hmr: host
       ? {

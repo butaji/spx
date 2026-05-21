@@ -1,5 +1,6 @@
 import type { CSSProperties } from "preact/compat";
-import type { TrackInfo } from "../App";
+import { useState, useEffect, useCallback } from "preact/compat";
+import type { TrackInfo } from "../types";
 import DeviceSelector from "./DeviceSelector";
 import {
   IconHeart,
@@ -56,23 +57,85 @@ export function PlayerBar({
   onRefreshLocalDevices,
   onMuteToggle,
 }: PlayerBarProps) {
-  const progressPct = track && duration > 0 ? (progress / duration) * 100 : 0;
+  const [isDraggingSeek, setIsDraggingSeek] = useState(false);
+  const [isDraggingVolume, setIsDraggingVolume] = useState(false);
+  const [dragProgress, setDragProgress] = useState<number | null>(null);
+  const [dragVolume, setDragVolume] = useState<number | null>(null);
 
-  const handleSeek = (e: MouseEvent) => {
-    const target = e.currentTarget as HTMLDivElement;
-    const rect = target.getBoundingClientRect();
+  const getPctFromMouse = useCallback((e: MouseEvent, el: HTMLDivElement) => {
+    const rect = el.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    const pct = Math.max(0, Math.min(1, x / rect.width));
-    onSeek(pct * duration);
-  };
+    return Math.max(0, Math.min(1, x / rect.width));
+  }, []);
 
-  const handleVolumeClick = (e: MouseEvent) => {
+  // Seek drag handlers
+  const handleSeekMouseDown = useCallback((e: MouseEvent) => {
     const target = e.currentTarget as HTMLDivElement;
-    const rect = target.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const vol = Math.round((x / rect.width) * 100);
+    const pct = getPctFromMouse(e, target);
+    setDragProgress(pct * duration);
+    setIsDraggingSeek(true);
+  }, [duration, getPctFromMouse]);
+
+  useEffect(() => {
+    if (!isDraggingSeek) return;
+    const handleMove = (e: MouseEvent) => {
+      const el = document.querySelector('.progress-track') as HTMLDivElement;
+      if (!el) return;
+      const pct = getPctFromMouse(e, el);
+      setDragProgress(pct * duration);
+    };
+    const handleUp = () => {
+      if (dragProgress !== null) {
+        onSeek(dragProgress);
+      }
+      setIsDraggingSeek(false);
+      setDragProgress(null);
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [isDraggingSeek, duration, getPctFromMouse]);
+
+  // Volume drag handlers
+  const handleVolumeMouseDown = useCallback((e: MouseEvent) => {
+    const target = e.currentTarget as HTMLDivElement;
+    const pct = getPctFromMouse(e, target);
+    const vol = Math.round(pct * 100);
+    setDragVolume(vol);
+    setIsDraggingVolume(true);
     onVolumeChange(Math.max(0, Math.min(100, vol)));
-  };
+  }, [getPctFromMouse, onVolumeChange]);
+
+  useEffect(() => {
+    if (!isDraggingVolume) return;
+    const handleMove = (e: MouseEvent) => {
+      const el = document.querySelector('.volume-track') as HTMLDivElement;
+      if (!el) return;
+      const pct = getPctFromMouse(e, el);
+      const vol = Math.round(pct * 100);
+      setDragVolume(Math.max(0, Math.min(100, vol)));
+    };
+    const handleUp = () => {
+      if (dragVolume !== null) {
+        onVolumeChange(dragVolume);
+      }
+      setIsDraggingVolume(false);
+      setDragVolume(null);
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [isDraggingVolume, dragVolume, getPctFromMouse, onVolumeChange]);
+
+  const displayProgress = isDraggingSeek && dragProgress !== null ? dragProgress : progress;
+  const displayProgressPct = track && duration > 0 ? (displayProgress / duration) * 100 : 0;
+  const displayVolume = isDraggingVolume && dragVolume !== null ? dragVolume : volume;
 
   return (
     <div className="player-bar">
@@ -124,17 +187,17 @@ export function PlayerBar({
           </button>
         </div>
         <div className="scrubber">
-          <span className="time current">{formatTime(progress)}</span>
+          <span className="time current">{formatTime(displayProgress)}</span>
           <div
             className="progress-track"
-            onClick={handleSeek}
+            onMouseDown={handleSeekMouseDown}
             role="slider"
-            aria-valuenow={Math.round(progressPct)}
+            aria-valuenow={Math.round(displayProgressPct)}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Progress"
             tabIndex={0}
-            style={{ "--progress-width": `${progressPct}%`, "--progress-left": `${progressPct}%` } as CSSProperties}
+            style={{ "--progress-width": `${displayProgressPct}%`, "--progress-left": `${displayProgressPct}%` } as CSSProperties}
           >
             <div className="progress-fill" />
             <div className="progress-thumb" />
@@ -152,14 +215,14 @@ export function PlayerBar({
         </button>
         <div
           className="volume-track"
-          onClick={handleVolumeClick}
+          onMouseDown={handleVolumeMouseDown}
           role="slider"
-          aria-valuenow={volume}
+          aria-valuenow={displayVolume}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label="Volume"
           tabIndex={0}
-          style={{ "--volume-width": `${volume}%` } as CSSProperties}
+          style={{ "--volume-width": `${displayVolume}%` } as CSSProperties}
         >
           <div className="volume-fill" />
         </div>

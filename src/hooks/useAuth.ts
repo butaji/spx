@@ -6,6 +6,7 @@ import {
   restoreSession,
   checkMockMode,
   getAccessToken,
+  clearToken,
 } from "../lib/spotify";
 import { initPlayer, onPlaybackEvent } from "../lib/playback";
 import {
@@ -13,12 +14,13 @@ import {
   isMockMode,
   authError,
   isAuthLoading,
+  isRestoring,
   appError,
   loadRecentActivity,
   refreshPlayback,
   validateToken,
 } from "../stores/spotify";
-import { refreshSpotifyDevices, refreshLocalDevices } from "../stores/devices";
+import { refreshSpotifyDevices, refreshLocalDevices, startDevicePolling, stopDevicePolling } from "../stores/devices";
 
 export function useAuth() {
   const isAuthed = isAuthSignal.value;
@@ -38,39 +40,55 @@ export function useAuth() {
   // Initialize auth on mount
   useEffect(() => {
     async function init() {
-      const mock = await checkMockMode();
-      isMockMode.value = mock;
-      const authed = await restoreSession();
-      isAuthSignal.value = authed || mock;
-      if (authed || mock) {
-        authError.value = false;
-        const token = getAccessToken();
-        if (token) {
-          console.log('[Debug] Access token:', token);
-        }
-        const valid = await validateToken();
-        if (!valid) {
-          console.log("Token validation failed, forcing re-auth");
-          isAuthSignal.value = false;
-          authError.value = true;
-          return;
-        }
-        try {
+      isRestoring.value = true;
+      // Safety: never show restoring for more than 8 seconds
+      const safetyTimeout = setTimeout(() => {
+        console.warn("Auth init safety timeout reached — forcing isRestoring = false");
+        isRestoring.value = false;
+      }, 8000);
+
+      try {
+        const mock = await checkMockMode();
+        isMockMode.value = mock;
+        const authed = await restoreSession();
+        isAuthSignal.value = authed || mock;
+
+        if (authed || mock) {
+          authError.value = null;
           const token = getAccessToken();
           if (token) {
-            await initPlayer(token);
-            console.log("Web Playback SDK initialized");
+            const valid = await validateToken();
+            if (!valid) {
+              console.warn("Token validation failed — clearing session");
+              await clearToken();
+              isAuthSignal.value = false;
+              isRestoring.value = false;
+              return;
+            }
+            try {
+              await initPlayer(token);
+            } catch (e) {
+              console.error("Failed to init Web Playback SDK:", e);
+            }
           }
-        } catch (e) {
-          console.error("Failed to init Web Playback SDK:", e);
+          // Start these independently — don't block auth init on device scanning
+          loadRecentActivity();
+          refreshPlayback();
+          refreshSpotifyDevices().catch(console.error);
+          // Scan local devices in background after auth is ready
+          setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
+          // Start device polling now that auth is ready
+          startDevicePolling();
         }
-        loadRecentActivity();
-        refreshPlayback();
-        await refreshSpotifyDevices();
-        await refreshLocalDevices(true);
+      } catch (e) {
+        console.error("Auth init failed:", e);
+      } finally {
+        clearTimeout(safetyTimeout);
+        isRestoring.value = false;
       }
     }
     init();
+    return () => stopDevicePolling();
   }, []);
 
   // Listen for deep link callbacks
@@ -86,7 +104,6 @@ export function useAuth() {
           const token = getAccessToken();
           if (token) {
             await initPlayer(token);
-            console.log("Web Playback SDK initialized");
           }
         } catch (e) {
           console.error("Failed to init Web Playback SDK:", e);
@@ -94,6 +111,7 @@ export function useAuth() {
         loadRecentActivity();
         refreshPlayback();
         refreshSpotifyDevices();
+        startDevicePolling();
       } catch (e) {
         console.error("Deep link auth error:", e);
         showError(e instanceof Error ? e.message : String(e));
@@ -101,7 +119,7 @@ export function useAuth() {
     }
 
     async function setupDeepLinks() {
-      console.log("Using localhost callback server, no deep links needed");
+      // Using localhost callback server, no deep links needed
     }
 
     setupDeepLinks();
@@ -125,7 +143,6 @@ export function useAuth() {
   useEffect(() => {
     const unsub = onPlaybackEvent((event) => {
       if (event.type === 'ready') {
-        console.log("SPX Player connected and ready, device:", event.data?.device_id);
         refreshPlayback();
       }
     });
@@ -136,18 +153,18 @@ export function useAuth() {
     if (isAuthLoading.value || isAuthSignal.value) return;
     isAuthLoading.value = true;
     appError.value = null;
-    authError.value = false;
+    authError.value = null;
     try {
       await startAuthFlow();
-      console.log("Auth flow completed successfully");
       isAuthSignal.value = true;
-      authError.value = false;
+      authError.value = null;
       loadRecentActivity();
       refreshPlayback();
       await refreshSpotifyDevices();
+      startDevicePolling();
     } catch (e) {
       console.error("Failed to start auth:", e);
-      authError.value = true;
+      authError.value = e instanceof Error ? e.message : 'Authentication failed';
       showError(e instanceof Error ? e.message : String(e));
     } finally {
       isAuthLoading.value = false;
@@ -158,6 +175,7 @@ export function useAuth() {
     isAuthed,
     authErr,
     isAuthLoad,
+    isRestoring,
     handleStartAuth,
   };
 }

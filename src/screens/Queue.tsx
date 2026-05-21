@@ -25,7 +25,10 @@ export default function Queue({ onPlayUris }: Props) {
 
   const playFromQueue = useCallback((index: number) => {
     const uris = ([current?.uri, ...queue.map((q) => q.uri)].filter(Boolean) as string[]);
-    onPlayUris(uris, index);
+    // When current track is present, it's at index 0 and queue items are offset by 1.
+    // When current is null, the URIs array shifts; adjust offset so the correct queue item plays.
+    const adjustedOffset = current?.uri ? index : Math.max(0, index - 1);
+    onPlayUris(uris, adjustedOffset);
   }, [current, queue, onPlayUris]);
 
   const handleQueueItemKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>, index: number) => {

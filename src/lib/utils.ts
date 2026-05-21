@@ -15,3 +15,9 @@ export function formatFollowers(count: number): string {
   }
   return count.toString();
 }
+
+/** Debug logger that only prints in development. */
+export const DEBUG = import.meta.env.DEV;
+export function debug(...args: any[]): void {
+  if (DEBUG) console.log(...args);
+}
