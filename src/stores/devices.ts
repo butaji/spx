@@ -163,7 +163,8 @@ async function wakeDevice(ip: string): Promise<string> {
 }
 
 /**
- * Authenticate a Cast device with Spotify so it appears in the Web API.
+ * Authenticate a Cast device with Spotify using the proper protocol.
+ * Tries raw auth first (with correct Spotify userAgent), falls back to old method.
  */
 async function authenticateCastDevice(ip: string, deviceName: string): Promise<string> {
   try {
@@ -172,6 +173,25 @@ async function authenticateCastDevice(ip: string, deviceName: string): Promise<s
       throw new Error("No access token available");
     }
     
+    // Try new raw protocol with proper Spotify CONNECT message
+    console.log(`[authenticateCastDevice] Trying raw auth for ${deviceName} at ${ip}`);
+    try {
+      const result = await Promise.race([
+        invoke<string>("authenticate_cast_device_raw_command", { 
+          ip, 
+          accessToken: token
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Raw Cast auth timed out after 45 seconds")), 45000)
+        )
+      ]);
+      console.log(`[authenticateCastDevice] Raw auth succeeded: ${result}`);
+      return result;
+    } catch (rawError) {
+      console.log(`[authenticateCastDevice] Raw auth failed: ${rawError}, falling back to old method`);
+    }
+    
+    // Fallback to old method
     const result = await Promise.race([
       invoke<string>("authenticate_cast_device_command", { 
         ip, 

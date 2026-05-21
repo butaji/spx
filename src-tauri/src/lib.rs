@@ -1,6 +1,8 @@
 pub mod commands;
 pub mod mdns;
 pub mod spotify_cast;
+pub mod cast_raw_auth;
+pub mod librespot_client;
 mod menu;
 
 use tauri::Manager;
@@ -27,6 +29,7 @@ pub fn run() {
             commands::scan_spotify_devices,
             commands::wake_cast_device,
             commands::authenticate_cast_device_command,
+            commands::authenticate_cast_device_raw_command,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]

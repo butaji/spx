@@ -276,3 +276,29 @@ pub async fn authenticate_cast_device_command(
         Err(_) => Err("Cast auth timed out after 30 seconds".to_string()),
     }
 }
+
+#[tauri::command]
+pub async fn authenticate_cast_device_raw_command(
+    ip: String,
+    access_token: String,
+) -> Result<String, String> {
+    info!("Authenticating Cast device at {} using raw protocol", ip);
+
+    let ip_owned = ip;
+    let token_owned = access_token;
+
+    let result = tokio::task::spawn_blocking(move || {
+        crate::cast_raw_auth::authenticate_cast_device_raw(
+            &ip_owned,
+            &token_owned,
+        )
+    });
+
+    // Wrap in a 45-second timeout
+    match timeout(Duration::from_secs(45), result).await {
+        Ok(Ok(Ok(s))) => Ok(s),
+        Ok(Ok(Err(e))) => Err(e),
+        Ok(Err(_)) => Err("Raw Cast auth task panicked".to_string()),
+        Err(_) => Err("Raw Cast auth timed out after 45 seconds".to_string()),
+    }
+}

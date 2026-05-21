@@ -15,6 +15,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 name = "mdns-test"
 path = "src/bin/mdns-test.rs"
 
+[[bin]]
+name = "mercury-discovery-test"
+path = "src/bin/mercury-discovery-test.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -31,8 +35,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 urlencoding = "2"
 rust_cast = "0.21"
 rustls = { version = "0.23", features = ["aws-lc-rs", "std"] }
-reqwest = { version = "0.12", features = ["rustls-tls"] }
+reqwest = { version = "0.12", features = ["rustls-tls", "json"] }
 md5 = "0.7"
+librespot-core = "0.4"
+librespot-connect = "0.4"
+librespot-protocol = "0.4"
+librespot-discovery = "0.4"
+futures-util = "0.3"
+tokio-util = "0.7"
+tokio-stream = "0.1"
+protobuf = "2.28"
 
 [profile.release]
 strip = true
