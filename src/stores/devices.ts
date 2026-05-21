@@ -1,6 +1,6 @@
 import { signal, computed } from "@preact/signals";
 import { invoke } from "@tauri-apps/api/core";
-import { getAvailableDevices, scanLocalDevices, transferPlayback } from "../lib/spotify";
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
 import { debug } from "../lib/utils";
@@ -163,6 +163,33 @@ async function wakeDevice(ip: string): Promise<string> {
 }
 
 /**
+ * Authenticate a Cast device with Spotify so it appears in the Web API.
+ */
+async function authenticateCastDevice(ip: string, deviceName: string): Promise<string> {
+  try {
+    const token = getAccessToken();
+    if (!token) {
+      throw new Error("No access token available");
+    }
+    
+    const result = await Promise.race([
+      invoke<string>("authenticate_cast_device_command", { 
+        ip, 
+        accessToken: token,
+        deviceName
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Cast auth timed out after 30 seconds")), 30000)
+      )
+    ]);
+
+    return result;
+  } catch (error) {
+    throw new Error(`Failed to authenticate Cast device: ${error}`);
+  }
+}
+
+/**
  * Poll until a Cast device appears in Spotify Connect (max 30s).
  * Progressively reports waiting state to caller via onStatus callback.
  */
@@ -252,17 +279,27 @@ async function resolveDevice(
       return match?.id ?? deviceId;
     }
 
-    // Wrap in 25s timeout (wake takes ~3-5s + polling up to 15s)
+    // Wrap in 60s timeout (wake takes ~3-5s + auth ~10s + polling up to 15s)
     return await Promise.race([
       (async () => {
         onStatus?.("Device is starting up...");
         console.log(`[resolveDevice] Calling wakeDevice(${deviceIp})...`);
         await wakeDevice(deviceIp);
         console.log(`[resolveDevice] Wake done, now polling for "${deviceName}"...`);
-        return await waitForDevice(deviceName, onStatus);
+        
+        try {
+          return await waitForDevice(deviceName, onStatus);
+        } catch (e) {
+          // Device didn't appear after wake - try authenticating it
+          console.log(`[resolveDevice] Device not in API after wake, trying Cast auth...`);
+          onStatus?.("Authenticating with Spotify...");
+          await authenticateCastDevice(deviceIp, device?.name ?? "");
+          console.log(`[resolveDevice] Auth done, polling again...`);
+          return await waitForDevice(deviceName, onStatus);
+        }
       })(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Device didn't appear in Spotify. Please start playing music on it from the official Spotify app first.")), 25_000)
+        setTimeout(() => reject(new Error("Device didn't appear in Spotify. Try starting playback on it from the official Spotify app first.")), 60_000)
       )
     ]);
   }
@@ -281,13 +318,13 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
   selectedDeviceId.value = deviceId;
   console.log(`[selectDevice] Starting transfer to deviceId=${deviceId}, deviceIp=${deviceIp}`);
 
-  // Safety net: force-reset isTransferring after 30s no matter what
+  // Safety net: force-reset isTransferring after 65s no matter what
   const safetyTimer = setTimeout(() => {
     if (isTransferring.value) {
       console.warn("[Devices] Safety timer reset isTransferring");
       isTransferring.value = false;
     }
-  }, 30_000);
+  }, 65_000);
 
   let statusMessage = "";
   const onStatus = (msg: string) => { statusMessage = msg; };
@@ -329,7 +366,7 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
     selectedDeviceId.value = activeDevice.value?.id ?? null;
 
     const msg = error?.message || String(error);
-    if (statusMessage && !msg.includes("didn't respond") && !msg.includes("didn't appear") && !msg.includes("isn't visible")) {
+    if (statusMessage && !msg.includes("didn't respond") && !msg.includes("didn't appear") && !msg.includes("isn't visible") && !msg.includes("Failed to authenticate")) {
       // Return the staged status message if set (e.g. "Waiting for Spotify to register...")
       return { success: false, error: statusMessage };
     }

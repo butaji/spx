@@ -10,6 +10,7 @@ vi.mock('../lib/spotify', () => ({
   getAvailableDevices: vi.fn(),
   scanLocalDevices: vi.fn(),
   transferPlayback: vi.fn(),
+  getAccessToken: vi.fn(() => 'mock-token'),
 }));
 
 vi.mock('../lib/playback', () => ({
@@ -431,10 +432,19 @@ describe('selectDevice timeout handling', () => {
 
     // Mock getAvailableDevices to always return empty (device never appears)
     (getAvailableDevices as ReturnType<typeof vi.fn>).mockResolvedValue({ devices: [] });
+    
+    // Mock authenticate_cast_device_command to also fail
+    (invoke as ReturnType<typeof vi.fn>).mockImplementation((cmd: string) => {
+      if (cmd === 'authenticate_cast_device_command') {
+        return Promise.reject(new Error("isn't visible"));
+      }
+      return Promise.resolve('Chromecast woken');
+    });
 
     const castDevice = allDevices.value.find(d => d.name === 'Chromecast');
 
     // Act — waitForDevice polls 15 times × 1000ms = 15s before throwing
+    // then auth fails immediately
     const resultPromise = import('./devices').then(m =>
       m.selectDevice(castDevice!.id!, (castDevice as any).deviceIp)
     );

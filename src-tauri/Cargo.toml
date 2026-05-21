@@ -32,6 +32,7 @@ urlencoding = "2"
 rust_cast = "0.21"
 rustls = { version = "0.23", features = ["aws-lc-rs", "std"] }
 reqwest = { version = "0.12", features = ["rustls-tls"] }
+md5 = "0.7"
 
 [profile.release]
 strip = true

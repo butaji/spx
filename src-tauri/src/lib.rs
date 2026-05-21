@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod mdns;
+pub mod spotify_cast;
 mod menu;
 
 use tauri::Manager;
@@ -25,6 +26,7 @@ pub fn run() {
             commands::is_mock_mode,
             commands::scan_spotify_devices,
             commands::wake_cast_device,
+            commands::authenticate_cast_device_command,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]

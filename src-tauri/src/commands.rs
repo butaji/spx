@@ -247,3 +247,32 @@ async fn wake_cast_v2(ip: &str) -> Result<String, String> {
         Err(_) => Err("Cast V2 wake timed out after 10 seconds".to_string()),
     }
 }
+
+#[tauri::command]
+pub async fn authenticate_cast_device_command(
+    ip: String,
+    access_token: String,
+    device_name: String,
+) -> Result<String, String> {
+    info!("Authenticating Cast device {} at {}", device_name, ip);
+
+    let ip_owned = ip;
+    let token_owned = access_token;
+    let name_owned = device_name;
+
+    let result = tokio::task::spawn_blocking(move || {
+        crate::spotify_cast::authenticate_cast_device(
+            &ip_owned,
+            &token_owned,
+            &name_owned,
+        )
+    });
+
+    // Wrap in a 30-second timeout
+    match timeout(Duration::from_secs(30), result).await {
+        Ok(Ok(Ok(s))) => Ok(s),
+        Ok(Ok(Err(e))) => Err(e),
+        Ok(Err(_)) => Err("Cast auth task panicked".to_string()),
+        Err(_) => Err("Cast auth timed out after 30 seconds".to_string()),
+    }
+}
