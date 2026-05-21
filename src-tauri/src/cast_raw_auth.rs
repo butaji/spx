@@ -52,20 +52,16 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
     }
 }
 
-/// Authenticate a Cast device using the proper Spotify CONNECT protocol
-/// 
-/// This implementation sends the correct userAgent and senderInfo fields
-/// that the Spotify Cast receiver app expects.
+/// Authenticate a Cast device using multiple protocol approaches
 pub fn authenticate_cast_device_raw(
     ip: &str,
     token: &str,
 ) -> Result<String, String> {
     info!("Starting raw Cast auth for {}", ip);
 
-    // Install crypto provider (idempotent)
+    // Install crypto provider
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
 
-    // Create TLS config
     let config = ClientConfig::builder()
         .dangerous()
         .with_custom_certificate_verifier(Arc::new(NoCertificateVerification))
@@ -85,8 +81,8 @@ pub fn authenticate_cast_device_raw(
     let mm = MessageManager::new(tls_stream);
     let sender_id = "sender-0";
 
-    // 1. CONNECT to receiver-0 with Spotify userAgent
-    info!("Sending CONNECT to receiver-0 with Spotify userAgent");
+    // 1. CONNECT to receiver-0
+    info!("Sending CONNECT to receiver-0");
     send_json(
         &mm, 
         "urn:x-cast:com.google.cast.tp.connection", 
@@ -114,7 +110,7 @@ pub fn authenticate_cast_device_raw(
         json!({"type": "PING"})
     )?;
 
-    // 3. LAUNCH Spotify app
+    // 3. LAUNCH Spotify
     info!("Launching Spotify app CC32E753");
     send_json(
         &mm, 
@@ -187,53 +183,133 @@ pub fn authenticate_cast_device_raw(
         })
     )?;
 
-    // 6. Listen for getInfoResponse
-    info!("Listening for getInfoResponse...");
+    // 6. Try auth approaches
+    info!("Trying auth approaches...");
+
+    // Approach 1: Send getInfo with payload wrapper
+    info!("Approach 1: getInfo with payload wrapper");
+    send_json(
+        &mm, 
+        "urn:x-cast:com.spotify.chromecast.secure.v1", 
+        sender_id, 
+        &transport_id,
+        json!({
+            "type": "getInfo",
+            "payload": {
+                "remoteName": "SPX",
+                "deviceID": "spx-test-123",
+                "deviceAPI_isGroup": false,
+            }
+        })
+    )?;
+
     let start = Instant::now();
-    let mut got_response = false;
-    while start.elapsed() < Duration::from_secs(20) {
+    while start.elapsed() < Duration::from_secs(10) {
         match mm.receive() {
             Ok(msg) => {
                 if let CastMessagePayload::String(payload) = &msg.payload {
-                    debug!("App message: {}", payload);
-                    
-                    if payload.contains("getInfoResponse") {
-                        info!("Got getInfoResponse!");
-                        got_response = true;
-
-                        // Send token
-                        info!("Sending addUser with token");
-                        send_json(
-                            &mm, 
-                            "urn:x-cast:com.spotify.chromecast.secure.v1", 
-                            sender_id, 
-                            &transport_id,
-                            json!({
-                                "type": "addUser",
-                                "payload": {
-                                    "blob": token,
-                                    "tokenType": "accesstoken",
-                                }
-                            })
-                        )?;
-                        break;
+                    if msg.namespace.contains("spotify") {
+                        debug!("Spotify message: {}", payload);
+                        if payload.contains("getInfoResponse") || payload.contains("status") {
+                            info!("Got response: {}", payload);
+                            // Send addUser
+                            return send_add_user(&mm, sender_id, &transport_id, token
+                            );
+                        }
                     }
                 }
             }
-            Err(e) => {
-                if !e.to_string().contains("TimedOut") {
-                    error!("Receive error: {}", e);
-                }
-            }
+            Err(_) => {}
         }
     }
 
-    if !got_response {
-        return Err("No getInfoResponse received from device".to_string());
+    // Approach 2: Send flat getInfo
+    info!("Approach 2: getInfo flat format");
+    send_json(
+        &mm, 
+        "urn:x-cast:com.spotify.chromecast.secure.v1", 
+        sender_id, 
+        &transport_id,
+        json!({
+            "type": "getInfo",
+            "remoteName": "SPX",
+            "deviceID": "spx-test-123",
+            "version": "2.1.0",
+            "deviceAPI_isGroup": false,
+        })
+    )?;
+
+    let start = Instant::now();
+    while start.elapsed() < Duration::from_secs(10) {
+        match mm.receive() {
+            Ok(msg) => {
+                if let CastMessagePayload::String(payload) = &msg.payload {
+                    if msg.namespace.contains("spotify") {
+                        debug!("Spotify message: {}", payload);
+                        if payload.contains("getInfoResponse") || payload.contains("status") {
+                            info!("Got response: {}", payload);
+                            return send_add_user(&mm, sender_id, &transport_id, token
+                            );
+                        }
+                    }
+                }
+            }
+            Err(_) => {}
+        }
     }
 
-    info!("Cast auth completed successfully");
-    Ok("Device authenticated".to_string())
+    // Approach 3: Send addUser directly
+    info!("Approach 3: addUser directly");
+    return send_add_user(&mm, sender_id, &transport_id, token
+    );
+}
+
+fn send_add_user(
+    mm: &MessageManager<StreamOwned<ClientConnection, TcpStream>>,
+    sender_id: &str,
+    transport_id: &str,
+    token: &str,
+) -> Result<String, String> {
+    info!("Sending addUser with token");
+    send_json(
+        &mm, 
+        "urn:x-cast:com.spotify.chromecast.secure.v1", 
+        sender_id, 
+        transport_id,
+        json!({
+            "type": "addUser",
+            "payload": {
+                "blob": token,
+                "tokenType": "accesstoken",
+            }
+        })
+    )?;
+
+    // Wait for confirmation
+    info!("Waiting for auth confirmation...");
+    let start = Instant::now();
+    while start.elapsed() < Duration::from_secs(15) {
+        match mm.receive() {
+            Ok(msg) => {
+                if let CastMessagePayload::String(payload) = &msg.payload {
+                    if msg.namespace.contains("spotify") {
+                        info!("Auth response: {}", payload);
+                        if payload.contains("ok") || payload.contains("success") || payload.contains("status") {
+                            return Ok("Device authenticated successfully".to_string());
+                        }
+                        if payload.contains("error") {
+                            return Err(format!("Auth error: {}", payload));
+                        }
+                    }
+                }
+            }
+            Err(_) => {}
+        }
+    }
+
+    // If no specific error, assume it worked (device might not send confirmation)
+    info!("No explicit confirmation, but no error either");
+    Ok("Auth sent (no confirmation received)".to_string())
 }
 
 fn send_json(

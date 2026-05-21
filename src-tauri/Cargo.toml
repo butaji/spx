@@ -19,6 +19,10 @@ path = "src/bin/mdns-test.rs"
 name = "mercury-discovery-test"
 path = "src/bin/mercury-discovery-test.rs"
 
+[[bin]]
+name = "cast-auth-test"
+path = "src/bin/cast-auth-test.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
