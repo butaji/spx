@@ -5,6 +5,9 @@ pub mod cast_raw_auth;
 pub mod librespot_client;
 mod menu;
 
+#[cfg(target_os = "macos")]
+pub mod macos_permission;
+
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -31,6 +34,7 @@ pub fn run() {
             commands::authenticate_cast_device_command,
             commands::authenticate_cast_device_raw_command,
             commands::diagnose_network,
+            commands::request_macos_local_network_permission,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]

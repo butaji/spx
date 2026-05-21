@@ -370,3 +370,16 @@ pub async fn diagnose_network(ip: String) -> Result<String, String> {
 
     Ok(results.join("\n"))
 }
+
+#[tauri::command]
+pub fn request_macos_local_network_permission() -> String {
+    #[cfg(target_os = "macos")]
+    {
+        crate::macos_permission::request_local_network_permission();
+        "Permission request triggered".to_string()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        "Not on macOS".to_string()
+    }
+}

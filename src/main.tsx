@@ -5,6 +5,17 @@ import "./styles/index.css";
 // Expose test function globally for Cast auth debugging
 import { invoke } from "@tauri-apps/api/core";
 import { getAccessToken } from "./lib/spotify";
+(window as any).requestMacOSNetworkPermission = async () => {
+  console.log('[Permission] Requesting macOS local network access...');
+  try {
+    const result = await invoke('request_macos_local_network_permission');
+    console.log('[Permission] Result:', result);
+    console.log('[Permission] If a dialog appeared, click "Allow"');
+  } catch (error) {
+    console.error('[Permission] Error:', error);
+  }
+};
+
 (window as any).testCastAuth = async (ip: string) => {
   console.log(`[Test] Starting Cast auth test for ${ip}`);
   try {
@@ -14,11 +25,6 @@ import { getAccessToken } from "./lib/spotify";
       return;
     }
     console.log(`[Test] Token: ${accessToken.substring(0, 20)}...`);
-    
-    // Run network diagnostics first
-    console.log('[Test] Running network diagnostics...');
-    const diag = await invoke('diagnose_network', { ip });
-    console.log('[Test] Network diagnostics:\n', diag);
     
     // Try raw auth
     console.log('[Test] Calling authenticate_cast_device_raw_command...');
