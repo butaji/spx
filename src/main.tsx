@@ -15,6 +15,11 @@ import { getAccessToken } from "./lib/spotify";
     }
     console.log(`[Test] Token: ${accessToken.substring(0, 20)}...`);
     
+    // Run network diagnostics first
+    console.log('[Test] Running network diagnostics...');
+    const diag = await invoke('diagnose_network', { ip });
+    console.log('[Test] Network diagnostics:\n', diag);
+    
     // Try raw auth
     console.log('[Test] Calling authenticate_cast_device_raw_command...');
     const result = await invoke('authenticate_cast_device_raw_command', {

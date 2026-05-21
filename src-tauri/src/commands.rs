@@ -6,6 +6,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::timeout;
 use tracing::{info, debug, warn};
+use std::process::Command;
 
 #[tauri::command]
 pub fn is_mock_mode() -> bool {
@@ -301,4 +302,71 @@ pub async fn authenticate_cast_device_raw_command(
         Ok(Err(_)) => Err("Raw Cast auth task panicked".to_string()),
         Err(_) => Err("Raw Cast auth timed out after 45 seconds".to_string()),
     }
+}
+
+#[tauri::command]
+pub async fn diagnose_network(ip: String) -> Result<String, String> {
+    let mut results = vec![format!("Network diagnostics for {}\n", ip)];
+
+    // Test 1: Basic TCP connection from Rust
+    results.push("Test 1: Rust TCP connection".to_string());
+    match timeout(Duration::from_secs(5), TcpStream::connect(format!("{}:8009", ip))).await {
+        Ok(Ok(_)) => results.push("  ✅ TCP connect succeeded".to_string()),
+        Ok(Err(e)) => results.push(format!("  ❌ TCP connect failed: {}", e)),
+        Err(_) => results.push("  ❌ TCP connect timed out".to_string()),
+    }
+
+    // Test 2: Ping via system command
+    results.push("\nTest 2: System ping".to_string());
+    match Command::new("ping").args(["-c", "2", "-W", "2", &ip]).output() {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            if output.status.success() {
+                results.push("  ✅ Ping succeeded".to_string());
+            } else {
+                results.push(format!("  ❌ Ping failed: {}", stderr));
+            }
+            results.push(format!("  stdout: {}", stdout.lines().next().unwrap_or("")));
+        }
+        Err(e) => results.push(format!("  ❌ Ping command failed: {}", e)),
+    }
+
+    // Test 3: DNS resolution
+    results.push("\nTest 3: DNS resolution".to_string());
+    match tokio::net::lookup_host(format!("{}:8009", ip)).await {
+        Ok(addrs) => {
+            let addrs: Vec<_> = addrs.collect();
+            results.push(format!("  ✅ Resolved to {:?}", addrs));
+        }
+        Err(e) => results.push(format!("  ❌ DNS failed: {}", e)),
+    }
+
+    // Test 4: Check local interfaces
+    results.push("\nTest 4: Local network interfaces".to_string());
+    match Command::new("ifconfig").output() {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines() {
+                if line.contains("inet ") && !line.contains("127.0.0.1") {
+                    results.push(format!("  {}", line.trim()));
+                }
+            }
+        }
+        Err(e) => results.push(format!("  ❌ ifconfig failed: {}", e)),
+    }
+
+    // Test 5: Route to target
+    results.push("\nTest 5: Route to target".to_string());
+    match Command::new("route").args(["-n", "get", &ip]).output() {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            for line in stdout.lines().take(5) {
+                results.push(format!("  {}", line));
+            }
+        }
+        Err(e) => results.push(format!("  ❌ route failed: {}", e)),
+    }
+
+    Ok(results.join("\n"))
 }

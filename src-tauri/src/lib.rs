@@ -30,6 +30,7 @@ pub fn run() {
             commands::wake_cast_device,
             commands::authenticate_cast_device_command,
             commands::authenticate_cast_device_raw_command,
+            commands::diagnose_network,
         ])
         .setup(|app| {
             #[cfg(target_os = "macos")]
