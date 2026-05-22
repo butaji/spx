@@ -1,1 +1,0 @@
-Check SPOTIFY.md, dont change it. Make temporary cli app to make sure its impleneted in this app and working as expected, proven.
