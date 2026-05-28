@@ -2,38 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
-    <key>CFBundleExecutable</key>
-    <string>$(EXECUTABLE_NAME)</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.spx.app</string>
-    <key>CFBundleInfoDictionaryVersion</key>
-    <string>6.0</string>
-    <key>CFBundleDisplayName</key>
-    <string>SPX</string>
-    <key>CFBundleName</key>
-    <string>SPX</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>LSUIElement</key>
-    <false/>
-    <key>LSBackgroundOnly</key>
-    <false/>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>SPX uses the local network to discover and connect to Spotify devices on your network.</string>
-    <key>NSBonjourServices</key>
-    <array>
-        <string>_googlecast._tcp</string>
-        <string>_spotify-connect._tcp</string>
-    </array>
-    <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
+    <string>SPX discovers Spotify Connect and Google Cast devices on your local network.</string>
 </dict>
 </plist>

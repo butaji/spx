@@ -2,7 +2,7 @@ import Foundation
 
 struct SpotifyArtist: Codable, Hashable, Identifiable, Sendable {
     let id: String
-    let name: String
+    let name: String?
     let genres: [String]?
     let followers: Followers?
     let images: [SpotifyImage]?

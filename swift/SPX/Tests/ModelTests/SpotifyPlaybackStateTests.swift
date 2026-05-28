@@ -434,8 +434,8 @@ final class SpotifyPlaybackStateTests: XCTestCase {
         """.data(using: .utf8)!
 
         let decoder = JSONDecoder()
-        let context1 = try decoder.decode(SpotifyPlaybackState.Context.self, from: json1)
-        let context2 = try decoder.decode(SpotifyPlaybackState.Context.self, from: json2)
+        let context1 = try decoder.decode(Context.self, from: json1)
+        let context2 = try decoder.decode(Context.self, from: json2)
 
         XCTAssertEqual(context1, context2)
     }

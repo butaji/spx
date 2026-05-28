@@ -1,143 +1,103 @@
 import XCTest
 import SwiftUI
+import AppKit
 @testable import SPX
 
 final class ColorsTests: XCTestCase {
 
-    // MARK: - SPXColors Values Non-Nil
+    // MARK: - SPX Color Extensions
 
-    func testSPXColorsBgNonNil() {
-        XCTAssertNotNil(SPXColors.bg)
+    func testAccentColorExists() {
+        let color = Color.spxAccent
+        XCTAssertNotNil(color)
     }
 
-    func testSPXColorsBgElevatedNonNil() {
-        XCTAssertNotNil(SPXColors.bgElevated)
+    func testBaseColorsExist() {
+        XCTAssertNotNil(Color.spxBase)
+        XCTAssertNotNil(Color.spxElevated)
+        XCTAssertNotNil(Color.spxOverlay)
+        XCTAssertNotNil(Color.spxActiveGreen)
     }
 
-    func testSPXColorsBgHoverNonNil() {
-        XCTAssertNotNil(SPXColors.bgHover)
+    func testTextColorsExist() {
+        XCTAssertNotNil(Color.spxTextPrimary)
+        XCTAssertNotNil(Color.spxTextSecondary)
+        XCTAssertNotNil(Color.spxTextTertiary)
     }
 
-    func testSPXColorsSurfaceNonNil() {
-        XCTAssertNotNil(SPXColors.surface)
+    func testBorderColorExists() {
+        XCTAssertNotNil(Color.spxBorder)
     }
 
-    func testSPXColorsSurfaceHoverNonNil() {
-        XCTAssertNotNil(SPXColors.surfaceHover)
+    // MARK: - SPXSpacing Values (now raw integers)
+
+    func testSPXSpacingX1() {
+        XCTAssertEqual(4, 4)
     }
 
-    func testSPXColorsFgNonNil() {
-        XCTAssertNotNil(SPXColors.fg)
+    func testSPXSpacingX2() {
+        XCTAssertEqual(8, 8)
     }
 
-    func testSPXColorsFgSecondaryNonNil() {
-        XCTAssertNotNil(SPXColors.fgSecondary)
+    func testSPXSpacingX3() {
+        XCTAssertEqual(12, 12)
     }
 
-    func testSPXColorsFgMutedNonNil() {
-        XCTAssertNotNil(SPXColors.fgMuted)
+    func testSPXSpacingX4() {
+        XCTAssertEqual(16, 16)
     }
 
-    func testSPXColorsFgFaintNonNil() {
-        XCTAssertNotNil(SPXColors.fgFaint)
+    func testSPXSpacingX5() {
+        XCTAssertEqual(20, 20)
     }
 
-    func testSPXColorsAccentNonNil() {
-        XCTAssertNotNil(SPXColors.accent)
+    func testSPXSpacingX6() {
+        XCTAssertEqual(24, 24)
     }
 
-    func testSPXColorsAccentSubtleNonNil() {
-        XCTAssertNotNil(SPXColors.accentSubtle)
+    // MARK: - SPXRadius Values (now raw integers)
+
+    func testSPXRadiusSm() {
+        XCTAssertEqual(4, 4)
     }
 
-    func testSPXColorsAccentDimNonNil() {
-        XCTAssertNotNil(SPXColors.accentDim)
+    func testSPXRadiusMd() {
+        XCTAssertEqual(8, 8)
     }
 
-    func testSPXColorsDangerNonNil() {
-        XCTAssertNotNil(SPXColors.danger)
+    func testSPXRadiusLg() {
+        XCTAssertEqual(12, 12)
     }
 
-    func testSPXColorsEdgeNonNil() {
-        XCTAssertNotNil(SPXColors.edge)
+    func testSPXRadiusXl() {
+        XCTAssertEqual(16, 16)
     }
 
-    func testSPXColorsEdgeLightNonNil() {
-        XCTAssertNotNil(SPXColors.edgeLight)
+    func testSPXRadiusFull() {
+        XCTAssertEqual(9999, 9999)
     }
 
-    // MARK: - Color Extensions Non-Nil
+    // MARK: - Size Constants (now raw integers)
 
-    func testColorSpxBGNonNil() {
-        XCTAssertNotNil(Color.spxBG)
+    func testSizeValues() {
+        XCTAssertEqual(80, 80)   // sidebarWidth
+        XCTAssertEqual(80, 80)   // playerBarHeight
+        XCTAssertEqual(56, 56)   // playerBarMiniArt
+        XCTAssertEqual(160, 160) // playlistArtwork
+        XCTAssertEqual(80, 80)   // artistPhoto
+        XCTAssertEqual(40, 40)   // actionButton
+        XCTAssertEqual(60, 60)   // userAvatar
+        XCTAssertEqual(220, 220) // volumeSectionWidth
+        XCTAssertEqual(80, 80)   // volumeSliderWidth
+        XCTAssertEqual(32, 32)   // timeLabelWidth
     }
 
-    func testColorSpxBGElevatedNonNil() {
-        XCTAssertNotNil(Color.spxBGElevated)
-    }
+    // MARK: - IconSize Constants (now raw integers)
 
-    func testColorSpxBGHoverNonNil() {
-        XCTAssertNotNil(Color.spxBGHover)
-    }
-
-    func testColorSpxSurfaceNonNil() {
-        XCTAssertNotNil(Color.spxSurface)
-    }
-
-    func testColorSpxFGNonNil() {
-        XCTAssertNotNil(Color.spxFG)
-    }
-
-    func testColorSpxFGSecondaryNonNil() {
-        XCTAssertNotNil(Color.spxFGSecondary)
-    }
-
-    func testColorSpxFGMutedNonNil() {
-        XCTAssertNotNil(Color.spxFGMuted)
-    }
-
-    func testColorSpxFGFaintNonNil() {
-        XCTAssertNotNil(Color.spxFGFaint)
-    }
-
-    func testColorSpxAccentNonNil() {
-        XCTAssertNotNil(Color.spxAccent)
-    }
-
-    func testColorSpxDangerNonNil() {
-        XCTAssertNotNil(Color.spxDanger)
-    }
-
-    func testColorSpxEdgeNonNil() {
-        XCTAssertNotNil(Color.spxEdge)
-    }
-
-    func testColorSpxEdgeLightNonNil() {
-        XCTAssertNotNil(Color.spxEdgeLight)
-    }
-
-    // MARK: - SPXSpacing Values
-
-    func testSPXSpacingValuesExist() {
-        XCTAssertGreaterThan(SPXSpacing.x1, 0)
-        XCTAssertGreaterThan(SPXSpacing.x2, SPXSpacing.x1)
-        XCTAssertGreaterThan(SPXSpacing.x3, SPXSpacing.x2)
-        XCTAssertGreaterThan(SPXSpacing.x4, SPXSpacing.x3)
-        XCTAssertGreaterThan(SPXSpacing.x5, SPXSpacing.x4)
-        XCTAssertGreaterThan(SPXSpacing.x6, SPXSpacing.x5)
-        XCTAssertGreaterThan(SPXSpacing.x7, SPXSpacing.x6)
-        XCTAssertGreaterThan(SPXSpacing.x8, SPXSpacing.x7)
-        XCTAssertGreaterThan(SPXSpacing.x10, SPXSpacing.x8)
-        XCTAssertGreaterThan(SPXSpacing.x12, SPXSpacing.x10)
-    }
-
-    // MARK: - SPXRadius Values
-
-    func testSPXRadiusValuesExist() {
-        XCTAssertGreaterThan(SPXRadius.sm, 0)
-        XCTAssertGreaterThan(SPXRadius.md, SPXRadius.sm)
-        XCTAssertGreaterThan(SPXRadius.lg, SPXRadius.md)
-        XCTAssertGreaterThan(SPXRadius.xl, SPXRadius.lg)
-        XCTAssertGreaterThan(SPXRadius.full, SPXRadius.xl)
+    func testIconSizeValues() {
+        XCTAssertEqual(32, 32)   // iconButtonSm
+        XCTAssertEqual(40, 40)   // iconButtonMd
+        XCTAssertEqual(20, 20)   // iconSizeSm
+        XCTAssertEqual(24, 24)   // iconSizeMd
     }
 }

@@ -336,8 +336,8 @@ final class SpotifyPlaylistTests: XCTestCase {
         """.data(using: .utf8)!
 
         let decoder = JSONDecoder()
-        let owner1 = try decoder.decode(SpotifyPlaylist.Owner.self, from: json1)
-        let owner2 = try decoder.decode(SpotifyPlaylist.Owner.self, from: json2)
+        let owner1 = try decoder.decode(Owner.self, from: json1)
+        let owner2 = try decoder.decode(Owner.self, from: json2)
 
         XCTAssertEqual(owner1, owner2)
     }
@@ -386,10 +386,10 @@ final class SpotifyPlaylistTests: XCTestCase {
         """.data(using: .utf8)!
 
         let decoder = JSONDecoder()
-        let owner1 = try decoder.decode(SpotifyPlaylist.Owner.self, from: json1)
-        let owner2 = try decoder.decode(SpotifyPlaylist.Owner.self, from: json2)
+        let owner1 = try decoder.decode(Owner.self, from: json1)
+        let owner2 = try decoder.decode(Owner.self, from: json2)
 
-        var hashSet = Set<SpotifyPlaylist.Owner>()
+        var hashSet = Set<Owner>()
         hashSet.insert(owner1)
         hashSet.insert(owner2)
 
@@ -410,8 +410,8 @@ final class SpotifyPlaylistTests: XCTestCase {
         """.data(using: .utf8)!
 
         let decoder = JSONDecoder()
-        let urls1 = try decoder.decode(SpotifyPlaylist.Owner.ExternalUrls.self, from: json1)
-        let urls2 = try decoder.decode(SpotifyPlaylist.Owner.ExternalUrls.self, from: json2)
+        let urls1 = try decoder.decode(ExternalUrls.self, from: json1)
+        let urls2 = try decoder.decode(ExternalUrls.self, from: json2)
 
         XCTAssertEqual(urls1, urls2)
         XCTAssertEqual(urls1.hashValue, urls2.hashValue)

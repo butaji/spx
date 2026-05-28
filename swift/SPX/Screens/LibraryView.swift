@@ -27,38 +27,39 @@ struct LibraryView: View {
             HStack {
                 Text("Your Library")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
+                    .padding(.top, 24)
 
                 Spacer()
 
                 if isRefreshing {
                     Text("Updating...")
                         .font(.system(size: 12))
-                        .foregroundColor(SPXColors.fgMuted)
+                        .foregroundColor(Color.spxTextTertiary)
                 }
             }
-            .padding(.bottom, SPXSpacing.x4)
+            .padding(.bottom, 16)
 
             // Tab Bar
-            HStack(spacing: SPXSpacing.x2) {
+            HStack(spacing: 8) {
                 ForEach(LibraryTab.allCases, id: \.self) { tab in
                     Button(action: { selectedTab = tab }) {
                         Text(tab.rawValue)
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(selectedTab == tab ? SPXColors.fg : SPXColors.fgFaint)
-                            .padding(.horizontal, SPXSpacing.x3)
-                            .padding(.vertical, SPXSpacing.x2)
-                            .background(selectedTab == tab ? SPXColors.surface : Color.clear)
+                            .foregroundColor(selectedTab == tab ? Color.spxTextPrimary : Color.spxTextTertiary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(selectedTab == tab ? Color.spxElevated : Color.clear)
                             .clipShape(Capsule())
                             .overlay(
                                 Capsule()
-                                    .stroke(selectedTab == tab ? SPXColors.edge : Color.clear, lineWidth: 1)
+                                    .stroke(selectedTab == tab ? Color.spxBorder : Color.clear, lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.bottom, SPXSpacing.x4)
+            .padding(.bottom, 16)
 
             // Content
             if isLoading && currentItems.isEmpty {
@@ -66,7 +67,7 @@ struct LibraryView: View {
                 HStack {
                     Spacer()
                     ProgressView()
-                        .tint(SPXColors.accent)
+                        .tint(Color.spxAccent)
                     Spacer()
                 }
                 Spacer()
@@ -83,11 +84,12 @@ struct LibraryView: View {
                         trackListView
                     }
                 }
+                .scrollIndicators(.hidden)
             }
         }
-        .padding(.horizontal, SPXSpacing.x6)
-        .padding(.top, SPXSpacing.x4)
-        .background(SPXColors.bg)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .background(Color.spxBase)
     }
 
     // MARK: - Current Items
@@ -102,7 +104,7 @@ struct LibraryView: View {
 
     // MARK: - Playlist Grid View
     private var playlistGridView: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: SPXSpacing.x4)], spacing: SPXSpacing.x4) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
             ForEach(playlists, id: \.id) { playlist in
                 LibraryItemView(item: .playlist(playlist))
                     .onTapGesture {
@@ -115,7 +117,7 @@ struct LibraryView: View {
 
     // MARK: - Album Grid View
     private var albumGridView: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: SPXSpacing.x4)], spacing: SPXSpacing.x4) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
             ForEach(albums, id: \.id) { album in
                 LibraryItemView(item: .album(album))
                     .onTapGesture {
@@ -162,10 +164,10 @@ struct LibraryTrackRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: SPXSpacing.x3) {
+        HStack(spacing: 12) {
             Text("\(index + 1)")
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(SPXColors.fgFaint)
+                .foregroundColor(Color.spxTextTertiary)
                 .frame(width: 32, alignment: .center)
 
             // Artwork
@@ -173,25 +175,25 @@ struct LibraryTrackRow: View {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    RoundedRectangle(cornerRadius: 4).fill(SPXColors.surface)
+                    RoundedRectangle(cornerRadius: 4).fill(Color.spxElevated)
                 }
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             } else {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(SPXColors.surface)
+                    .fill(Color.spxElevated)
                     .frame(width: 40, height: 40)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.name)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
                     .lineLimit(1)
 
-                Text(track.artists?.map { $0.name }.joined(separator: ", ") ?? "")
+                Text(track.artists?.compactMap { $0.name }.joined(separator: ", ") ?? "")
                     .font(.system(size: 12))
-                    .foregroundColor(SPXColors.fgFaint)
+                    .foregroundColor(Color.spxTextTertiary)
                     .lineLimit(1)
             }
 
@@ -200,18 +202,18 @@ struct LibraryTrackRow: View {
             // Album name
             Text(track.album?.name ?? "")
                 .font(.system(size: 12))
-                .foregroundColor(SPXColors.fgFaint)
+                .foregroundColor(Color.spxTextTertiary)
                 .lineLimit(1)
                 .frame(maxWidth: 120)
 
-            Text(formatTime(track.durationMs ?? 0))
+            Text(String.formatDuration(millis: track.durationMs ?? 0))
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(SPXColors.fgFaint)
+                .foregroundColor(Color.spxTextTertiary)
         }
-        .padding(.horizontal, SPXSpacing.x2)
-        .padding(.vertical, SPXSpacing.x2)
-        .background(isHovered ? SPXColors.bgHover : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: SPXRadius.sm))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(isHovered ? Color.spxOverlay : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
         .onHover { hovering in
             isHovered = hovering
         }

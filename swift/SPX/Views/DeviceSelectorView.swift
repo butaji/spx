@@ -35,7 +35,7 @@ struct DeviceSelectorView: View {
                 dropdownPanel
             }
         }
-        .background(SPXColors.bgElevated)
+        .background(Color.spxElevated)
         .onTapOutside {
             isExpanded = false
         }
@@ -54,19 +54,20 @@ struct DeviceSelectorView: View {
 
                 Text(currentDeviceName)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
 
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8))
-                    .foregroundColor(SPXColors.fgSecondary)
+                    .foregroundColor(Color.spxTextSecondary)
                     .rotationEffect(.degrees(isExpanded ? 180 : 0))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(SPXColors.surface)
+            .background(Color.spxElevated)
             .cornerRadius(20)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Select playback device")
     }
 
     private var currentDeviceName: String {
@@ -96,7 +97,7 @@ struct DeviceSelectorView: View {
             }
         }
         .font(.system(size: 14))
-        .foregroundColor(SPXColors.accent)
+        .foregroundColor(Color.spxAccent)
     }
 
     // MARK: - Dropdown Panel
@@ -107,7 +108,7 @@ struct DeviceSelectorView: View {
             HStack {
                 Text("Connect to a device")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(SPXColors.fgSecondary)
+                    .foregroundColor(Color.spxTextSecondary)
 
                 Spacer()
 
@@ -118,24 +119,26 @@ struct DeviceSelectorView: View {
                         ProgressView()
                             .progressViewStyle(
                                 CircularProgressViewStyle(
-                                    tint: SPXColors.fgSecondary
+                                    tint: Color.spxTextSecondary
                                 )
                             )
                             .scaleEffect(0.7)
                     } else {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 12))
-                            .foregroundColor(SPXColors.fgSecondary)
+                            .foregroundColor(Color.spxTextSecondary)
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Refresh devices")
+                .accessibilityIdentifier("refresh-devices-button")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(SPXColors.bgElevated)
+            .background(Color.spxElevated)
 
             Divider()
-                .background(SPXColors.edge)
+                .background(Color.spxBorder)
 
             // Device list
             VStack(spacing: 0) {
@@ -143,18 +146,18 @@ struct DeviceSelectorView: View {
                     deviceRow(device)
                     if device.id != devices.last?.id {
                         Divider()
-                            .background(SPXColors.edge)
+                            .background(Color.spxBorder)
                     }
                 }
             }
-            .background(SPXColors.bgElevated)
+            .background(Color.spxElevated)
         }
         .frame(minWidth: 220)
         .cornerRadius(8)
         .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(SPXColors.edgeLight, lineWidth: 1)
+                .stroke(Color.spxBorder, lineWidth: 1)
         )
         .padding(.top, 8)
     }
@@ -173,6 +176,7 @@ struct DeviceSelectorView: View {
             deviceRowContent(device)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(device.name ?? "Unknown Device")
     }
 
     private func deviceRowContent(_ device: SpotifyDevice) -> some View {
@@ -185,7 +189,7 @@ struct DeviceSelectorView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
-            device.id == currentDeviceId ? SPXColors.bgHover : Color.clear
+            device.id == currentDeviceId ? Color.spxOverlay : Color.clear
         )
     }
 
@@ -207,7 +211,7 @@ struct DeviceSelectorView: View {
             }
         }
         .font(.system(size: 14))
-        .foregroundColor(SPXColors.fgSecondary)
+        .foregroundColor(Color.spxTextSecondary)
         .frame(width: 20)
     }
 
@@ -215,12 +219,12 @@ struct DeviceSelectorView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(device.name ?? "Unknown Device")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(SPXColors.fg)
+                .foregroundColor(Color.spxTextPrimary)
                 .lineLimit(1)
 
             Text(device.type?.capitalized ?? "Unknown")
                 .font(.system(size: 10))
-                .foregroundColor(SPXColors.fgMuted)
+                .foregroundColor(Color.spxTextTertiary)
         }
     }
 
@@ -229,7 +233,7 @@ struct DeviceSelectorView: View {
         if device.id == currentDeviceId {
             Image(systemName: "checkmark")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundColor(SPXColors.accent)
+                .foregroundColor(Color.spxAccent)
         }
     }
 }
@@ -285,7 +289,7 @@ struct DeviceSelectorView: View {
         deviceIp: nil
     )
 
-    return VStack {
+    VStack {
         Spacer()
         DeviceSelectorView(
             devices: [macBook, iPhone, spotifyConnect],
@@ -294,5 +298,5 @@ struct DeviceSelectorView: View {
         .padding(40)
     }
     .frame(width: 300, height: 200)
-    .background(SPXColors.bg)
+    .background(Color.spxBase)
 }

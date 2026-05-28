@@ -32,6 +32,9 @@ protocol SpotifyServiceProtocol: AnyObject {
     func getDevices() async throws -> [SpotifyDevice]
     func getLocalDevices() async throws -> [LocalDevice]
     func transferPlayback(to deviceId: String) async throws
+
+    // Search
+    func search(query: String, types: [String], limit: Int) async throws -> SpotifySearchResults
 }
 
 // MARK: - SpotifyAPI Conformance

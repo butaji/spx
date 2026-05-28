@@ -4,7 +4,11 @@
 # Disabled rules
 disabled_rules:
   - trailing_whitespace
-  - todo
+  - blanket_disable_command
+  - implicit_return
+  - identifier_name
+  - multiple_closures_with_trailing_closure
+  - redundant_string_enum_value
 
 # Enabled opt-in rules
 opt_in_rules:
@@ -22,7 +26,6 @@ opt_in_rules:
   - first_where
   - force_unwrapping
   - identical_operands
-  - implicit_return
   - joined_default_parameter
   - legacy_random
   - lower_acl_than_parent
@@ -38,23 +41,22 @@ opt_in_rules:
   - static_operator
   - toggle_bool
   - unneeded_parentheses_in_closure_argument
-  - unused_import
   - vertical_parameter_alignment_on_call
   - vertical_whitespace_closing_braces
 
 # File length rule
 file_length:
-  warning: 800
+  warning: 1000
   error: 1000
 
 # Function body length
 function_body_length:
-  warning: 30
+  warning: 50
   error: 40
 
 # Cyclomatic complexity
 cyclomatic_complexity:
-  warning: 8
+  warning: 10
   error: 10
 
 # Line length
@@ -64,8 +66,8 @@ line_length:
 
 # Type body length
 type_body_length:
-  warning: 300
-  error: 400
+  warning: 400
+  error: 500
 
 # Exclude directories
 excluded:

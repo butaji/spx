@@ -23,60 +23,61 @@ struct SearchView: View {
             // Screen Title
             Text("Search")
                 .font(.system(size: 24, weight: .bold))
-                .foregroundColor(SPXColors.fg)
-                .padding(.bottom, SPXSpacing.x4)
+                .foregroundColor(Color.spxTextPrimary)
+                .padding(.top, 24)
+                .padding(.bottom, 16)
 
             // Search Bar
-            HStack(spacing: SPXSpacing.x2) {
+            HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(SPXColors.fgFaint)
+                    .foregroundColor(Color.spxTextTertiary)
                     .font(.system(size: 14))
 
                 TextField("What do you want to listen to?", text: $query)
                     .font(.system(size: 13))
-                    .foregroundColor(SPXColors.fg)
-                    .tint(SPXColors.accent)
+                    .foregroundColor(Color.spxTextPrimary)
+                    .tint(Color.spxAccent)
                     .onSubmit {
                         performSearch()
                     }
 
                 Button(action: performSearch) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(SPXColors.fgSecondary)
+                        .foregroundColor(Color.spxTextSecondary)
                         .font(.system(size: 16))
                 }
                 .buttonStyle(.plain)
             }
-            .padding(SPXSpacing.x3)
-            .background(SPXColors.surface)
-            .clipShape(RoundedRectangle(cornerRadius: SPXRadius.md))
+            .padding(12)
+            .background(Color.spxElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
-                RoundedRectangle(cornerRadius: SPXRadius.md)
-                    .stroke(SPXColors.edge, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.spxBorder, lineWidth: 1)
             )
-            .padding(.bottom, SPXSpacing.x4)
+            .padding(.bottom, 16)
 
             // Filter Tabs
             if results != nil {
-                HStack(spacing: SPXSpacing.x2) {
+                HStack(spacing: 8) {
                     ForEach(SearchFilter.allCases, id: \.self) { filter in
                         Button(action: { selectedFilter = filter }) {
                             Text(filter.rawValue)
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(selectedFilter == filter ? SPXColors.fg : SPXColors.fgFaint)
-                                .padding(.horizontal, SPXSpacing.x3)
-                                .padding(.vertical, SPXSpacing.x2)
-                                .background(selectedFilter == filter ? SPXColors.surface : Color.clear)
+                                .foregroundColor(selectedFilter == filter ? Color.spxTextPrimary : Color.spxTextTertiary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(selectedFilter == filter ? Color.spxElevated : Color.clear)
                                 .clipShape(Capsule())
                                 .overlay(
                                     Capsule()
-                                        .stroke(selectedFilter == filter ? SPXColors.edge : Color.clear, lineWidth: 1)
+                                        .stroke(selectedFilter == filter ? Color.spxBorder : Color.clear, lineWidth: 1)
                                 )
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.bottom, SPXSpacing.x4)
+                .padding(.bottom, 16)
             }
 
             // Content
@@ -85,13 +86,13 @@ struct SearchView: View {
                 HStack {
                     Spacer()
                     ProgressView()
-                        .tint(SPXColors.accent)
+                        .tint(Color.spxAccent)
                     Spacer()
                 }
                 Spacer()
             } else if let results = results {
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: SPXSpacing.x8) {
+                    LazyVStack(alignment: .leading, spacing: 40) {
                         switch selectedFilter {
                         case .all:
                             allResultsView(results)
@@ -107,23 +108,24 @@ struct SearchView: View {
                     }
                     .padding(.bottom, 100)
                 }
+                .scrollIndicators(.hidden)
             } else {
                 emptyStateView
             }
         }
-        .padding(.horizontal, SPXSpacing.x6)
-        .padding(.top, SPXSpacing.x4)
-        .background(SPXColors.bg)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .background(Color.spxBase)
     }
 
     // MARK: - All Results View
     @ViewBuilder
     private func allResultsView(_ results: SpotifySearchResults) -> some View {
         if let tracks = results.tracks?.items, !tracks.isEmpty {
-            VStack(alignment: .leading, spacing: SPXSpacing.x3) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Tracks")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
 
                 ForEach(Array(tracks.prefix(5).enumerated()), id: \.element.id) { index, track in
                     SearchTrackRow(track: track, index: index, onPlay: { onPlayTrack(track) })
@@ -132,30 +134,30 @@ struct SearchView: View {
         }
 
         if let albums = results.albums?.items, !albums.isEmpty {
-            VStack(alignment: .leading, spacing: SPXSpacing.x3) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Albums")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
 
                 LibraryGridView(items: albums.map { LibraryItem.album($0) }, onNavigate: onNavigate)
             }
         }
 
         if let artists = results.artists?.items, !artists.isEmpty {
-            VStack(alignment: .leading, spacing: SPXSpacing.x3) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Artists")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
 
                 LibraryGridView(items: artists.map { LibraryItem.artist($0) }, onNavigate: onNavigate)
             }
         }
 
         if let playlists = results.playlists?.items, !playlists.isEmpty {
-            VStack(alignment: .leading, spacing: SPXSpacing.x3) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Playlists")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
 
                 LibraryGridView(items: playlists.map { LibraryItem.playlist($0) }, onNavigate: onNavigate)
             }
@@ -208,21 +210,21 @@ struct SearchView: View {
 
     // MARK: - Empty State
     private var emptyStateView: some View {
-        VStack(spacing: SPXSpacing.x4) {
+        VStack(spacing: 16) {
             Spacer()
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundColor(SPXColors.fgMuted.opacity(0.5))
+                .foregroundColor(Color.spxTextTertiary.opacity(0.5))
 
             Text("Search for songs, albums, artists, or playlists")
                 .font(.system(size: 14))
-                .foregroundColor(SPXColors.fgSecondary)
+                .foregroundColor(Color.spxTextSecondary)
                 .multilineTextAlignment(.center)
 
-            VStack(alignment: .leading, spacing: SPXSpacing.x2) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text("Try searching for:")
 .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(SPXColors.fgMuted)
+                    .foregroundColor(Color.spxTextTertiary)
 
                 ForEach(["Electro swing", "Lo-fi hip hop", "Jazz fusion"], id: \.self) { suggestion in
                     Button(action: {
@@ -231,12 +233,12 @@ struct SearchView: View {
                     }) {
                         Text(suggestion)
                             .font(.system(size: 12))
-                            .foregroundColor(SPXColors.accent)
+                            .foregroundColor(Color.spxAccent)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.top, SPXSpacing.x4)
+            .padding(.top, 16)
 
             Spacer()
         }
@@ -244,11 +246,11 @@ struct SearchView: View {
     }
 
     private var emptyResultsView: some View {
-        VStack(spacing: SPXSpacing.x3) {
+        VStack(spacing: 12) {
             Spacer()
             Text("No results found")
                 .font(.system(size: 14))
-                .foregroundColor(SPXColors.fgSecondary)
+                .foregroundColor(Color.spxTextSecondary)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -273,10 +275,10 @@ struct SearchTrackRow: View {
     let onPlay: () -> Void
 
     var body: some View {
-        HStack(spacing: SPXSpacing.x3) {
+        HStack(spacing: 12) {
             Text("\(index + 1)")
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(SPXColors.fgFaint)
+                .foregroundColor(Color.spxTextTertiary)
                 .frame(width: 32, alignment: .center)
 
             // Artwork
@@ -284,35 +286,35 @@ struct SearchTrackRow: View {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    RoundedRectangle(cornerRadius: 4).fill(SPXColors.surface)
+                    RoundedRectangle(cornerRadius: 4).fill(Color.spxElevated)
                 }
                 .frame(width: 36, height: 36)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             } else {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(SPXColors.surface)
+                    .fill(Color.spxElevated)
                     .frame(width: 36, height: 36)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.name)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
                     .lineLimit(1)
 
-                Text(track.artists?.map { $0.name }.joined(separator: ", ") ?? "")
+                Text(track.artists?.compactMap { $0.name }.joined(separator: ", ") ?? "")
                     .font(.system(size: 12))
-                    .foregroundColor(SPXColors.fgFaint)
+                    .foregroundColor(Color.spxTextTertiary)
                     .lineLimit(1)
             }
 
             Spacer()
 
-            Text(formatTime(track.durationMs ?? 0))
+            Text(String.formatDuration(millis: track.durationMs ?? 0))
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(SPXColors.fgFaint)
+                .foregroundColor(Color.spxTextTertiary)
         }
-        .padding(.vertical, SPXSpacing.x2)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
         .onTapGesture {
             onPlay()
@@ -326,7 +328,7 @@ struct LibraryGridView: View {
     let onNavigate: (AppView) -> Void
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: SPXSpacing.x4)], spacing: SPXSpacing.x4) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
             ForEach(items, id: \.id) { item in
                 LibraryItemView(item: item)
                     .onTapGesture {
@@ -343,7 +345,7 @@ struct LibraryGridView: View {
                 onNavigate(AppView.album(id: id, name: album.name))
             }
         case .artist(let artist):
-            onNavigate(AppView.artist(id: artist.id, name: artist.name))
+            onNavigate(AppView.artist(id: artist.id, name: artist.name ?? ""))
         case .playlist(let playlist):
             onNavigate(AppView.playlist(id: playlist.id, name: playlist.name))
         case .track:
@@ -370,10 +372,10 @@ enum LibraryItem: Identifiable {
 
     var name: String {
         switch self {
-        case .album(let album): return album.name
-        case .artist(let artist): return artist.name
-        case .playlist(let playlist): return playlist.name
-        case .track(let track): return track.name
+        case .album(let album): return album.name ?? ""
+        case .artist(let artist): return artist.name ?? ""
+        case .playlist(let playlist): return playlist.name ?? ""
+        case .track(let track): return track.name ?? ""
         }
     }
 
@@ -388,10 +390,10 @@ enum LibraryItem: Identifiable {
 
     var subtitle: String {
         switch self {
-        case .album(let album): return album.artists?.map { $0.name }.joined(separator: ", ") ?? ""
+        case .album(let album): return album.artists?.compactMap { $0.name }.joined(separator: ", ") ?? ""
         case .artist: return "Artist"
         case .playlist: return "Playlist"
-        case .track(let track): return track.artists?.map { $0.name }.joined(separator: ", ") ?? ""
+        case .track(let track): return track.artists?.compactMap { $0.name }.joined(separator: ", ") ?? ""
         }
     }
 }
@@ -401,35 +403,35 @@ struct LibraryItemView: View {
     let item: LibraryItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: SPXSpacing.x2) {
+        VStack(alignment: .leading, spacing: 8) {
             // Image
             if let imageUrl = item.imageUrl, let url = URL(string: imageUrl) {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    RoundedRectangle(cornerRadius: SPXRadius.sm)
-                        .fill(SPXColors.surface)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.spxElevated)
                         .overlay(
                             ProgressView()
-                                .tint(SPXColors.fgMuted)
+                                .tint(Color.spxTextTertiary)
                         )
                 }
                 .frame(width: 160, height: 160)
-                .clipShape(isCircle ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: SPXRadius.sm)))
+                .clipShape(isCircle ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: 4)))
             } else {
-                RoundedRectangle(cornerRadius: isCircle ? 80 : SPXRadius.sm)
-                    .fill(SPXColors.surface)
+                RoundedRectangle(cornerRadius: isCircle ? 80 : 4)
+                    .fill(Color.spxElevated)
                     .frame(width: 160, height: 160)
             }
 
             Text(item.name)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(SPXColors.fg)
+                .foregroundColor(Color.spxTextPrimary)
                 .lineLimit(1)
 
             Text(item.subtitle)
                 .font(.system(size: 11))
-                .foregroundColor(SPXColors.fgFaint)
+                .foregroundColor(Color.spxTextTertiary)
                 .lineLimit(1)
         }
         .frame(width: 160)

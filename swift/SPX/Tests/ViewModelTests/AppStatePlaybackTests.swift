@@ -134,8 +134,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.pauseError = nil
 
         // When
-        sut.handlePlayPause()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePlayPause()
 
         // Then - isPlaying will be set to false after pause is called
         XCTAssertTrue(mockSpotify.pauseCallCount >= 1)
@@ -146,8 +145,7 @@ final class AppStatePlaybackTests: XCTestCase {
         sut.isPlaying = false
 
         // When
-        sut.handlePlayPause()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePlayPause()
 
         // Then
         XCTAssertTrue(mockSpotify.resumeCallCount >= 1)
@@ -159,8 +157,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handlePlayPause()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePlayPause()
 
         // Then
         XCTAssertEqual(mockSpotify.resumeCallCount, 1)
@@ -173,8 +170,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handlePlayPause()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePlayPause()
 
         // Then
         XCTAssertEqual(mockSpotify.pauseCallCount, 1)
@@ -188,8 +184,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handlePlayPause()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePlayPause()
 
         // Then
         XCTAssertNotNil(sut.appError)
@@ -200,10 +195,9 @@ final class AppStatePlaybackTests: XCTestCase {
         sut.isPlayActionLoading = true
 
         // When
-        sut.handlePlayPause()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePlayPause()
 
-        // Then - no API calls should be made
+        // Then - no API calls should be made (early return)
         XCTAssertEqual(mockSpotify.resumeCallCount, 0)
         XCTAssertEqual(mockSpotify.pauseCallCount, 0)
     }
@@ -215,8 +209,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleNext()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleNext()
 
         // Then
         XCTAssertEqual(mockSpotify.nextCallCount, 1)
@@ -227,8 +220,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleNext()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleNext()
 
         // Then - the async refresh should be triggered
         XCTAssertEqual(mockSpotify.nextCallCount, 1)
@@ -240,8 +232,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleNext()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleNext()
 
         // Then
         XCTAssertNotNil(sut.appError)
@@ -252,8 +243,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handlePrev()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePrev()
 
         // Then
         XCTAssertEqual(mockSpotify.previousCallCount, 1)
@@ -264,8 +254,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handlePrev()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePrev()
 
         // Then
         XCTAssertEqual(mockSpotify.previousCallCount, 1)
@@ -277,8 +266,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handlePrev()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handlePrev()
 
         // Then
         XCTAssertNotNil(sut.appError)
@@ -291,8 +279,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleSeek(to: 60000)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleSeek(to: 60000)
 
         // Then
         XCTAssertEqual(mockSpotify.seekCallCount, 1)
@@ -304,8 +291,7 @@ final class AppStatePlaybackTests: XCTestCase {
         sut.playbackProgress = 0
 
         // When
-        sut.handleSeek(to: 45000)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleSeek(to: 45000)
 
         // Then - progress should update optimistically
         XCTAssertEqual(sut.playbackProgress, 45000)
@@ -317,8 +303,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleSeek(to: 30000)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleSeek(to: 30000)
 
         // Then
         XCTAssertNotNil(sut.appError)
@@ -334,8 +319,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleToggleLike()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleToggleLike()
 
         // Then
         XCTAssertFalse(sut.likedTrack)
@@ -350,8 +334,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleToggleLike()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleToggleLike()
 
         // Then
         XCTAssertTrue(sut.likedTrack)
@@ -366,10 +349,9 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleToggleLike()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleToggleLike()
 
-        // Then
+        // Then - no API calls should be made (early return when track is nil)
         XCTAssertEqual(mockSpotify.saveTrackCallCount, 0)
         XCTAssertEqual(mockSpotify.removeTrackCallCount, 0)
     }
@@ -382,8 +364,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleToggleLike()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleToggleLike()
 
         // Then - likedTrack should revert to false
         XCTAssertFalse(sut.likedTrack)
@@ -399,8 +380,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleToggleLike()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleToggleLike()
 
         // Then - likedTrack should revert to true
         XCTAssertTrue(sut.likedTrack)
@@ -493,8 +473,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.setShuffleError = SpotifyError.apiError("Shuffle failed")
 
         // When
-        sut.handleShuffle()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleShuffle()
 
         // Then
         XCTAssertEqual(sut.playbackShuffle, originalShuffle)
@@ -506,8 +485,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.setRepeatError = SpotifyError.apiError("Repeat failed")
 
         // When
-        sut.handleRepeat()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleRepeat()
 
         // Then
         XCTAssertEqual(sut.playbackRepeat, originalRepeat)
@@ -520,8 +498,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleVolumeChange(80)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleVolumeChange(80)
 
         // Then
         XCTAssertEqual(mockSpotify.setVolumeCallCount, 1)
@@ -533,8 +510,7 @@ final class AppStatePlaybackTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleVolumeChange(200)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleVolumeChange(200)
 
         // Then
         XCTAssertEqual(mockSpotify.setVolumeCallValue, 100)

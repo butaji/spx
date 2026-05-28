@@ -30,14 +30,15 @@ struct TrackRowView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isPlaying ? SPXColors.accent : SPXColors.fg)
+                    .foregroundColor(isPlaying ? Color.spxAccent : Color.spxTextPrimary)
                     .lineLimit(1)
 
                 Text(artist)
                     .font(.system(size: 11))
-                    .foregroundColor(SPXColors.fgSecondary)
+                    .foregroundColor(Color.spxTextSecondary)
                     .lineLimit(1)
             }
+            .accessibilityElement(children: .combine)
 
             Spacer()
 
@@ -45,7 +46,7 @@ struct TrackRowView: View {
             if showAlbum {
                 Text(album)
                     .font(.system(size: 11))
-                    .foregroundColor(SPXColors.fgSecondary)
+                    .foregroundColor(Color.spxTextSecondary)
                     .lineLimit(1)
                     .frame(maxWidth: 150, alignment: .leading)
             }
@@ -53,21 +54,26 @@ struct TrackRowView: View {
             // Duration
             Text(formatTime(durationMs))
                 .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(SPXColors.fgSecondary)
+                .foregroundColor(Color.spxTextSecondary)
+                .accessibilityHidden(true)
 
             // Like button
-            Button(action: {}) {
+            Button { } label: {
                 IconHeart(filled: isLiked, size: 14)
-                    .foregroundColor(isLiked ? SPXColors.accent : SPXColors.fgMuted)
+                    .foregroundColor(isLiked ? Color.spxAccent : Color.spxTextTertiary)
             }
             .buttonStyle(.plain)
             .opacity(isHovered ? 1 : 0)
+            .accessibilityLabel(isLiked ? "Unlike track" : "Like track")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isHovered ? SPXColors.bgHover : Color.clear)
+        .background(isHovered ? Color.spxOverlay : Color.clear)
         .cornerRadius(4)
         .contentShape(Rectangle())
+        .accessibilityLabel("\(title) by \(artist)")
+        .accessibilityHint("Double tap to play")
+        .accessibilityIdentifier("track-row-\(index ?? 0)")
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
@@ -84,11 +90,11 @@ struct TrackRowView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 12, height: 12)
-                    .foregroundColor(SPXColors.accent)
+                    .foregroundColor(Color.spxAccent)
             } else {
                 Text("\(index ?? 0)")
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(SPXColors.fgMuted)
+                    .foregroundColor(Color.spxTextTertiary)
                     .frame(width: 20, alignment: .center)
             }
         }
@@ -100,25 +106,28 @@ struct TrackRowView: View {
     private var artworkView: some View {
         ZStack {
             ArtworkView(url: artworkUrl, size: .small, shape: .square)
+                .accessibilityHidden(true)
 
             // Play overlay on hover
             if isHovered {
                 ZStack {
-                    Color.black.opacity(0.5)
+                    Color.black.opacity(0.4)
                         .frame(width: 32, height: 32)
-                        .cornerRadius(6)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
 
                     IconPlay(size: 14)
-                        .foregroundColor(SPXColors.fg)
+                        .foregroundColor(Color.spxTextPrimary)
                 }
+                .accessibilityLabel("Play \(title)")
+                .accessibilityHint("Double tap to play")
             }
         }
     }
 
     // MARK: - Helpers
 
-    private func formatTime(_ ms: Int) -> String {
-        let totalSeconds = ms / 1000
+    private func formatTime(_ millis: Int) -> String {
+        let totalSeconds = millis / 1000
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
@@ -134,23 +143,23 @@ struct TrackListHeader: View {
         HStack(spacing: 12) {
             Text("#")
                 .font(.system(size: 11))
-                .foregroundColor(SPXColors.fgMuted)
+                .foregroundColor(Color.spxTextTertiary)
                 .frame(width: 24, alignment: .center)
 
             Text("Title")
                 .font(.system(size: 11))
-                .foregroundColor(SPXColors.fgMuted)
+                .foregroundColor(Color.spxTextTertiary)
 
             Spacer()
 
             Text("Album")
                 .font(.system(size: 11))
-                .foregroundColor(SPXColors.fgMuted)
+                .foregroundColor(Color.spxTextTertiary)
                 .frame(maxWidth: 150, alignment: .leading)
 
             Text("Duration")
                 .font(.system(size: 11))
-                .foregroundColor(SPXColors.fgMuted)
+                .foregroundColor(Color.spxTextTertiary)
                 .frame(width: 50, alignment: .trailing)
         }
         .padding(.horizontal, 12)
@@ -161,7 +170,7 @@ struct TrackListHeader: View {
 #Preview {
     VStack(spacing: 0) {
         TrackListHeader()
-        Divider().background(SPXColors.edge)
+        Divider().background(Color.spxBorder)
 
         TrackRowView(
             index: 1,
@@ -192,5 +201,5 @@ struct TrackListHeader: View {
         )
     }
     .frame(width: 600)
-    .background(SPXColors.bg)
+    .background(Color.spxBase)
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Auth View
 struct AuthView: View {
-    @EnvironmentObject private var appState: AppState
+    @Environment(AppState.self) private var appState
     let onConnect: () -> Void
 
     @State private var isAppeared = false
@@ -17,7 +17,7 @@ struct AuthView: View {
                 Spacer()
 
                 // Main card with frosted glass effect
-                VStack(spacing: SPXSpacing.x5) {
+                VStack(spacing: 20) {
                     // Logo with pulsing glow
                     AnimatedLogoView(pulseAnimation: pulseAnimation)
                         .opacity(isAppeared ? 1 : 0)
@@ -26,19 +26,19 @@ struct AuthView: View {
                     // Title
                     Text("SPX")
                         .font(.system(size: 56, weight: .heavy, design: .rounded))
-                        .foregroundColor(SPXColors.fg)
+                        .foregroundColor(Color.spxTextPrimary)
                         .tracking(8)
                         .opacity(isAppeared ? 1 : 0)
                         .offset(y: isAppeared ? 0 : -20)
 
                     // Subtitle
-                    HStack(spacing: SPXSpacing.x2) {
+                    HStack(spacing: 8) {
                         Text("Spotify")
-                            .foregroundColor(SPXColors.accent)
+                            .foregroundColor(Color.spxAccent)
                             .fontWeight(.bold)
 
                         Text("Remote Control")
-                            .foregroundColor(SPXColors.fgSecondary)
+                            .foregroundColor(Color.spxTextSecondary)
                             .fontWeight(.medium)
                     }
                     .font(.system(size: 16))
@@ -48,7 +48,7 @@ struct AuthView: View {
                     // Description
                     Text("Control your Spotify playback from a beautiful desktop app")
                         .font(.system(size: 14))
-                        .foregroundColor(SPXColors.fgMuted)
+                        .foregroundColor(Color.spxTextTertiary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(5)
                         .opacity(isAppeared ? 1 : 0)
@@ -80,7 +80,7 @@ struct AuthView: View {
                         }) {
                             Text("Cancel")
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(SPXColors.fgMuted)
+                                .foregroundColor(Color.spxTextTertiary)
                         }
                         .buttonStyle(.plain)
                         .focusable(false)
@@ -89,7 +89,7 @@ struct AuthView: View {
 
                     Text("Requires a Spotify Premium account")
                         .font(.system(size: 11))
-                        .foregroundColor(SPXColors.fgFaint)
+                        .foregroundColor(Color.spxTextTertiary)
                         .multilineTextAlignment(.center)
                         .opacity(isAppeared ? 0.6 : 0)
                 }
@@ -119,7 +119,7 @@ struct AuthView: View {
                     y: 8
                 )
                 .shadow(
-                    color: SPXColors.accent.opacity(0.05),
+                    color: Color.spxAccent.opacity(0.05),
                     radius: 40,
                     x: 0,
                     y: 0
@@ -147,7 +147,7 @@ struct AnimatedLogoView: View {
         ZStack {
             // Pulsing glow ring
             Circle()
-                .stroke(SPXColors.accent.opacity(0.3), lineWidth: 2)
+                .stroke(Color.spxAccent.opacity(0.3), lineWidth: 2)
                 .frame(width: 120, height: 120)
                 .scaleEffect(pulseAnimation ? 1.15 : 1.0)
                 .opacity(pulseAnimation ? 0.4 : 0.8)
@@ -156,7 +156,7 @@ struct AnimatedLogoView: View {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [SPXColors.accent.opacity(0.2), Color.clear],
+                        colors: [Color.spxAccent.opacity(0.2), Color.clear],
                         center: .center,
                         startRadius: 0,
                         endRadius: 50
@@ -167,7 +167,7 @@ struct AnimatedLogoView: View {
 
             // Logo circle background
             Circle()
-                .fill(SPXColors.accent.opacity(0.15))
+                .fill(Color.spxAccent.opacity(0.15))
                 .frame(width: 80, height: 80)
 
             // Spotify icon
@@ -183,7 +183,7 @@ struct SpotifyIconView: View {
         ZStack {
             // Green circle background
             Circle()
-                .fill(SPXColors.accent)
+                .fill(Color.spxAccent)
                 .frame(width: 40, height: 40)
 
             // Three curved lines (simplified Spotify logo)
@@ -223,7 +223,7 @@ struct MeshGradientBackground: View {
     var body: some View {
         ZStack {
             // Base gradient
-            SPXColors.bg
+            Color.spxBase
                 .ignoresSafeArea()
 
             // Animated orbs
@@ -232,7 +232,7 @@ struct MeshGradientBackground: View {
                     // Primary accent orb
                     AnimatedOrb(
                         size: 500,
-                        color: SPXColors.accent,
+                        color: Color.spxAccent,
                         opacity: 0.12,
                         position: CGPoint(
                             x: geometry.size.width * 0.3,
@@ -258,7 +258,7 @@ struct MeshGradientBackground: View {
                     // Tertiary accent
                     AnimatedOrb(
                         size: 350,
-                        color: SPXColors.accent,
+                        color: Color.spxAccent,
                         opacity: 0.08,
                         position: CGPoint(
                             x: geometry.size.width * 0.8,
@@ -326,32 +326,32 @@ struct AnimatedErrorView: View {
     let error: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: SPXSpacing.x3) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: "exclamationmark.circle.fill")
                 .font(.system(size: 16))
-                .foregroundColor(SPXColors.danger.opacity(0.8))
+                .foregroundColor(Color.spxAccent.opacity(0.8))
 
-            VStack(alignment: .leading, spacing: SPXSpacing.x1) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Connection Error")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(SPXColors.danger.opacity(0.9))
+                    .foregroundColor(Color.spxAccent.opacity(0.9))
 
                 Text(error)
                     .font(.system(size: 12))
-                    .foregroundColor(SPXColors.fgMuted)
+                    .foregroundColor(Color.spxTextTertiary)
                     .lineSpacing(2)
             }
 
             Spacer()
         }
-        .padding(SPXSpacing.x3)
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: SPXRadius.md)
-                .fill(SPXColors.danger.opacity(0.08))
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.spxAccent.opacity(0.08))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: SPXRadius.md)
-                .stroke(SPXColors.danger.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.spxAccent.opacity(0.15), lineWidth: 1)
         )
     }
 }
@@ -395,8 +395,8 @@ struct ConnectButton: View {
                     .fill(
                         LinearGradient(
                             colors: [
-                                SPXColors.accent,
-                                SPXColors.accent.opacity(0.9)
+                                Color.spxAccent,
+                                Color.spxAccent.opacity(0.9)
                             ],
                             startPoint: .leading,
                             endPoint: .trailing
@@ -428,12 +428,12 @@ struct LoadingAuthView: View {
 
     var body: some View {
         ZStack {
-            SPXColors.bg
+            Color.spxBase
                 .ignoresSafeArea()
 
             MeshGradientBackground()
 
-            VStack(spacing: SPXSpacing.x7) {
+            VStack(spacing: 32) {
                 // Animated Logo
                 AnimatedLogoView(pulseAnimation: pulseAnimation)
                     .opacity(isAppeared ? 1 : 0)
@@ -446,7 +446,7 @@ struct LoadingAuthView: View {
                 // Title
                 Text("SPX")
                     .font(.system(size: 42, weight: .heavy, design: .rounded))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
                     .tracking(6)
                     .opacity(isAppeared ? 1 : 0)
 
@@ -454,7 +454,7 @@ struct LoadingAuthView: View {
                 HStack(spacing: 4) {
                     Text("Loading")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(SPXColors.fgMuted)
+                        .foregroundColor(Color.spxTextTertiary)
 
                     LoadingDotsView()
                 }
@@ -490,7 +490,7 @@ struct EqualizerBar: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 2)
-            .fill(SPXColors.accent)
+            .fill(Color.spxAccent)
             .frame(width: 3, height: height)
             .onAppear {
                 withAnimation(
@@ -512,7 +512,7 @@ struct LoadingDotsView: View {
         HStack(spacing: 2) {
             ForEach(0..<3, id: \.self) { index in
                 Circle()
-                    .fill(SPXColors.fgMuted)
+                    .fill(Color.spxTextTertiary)
                     .frame(width: 4, height: 4)
                     .opacity(index < dotCount ? 1 : 0.3)
             }
@@ -535,29 +535,29 @@ struct ErrorAuthView: View {
 
     var body: some View {
         ZStack {
-            SPXColors.bg
+            Color.spxBase
                 .ignoresSafeArea()
 
             MeshGradientBackground()
 
-            VStack(spacing: SPXSpacing.x6) {
+            VStack(spacing: 24) {
                 // Error Icon with pulse
                 ZStack {
                     // Glow ring
                     Circle()
-                        .stroke(SPXColors.danger.opacity(0.3), lineWidth: 2)
+                        .stroke(Color.spxAccent.opacity(0.3), lineWidth: 2)
                         .frame(width: 120, height: 120)
                         .scaleEffect(pulseAnimation ? 1.1 : 1.0)
                         .opacity(pulseAnimation ? 0.5 : 0.8)
 
                     // Background circle
                     Circle()
-                        .fill(SPXColors.danger.opacity(0.1))
+                        .fill(Color.spxAccent.opacity(0.1))
                         .frame(width: 100, height: 100)
 
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 40))
-                        .foregroundColor(SPXColors.danger.opacity(0.9))
+                        .foregroundColor(Color.spxAccent.opacity(0.9))
                 }
                 .opacity(isAppeared ? 1 : 0)
                 .scaleEffect(isAppeared ? 1 : 0.8)
@@ -565,15 +565,15 @@ struct ErrorAuthView: View {
                 // Title
                 Text("Connection Failed")
                     .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
                     .opacity(isAppeared ? 1 : 0)
 
                 // Error Message
                 Text(error)
                     .font(.system(size: 14))
-                    .foregroundColor(SPXColors.fgSecondary)
+                    .foregroundColor(Color.spxTextSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, SPXSpacing.x6)
+                    .padding(.horizontal, 24)
                     .opacity(isAppeared ? 1 : 0)
 
                 // Retry Button
@@ -586,11 +586,11 @@ struct ErrorAuthView: View {
                             .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundColor(.black)
-                    .padding(.horizontal, SPXSpacing.x5)
-                    .padding(.vertical, SPXSpacing.x3)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(SPXColors.accent)
+                            .fill(Color.spxAccent)
                     )
                 }
                 .buttonStyle(.plain)

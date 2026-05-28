@@ -34,7 +34,7 @@ struct ArtworkView: View {
     private var cornerRadius: CGFloat {
         switch shape {
         case .square:
-            return 6
+            return 8
         case .round:
             return size.rawValue / 2
         }
@@ -45,7 +45,15 @@ struct ArtworkView: View {
             .resizable()
             .scaledToFit()
             .frame(width: size.rawValue * 0.5, height: size.rawValue * 0.5)
-            .foregroundColor(SPXColors.fgMuted)
+            .foregroundColor(Color.spxTextTertiary)
+    }
+
+    private var personIcon: some View {
+        Image(systemName: "person.fill")
+            .resizable()
+            .scaledToFit()
+            .frame(width: size.rawValue * 0.5, height: size.rawValue * 0.5)
+            .foregroundColor(Color.spxTextTertiary)
     }
 
     var body: some View {
@@ -80,8 +88,9 @@ struct ArtworkView: View {
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
         .background(
             RoundedRectangle(cornerRadius: cornerRadius)
-                .fill(SPXColors.surface)
+                .fill(Color.spxElevated)
         )
+        .accessibilityHidden(true)
     }
 }
 
@@ -101,5 +110,5 @@ struct ArtworkView: View {
         }
     }
     .padding()
-    .background(SPXColors.bg)
+    .background(Color.spxBase)
 }

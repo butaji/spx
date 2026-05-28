@@ -2,7 +2,7 @@ import Foundation
 
 struct LocalDevice: Codable, Hashable, Sendable {
     let name: String
-    let ip: String
+    let ipAddress: String?
     let port: Int
     let id: String?
     let isActive: Bool?
@@ -12,7 +12,8 @@ struct LocalDevice: Codable, Hashable, Sendable {
     let friendlyName: String?
 
     enum CodingKeys: String, CodingKey {
-        case name, ip, port, id, note
+        case name, port, id, note
+        case ipAddress = "ip"
         case isActive = "is_active"
         case canTransfer = "canTransfer"
         case serviceType = "service_type"

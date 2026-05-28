@@ -7,17 +7,8 @@ struct IconHeart: View {
     var size: CGFloat = 20
 
     var body: some View {
-        if filled {
-            Image(systemName: "heart.fill")
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
-        } else {
-            Image(systemName: "heart")
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
-        }
+        Image(systemName: filled ? "heart.fill" : "heart")
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -28,9 +19,7 @@ struct IconPlay: View {
 
     var body: some View {
         Image(systemName: "play.fill")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -41,9 +30,7 @@ struct IconPause: View {
 
     var body: some View {
         Image(systemName: "pause.fill")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -53,10 +40,8 @@ struct IconPrev: View {
     var size: CGFloat = 20
 
     var body: some View {
-        Image(systemName: "backward.fill")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+        Image(systemName: "backward.end.fill")
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -66,10 +51,8 @@ struct IconNext: View {
     var size: CGFloat = 20
 
     var body: some View {
-        Image(systemName: "forward.fill")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+        Image(systemName: "forward.end.fill")
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -80,10 +63,8 @@ struct IconVolume: View {
     var size: CGFloat = 20
 
     var body: some View {
-        Image(systemName: muted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+        Image(systemName: muted ? "speaker.slash" : "speaker.wave.2")
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -95,10 +76,8 @@ struct IconShuffle: View {
 
     var body: some View {
         Image(systemName: "shuffle")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
-            .foregroundColor(active ? SPXColors.accent : SPXColors.fg)
+            .font(.system(size: size, weight: .light))
+            .foregroundColor(active ? Color.spxAccent : Color.spxTextPrimary)
     }
 }
 
@@ -111,17 +90,15 @@ struct IconRepeat: View {
     var body: some View {
         ZStack {
             Image(systemName: "repeat")
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
+                .font(.system(size: size, weight: .light))
 
             if mode == "track" {
                 Text("1")
                     .font(.system(size: size * 0.4, weight: .bold))
-                    .foregroundColor(SPXColors.accent)
+                    .foregroundColor(Color.spxAccent)
             }
         }
-        .foregroundColor(mode != "off" ? SPXColors.accent : SPXColors.fg)
+        .foregroundColor(mode != "off" ? Color.spxAccent : Color.spxTextPrimary)
     }
 }
 
@@ -132,10 +109,8 @@ struct IconHome: View {
     var size: CGFloat = 20
 
     var body: some View {
-        Image(systemName: active ? "house.fill" : "house")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+        Image(systemName: "house")
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -146,35 +121,7 @@ struct IconSearch: View {
 
     var body: some View {
         Image(systemName: "magnifyingglass")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
-    }
-}
-
-// MARK: - IconLibrary
-
-struct IconLibrary: View {
-    var size: CGFloat = 20
-
-    var body: some View {
-        Image(systemName: "music.note.list")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
-    }
-}
-
-// MARK: - IconQueue
-
-struct IconQueue: View {
-    var size: CGFloat = 20
-
-    var body: some View {
-        Image(systemName: "list.bullet")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -185,9 +132,7 @@ struct IconClose: View {
 
     var body: some View {
         Image(systemName: "xmark")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -198,9 +143,7 @@ struct IconTag: View {
 
     var body: some View {
         Image(systemName: "tag")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -211,9 +154,7 @@ struct IconShare: View {
 
     var body: some View {
         Image(systemName: "square.and.arrow.up")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -224,9 +165,7 @@ struct IconFlame: View {
 
     var body: some View {
         Image(systemName: "flame")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+            .font(.system(size: size, weight: .light))
     }
 }
 
@@ -237,8 +176,94 @@ struct IconChart: View {
 
     var body: some View {
         Image(systemName: "chart.bar")
-            .resizable()
-            .scaledToFit()
-            .frame(width: size, height: size)
+            .font(.system(size: size, weight: .light))
+    }
+}
+
+// MARK: - IconMusic
+
+struct IconMusic: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image(systemName: "music.note")
+            .font(.system(size: size, weight: .light))
+    }
+}
+
+// MARK: - IconQueue
+
+struct IconQueue: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image(systemName: "list.bullet")
+            .font(.system(size: size, weight: .light))
+    }
+}
+
+// MARK: - IconDevice
+
+struct IconDevice: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image(systemName: "laptopcomputer")
+            .font(.system(size: size, weight: .light))
+    }
+}
+
+// MARK: - IconEllipsis
+
+struct IconEllipsis: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image(systemName: "ellipsis")
+            .font(.system(size: size, weight: .light))
+    }
+}
+
+// MARK: - IconGrid
+
+struct IconGrid: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image(systemName: "square.grid.2x2")
+            .font(.system(size: size, weight: .light))
+    }
+}
+
+// MARK: - IconLink
+
+struct IconLink: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image(systemName: "link")
+            .font(.system(size: size, weight: .light))
+    }
+}
+
+// MARK: - IconAdd
+
+struct IconAdd: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image(systemName: "plus")
+            .font(.system(size: size, weight: .light))
+    }
+}
+
+// MARK: - IconPerson
+
+struct IconPerson: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image(systemName: "person")
+            .font(.system(size: size, weight: .light))
     }
 }

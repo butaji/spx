@@ -1,363 +1,128 @@
 import Foundation
 import SwiftUI
+import Combine
 
 // MARK: - AppState
 
 @MainActor
-final class AppState: ObservableObject {
+@Observable
+final class AppState {
 
-    // MARK: - Playback State
+    // MARK: - Sub-Managers
 
-    @Published var playbackTrack: SpotifyTrack?
-    @Published var playbackProgress: Int = 0 // ms
-    @Published var playbackDuration: Int = 0 // ms
-    @Published var isPlaying: Bool = false
-    @Published var playbackVolume: Int = 50
-    @Published var isMuted: Bool = false
-    @Published var playbackShuffle: Bool = false
-    @Published var playbackRepeat: String = "off" // off/context/track
-    @Published var likedTrack: Bool = false
-    @Published var isPlayActionLoading: Bool = false
-
-    // MARK: - User State
-
-    @Published var userProfile: SpotifyUserProfile?
-    @Published var isAuthed: Bool = false
-    @Published var isAuthLoading: Bool = false
+    let auth: AuthState
+    let playback: PlaybackState
+    let navigation: NavigationState
+    let devices: DeviceState
 
     // MARK: - App State
 
-    @Published var appError: String?
-    @Published var isRestoring: Bool = false
-    @Published var currentView: AppView = .home
-    @Published var viewHistory: [AppView] = [.home]
-    @Published var contextPanelItem: SpotifyArtist?
-    @Published var lastPlayedTrack: TrackInfo?
-    @Published var isMockMode: Bool = false
+    var appError: String?
+    var isRestoring: Bool = false
+    var isMockMode: Bool = false
 
-    // MARK: - Device State
+    // MARK: - Search State
 
-    @Published var localDevices: [LocalDevice] = []
-    @Published var spotifyDevices: [SpotifyDevice] = []
+    var searchResults: SpotifySearchResults?
+    var isSearching: Bool = false
+    private var searchDebounceTask: Task<Void, Never>?
+    private let searchDebounceInterval: TimeInterval = Constants.Timing.searchDebounce
+
+    // MARK: - Backward-Compatible Computed Properties
+
+    var playbackTrack: SpotifyTrack? {
+        get { playback.playbackTrack }
+        set { playback.playbackTrack = newValue }
+    }
+    var playbackProgress: Int {
+        get { playback.playbackProgress }
+        set { playback.playbackProgress = newValue }
+    }
+    var playbackDuration: Int {
+        get { playback.playbackDuration }
+        set { playback.playbackDuration = newValue }
+    }
+    var isPlaying: Bool {
+        get { playback.isPlaying }
+        set { playback.isPlaying = newValue }
+    }
+    var playbackVolume: Int {
+        get { playback.playbackVolume }
+        set { playback.playbackVolume = newValue }
+    }
+    var isMuted: Bool {
+        get { playback.isMuted }
+        set { playback.isMuted = newValue }
+    }
+    var playbackShuffle: Bool {
+        get { playback.playbackShuffle }
+        set { playback.playbackShuffle = newValue }
+    }
+    var playbackRepeat: String {
+        get { playback.playbackRepeat }
+        set { playback.playbackRepeat = newValue }
+    }
+    var likedTrack: Bool {
+        get { playback.likedTrack }
+        set { playback.likedTrack = newValue }
+    }
+    var isPlayActionLoading: Bool {
+        get { playback.isPlayActionLoading }
+        set { playback.isPlayActionLoading = newValue }
+    }
+
+    var lastPlayedTrack: TrackInfo? {
+        get { playback.lastPlayedTrack }
+        set { playback.lastPlayedTrack = newValue }
+    }
+
+    var userProfile: SpotifyUserProfile? {
+        get { auth.userProfile }
+        set { auth.userProfile = newValue }
+    }
+    var isAuthed: Bool {
+        get { auth.isAuthed }
+        set { auth.isAuthed = newValue }
+    }
+    var isAuthLoading: Bool { auth.isAuthLoading }
+
+    var currentView: AppView {
+        get { navigation.currentView }
+        set { navigation.currentView = newValue }
+    }
+    var viewHistory: [AppView] {
+        get { navigation.viewHistory }
+        set { navigation.viewHistory = newValue }
+    }
+    var contextPanelItem: SpotifyArtist? {
+        get { navigation.contextPanelItem }
+        set { navigation.contextPanelItem = newValue }
+    }
+
+    var localDevices: [LocalDevice] { devices.localDevices }
+    var spotifyDevices: [SpotifyDevice] { devices.spotifyDevices }
 
     // MARK: - Private
 
-    private var playbackPollingTask: Task<Void, Never>?
-    private var authTask: Task<Void, Never>?
     private let spotifyService: SpotifyServiceProtocol
-    private let tokenStorage: TokenStorage
 
     // MARK: - Init
 
-    init(spotifyService: SpotifyServiceProtocol = SpotifyAPI.shared, tokenStorage: TokenStorage = .shared) {
+    init(
+        spotifyService: SpotifyServiceProtocol,
+        tokenStorage: TokenStorage
+    ) {
         self.spotifyService = spotifyService
-        self.tokenStorage = tokenStorage
+        self.auth = AuthState(spotifyService: spotifyService, tokenStorage: tokenStorage)
+        self.playback = PlaybackState(spotifyService: spotifyService)
+        self.navigation = NavigationState()
+        self.devices = DeviceState(spotifyService: spotifyService)
     }
 
-    // MARK: - Navigation
+    // MARK: - Error Handling
 
-    private let maxHistoryDepth = 50
-
-    func navigate(to view: AppView) {
-        viewHistory.append(currentView)
-        // Cap history to prevent unbounded growth (allow maxHistoryDepth + 1 for current view)
-        if viewHistory.count > maxHistoryDepth + 1 {
-            viewHistory.removeFirst(viewHistory.count - maxHistoryDepth - 1)
-        }
-        currentView = view
-    }
-
-    func goBack() {
-        guard viewHistory.count > 1 else { return }
-        currentView = viewHistory.removeLast()
-    }
-
-    // MARK: - Auth
-
-    func handleStartAuth() {
-        isAuthLoading = true
+    func clearError() {
         appError = nil
-
-        authTask = Task {
-            do {
-                try await spotifyService.authorize()
-                isAuthed = true
-                isAuthLoading = false
-                await restoreSession()
-            } catch {
-                appError = error.localizedDescription
-                isAuthLoading = false
-            }
-        }
-    }
-
-    func cancelAuth() {
-        authTask?.cancel()
-        authTask = nil
-        isAuthLoading = false
-        appError = nil
-    }
-
-    func handleLogout() {
-        tokenStorage.delete(key: "spotify_access_token")
-        tokenStorage.delete(key: "spotify_refresh_token")
-        isAuthed = false
-        userProfile = nil
-        stopPlaybackPolling()
-        currentView = .home
-        viewHistory = [.home]
-    }
-
-    // MARK: - Playback Controls
-
-    func handlePlayPause() {
-        guard !isPlayActionLoading else { return }
-
-        Task {
-            isPlayActionLoading = true
-            defer { isPlayActionLoading = false }
-
-            do {
-                if isPlaying {
-                    try await spotifyService.pause()
-                    isPlaying = false
-                } else {
-                    try await spotifyService.resume()
-                    isPlaying = true
-                }
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    func handleNext() {
-        Task {
-            isPlayActionLoading = true
-            defer { isPlayActionLoading = false }
-
-            do {
-                try await spotifyService.next()
-                await refreshPlaybackState()
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    func handlePrev() {
-        Task {
-            isPlayActionLoading = true
-            defer { isPlayActionLoading = false }
-
-            do {
-                try await spotifyService.previous()
-                await refreshPlaybackState()
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    func handleSeek(to ms: Int) {
-        Task {
-            do {
-                try await spotifyService.seek(to: ms)
-                playbackProgress = ms
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    func handleVolumeChange(_ vol: Int) {
-        playbackVolume = max(0, min(100, vol))
-
-        Task {
-            do {
-                try await spotifyService.setVolume(playbackVolume)
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    func handleVolumeUp() {
-        handleVolumeChange(playbackVolume + 5)
-    }
-
-    func handleVolumeDown() {
-        handleVolumeChange(playbackVolume - 5)
-    }
-
-    func handleToggleMute() {
-        isMuted.toggle()
-
-        Task {
-            do {
-                try await spotifyService.setVolume(isMuted ? 0 : playbackVolume)
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    func handleShuffle() {
-        playbackShuffle.toggle()
-
-        Task {
-            do {
-                try await spotifyService.setShuffle(playbackShuffle)
-            } catch {
-                appError = error.localizedDescription
-                playbackShuffle.toggle() // revert on failure
-            }
-        }
-    }
-
-    func handleRepeat() {
-        let modes = ["off", "context", "track"]
-        guard let currentIndex = modes.firstIndex(of: playbackRepeat) else { return }
-        let nextIndex = (currentIndex + 1) % modes.count
-        playbackRepeat = modes[nextIndex]
-
-        Task {
-            do {
-                try await spotifyService.setRepeat(playbackRepeat)
-            } catch {
-                appError = error.localizedDescription
-                playbackRepeat = modes[currentIndex] // revert on failure
-            }
-        }
-    }
-
-    func handleToggleLike() {
-        guard let trackId = playbackTrack?.id else { return }
-        likedTrack.toggle()
-
-        Task {
-            do {
-                if likedTrack {
-                    try await spotifyService.saveTrack(id: trackId)
-                } else {
-                    try await spotifyService.removeTrack(id: trackId)
-                }
-            } catch {
-                appError = error.localizedDescription
-                likedTrack.toggle() // revert on failure
-            }
-        }
-    }
-
-    // MARK: - Devices
-
-    func refreshDevices() {
-        Task {
-            do {
-                async let local = spotifyService.getLocalDevices()
-                async let spotify = spotifyService.getDevices()
-
-                localDevices = try await local
-                spotifyDevices = try await spotify
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    func transferPlayback(to deviceId: String) {
-        Task {
-            do {
-                try await spotifyService.transferPlayback(to: deviceId)
-                await refreshDevices()
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    // MARK: - Context Playback
-
-    func playContext(uri: String) {
-        Task {
-            isPlayActionLoading = true
-            defer { isPlayActionLoading = false }
-
-            do {
-                try await spotifyService.playContext(uri: uri)
-                await refreshPlaybackState()
-                startPlaybackPolling()
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    func playUris(uris: [String], offset: Int = 0) {
-        Task {
-            isPlayActionLoading = true
-            defer { isPlayActionLoading = false }
-
-            do {
-                try await spotifyService.playUris(uris: uris, offset: offset)
-                await refreshPlaybackState()
-                startPlaybackPolling()
-            } catch {
-                appError = error.localizedDescription
-            }
-        }
-    }
-
-    // MARK: - Playback State Sync
-
-    func refreshPlaybackState() async {
-        do {
-            let state = try await spotifyService.getPlaybackState()
-
-            playbackTrack = state.item
-            playbackProgress = state.progressMs ?? 0
-            playbackDuration = state.item?.durationMs ?? 0
-            isPlaying = state.isPlaying ?? false
-            playbackVolume = state.device?.volumePercent ?? 50
-            playbackShuffle = state.shuffleState ?? false
-            playbackRepeat = state.repeatState?.rawValue ?? "off"
-            likedTrack = state.item != nil ? (try await spotifyService.checkTrack(id: state.item!.id)) : false
-
-            if let track = state.item {
-                lastPlayedTrack = TrackInfo(
-                    id: track.id,
-                    name: track.name,
-                    artist: track.artists?.first?.name ?? "",
-                    artistIds: track.artists?.map { $0.id },
-                    album: track.album?.name ?? "",
-                    durationMs: track.durationMs ?? 0,
-                    progressMs: state.progressMs ?? 0,
-                    isPlaying: state.isPlaying ?? false,
-                    imageUrl: track.images?.first?.url,
-                    uri: track.uri
-                )
-            }
-        } catch {
-            appError = error.localizedDescription
-        }
-    }
-
-    // MARK: - Polling
-
-    func startPlaybackPolling() {
-        stopPlaybackPolling()
-
-        playbackPollingTask = Task {
-            while !Task.isCancelled {
-                await refreshPlaybackState()
-                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
-            }
-        }
-    }
-
-    func stopPlaybackPolling() {
-        playbackPollingTask?.cancel()
-        playbackPollingTask = nil
     }
 
     // MARK: - Session Restore
@@ -368,17 +133,361 @@ final class AppState: ObservableObject {
 
         do {
             userProfile = try await spotifyService.getCurrentUser()
-            await refreshPlaybackState()
-            refreshDevices()
-            startPlaybackPolling()
+            await playback.refreshPlaybackState()
+            devices.refreshDevices()
+            playback.startPlaybackPolling()
         } catch {
             appError = error.localizedDescription
         }
     }
 
-    // MARK: - Error Handling
+    // MARK: - Auth Handlers (Coordinator)
 
-    func clearError() {
+    func handleStartAuth() {
         appError = nil
+
+        auth.handleStartAuth(
+            onSuccess: { [weak self] in
+                await self?.restoreSession()
+            },
+            onError: { [weak self] error in
+                self?.appError = error.localizedDescription
+            }
+        )
+    }
+
+    func cancelAuth() {
+        auth.cancelAuth()
+        appError = nil
+    }
+
+    func handleLogout() {
+        auth.handleLogout { [weak self] in
+            self?.playback.stopPlaybackPolling()
+        }
+        navigation.resetToHome()
+    }
+
+    // MARK: - Playback Handlers (Error Delegation)
+
+    func handlePlayPause() async {
+        await playback.handlePlayPause()
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    func handleNext() async {
+        await playback.handleNext()
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    func handlePrev() async {
+        await playback.handlePrev()
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    func handleSeek(to millis: Int) async {
+        await playback.handleSeek(to: millis)
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    func handleVolumeChange(_ vol: Int) async {
+        await playback.handleVolumeChange(vol)
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    func handleVolumeUp() async {
+        await playback.handleVolumeUp()
+    }
+
+    func handleVolumeDown() async {
+        await playback.handleVolumeDown()
+    }
+
+    func startPlaybackPolling() {
+        playback.startPlaybackPolling()
+    }
+
+    func stopPlaybackPolling() {
+        playback.stopPlaybackPolling()
+    }
+
+    func handleToggleMute() {
+        playback.handleToggleMute()
+    }
+
+    func handleShuffle() async {
+        await playback.handleShuffle()
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    func handleRepeat() async {
+        await playback.handleRepeat()
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    func handleToggleLike() async {
+        await playback.handleToggleLike()
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    func playContext(uri: String) {
+        playback.playContext(uri: uri)
+    }
+
+    func playUris(uris: [String], offset: Int = 0) {
+        playback.playUris(uris: uris, offset: offset)
+    }
+
+    func refreshPlaybackState() async {
+        await playback.refreshPlaybackState()
+        if let error = playback.errorMessage {
+            appError = error
+            playback.errorMessage = nil
+        }
+    }
+
+    // MARK: - Search Handlers
+
+    func performSearch(query: String) {
+        searchDebounceTask?.cancel()
+
+        let trimmedQuery = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmedQuery.isEmpty else {
+            searchResults = nil
+            isSearching = false
+            return
+        }
+
+        isSearching = true
+
+        searchDebounceTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: UInt64(searchDebounceInterval * 1_000_000_000))
+                guard !Task.isCancelled else { return }
+
+                let results = try await spotifyService.search(
+                    query: trimmedQuery,
+                    types: ["track", "album", "artist", "playlist"],
+                    limit: 20
+                )
+
+                guard !Task.isCancelled else { return }
+                searchResults = results
+                isSearching = false
+            } catch {
+                guard !Task.isCancelled else { return }
+                appError = error.localizedDescription
+                isSearching = false
+            }
+        }
+    }
+
+    func clearSearch() {
+        searchDebounceTask?.cancel()
+        searchResults = nil
+        isSearching = false
+    }
+
+    // MARK: - Navigation Handlers (Delegation)
+
+    func navigate(to view: AppView) {
+        navigation.navigate(to: view)
+    }
+
+    func goBack() {
+        navigation.goBack()
+    }
+
+    // MARK: - Device Handlers (Delegation)
+
+    func refreshDevices() {
+        devices.refreshDevices()
+    }
+
+    func transferPlayback(to deviceId: String) {
+        devices.transferPlayback(to: deviceId) { [weak self] in
+            self?.devices.refreshDevices()
+        }
+    }
+
+// MARK: - Preview Mode
+
+    func populateMockData() {
+        auth.isAuthed = true
+        populateMockUserProfile()
+        let track = createMockTrack()
+        populateMockPlayback(with: track)
+        populateMockArtistDetail()
+        populateMockPlaylists()
+        navigation.currentView = .home
+    }
+
+    private func populateMockUserProfile() {
+        auth.userProfile = SpotifyUserProfile(
+            id: "user123",
+            displayName: "Alex",
+            images: [SpotifyImage(
+                url: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop",
+                height: 150,
+                width: 150
+            )],
+            email: "alex@example.com",
+            country: "US",
+            product: "premium",
+            followers: Followers(total: 42, href: nil),
+            externalUrls: nil,
+            href: nil,
+            uri: "spotify:user:user123",
+            explicitContent: nil
+        )
+    }
+
+    private func createMockArtists() -> [SpotifyArtist] {
+        [
+            SpotifyArtist(
+                id: "artist123",
+                name: "Mr. Scruff",
+                genres: nil,
+                followers: nil,
+                images: [SpotifyImage(
+                    url: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300&h=300&fit=crop",
+                    height: 300,
+                    width: 300
+                )],
+                popularity: nil,
+                uri: nil
+            ),
+            SpotifyArtist(
+                id: "artist456",
+                name: "Feebi",
+                genres: nil,
+                followers: nil,
+                images: nil,
+                popularity: nil,
+                uri: nil
+            )
+        ]
+    }
+
+    private func createMockAlbum() -> SpotifyAlbum {
+        SpotifyAlbum(
+            id: "album123",
+            name: "Keep It Unreal (10th Anniversary Analogue Remaster Edition)",
+            images: [SpotifyImage(
+                url: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",
+                height: 300,
+                width: 300
+            )],
+            uri: "spotify:album:album123",
+            artists: nil,
+            releaseDate: "2009-01-01",
+            tracks: nil,
+            albumType: "album",
+            totalTracks: 12
+        )
+    }
+
+    private func createMockTrack() -> SpotifyTrack {
+        SpotifyTrack(
+            id: "track123",
+            name: "Honeydew",
+            uri: "spotify:track:track123",
+            durationMs: 456000,
+            artists: createMockArtists(),
+            album: createMockAlbum(),
+            images: [SpotifyImage(
+                url: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",
+                height: 300,
+                width: 300
+            )],
+            trackNumber: 7,
+            discNumber: 1,
+            explicit: false,
+            popularity: 65,
+            previewUrl: nil
+        )
+    }
+
+    private func populateMockPlayback(with track: SpotifyTrack) {
+        playback.playbackTrack = track
+        playback.lastPlayedTrack = TrackInfo(from: track, progressMs: 410000)
+        playback.playbackProgress = 410000
+        playback.playbackDuration = 456000
+        playback.isPlaying = true
+        playback.playbackVolume = 65
+        playback.playbackShuffle = false
+        playback.playbackRepeat = "off"
+        playback.likedTrack = false
+        playback.userName = "Lav Baum"
+        playback.userImage = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop"
+        playback.artistListenCount = 422
+        playback.trackListenCount = 7
+    }
+
+    private func populateMockArtistDetail() {
+        playback.artistDetail = SpotifyArtist(
+            id: "artist123",
+            name: "Mr. Scruff",
+            genres: ["electro swing", "trip hop", "nu jazz", "downtempo", "acid jazz"],
+            followers: SpotifyArtist.Followers(total: 175608),
+            images: [SpotifyImage(
+                url: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300&h=300&fit=crop",
+                height: 300,
+                width: 300
+            )],
+            popularity: 72,
+            uri: "spotify:artist:artist123"
+        )
+        contextPanelItem = playback.artistDetail
+        playback.tags = ["electro swing", "trip hop", "nu jazz", "downtempo", "acid jazz"]
+    }
+
+    private func populateMockPlaylists() {
+        playback.playlists = [
+            PlaylistItem(
+                id: "1",
+                name: "Lav Baum",
+                image: "https://picsum.photos/seed/lavbaum/300/200"
+            ),
+            PlaylistItem(
+                id: "2",
+                name: "Chill Beats",
+                image: "https://picsum.photos/seed/chill/300/200"
+            ),
+            PlaylistItem(
+                id: "3",
+                name: "Jazz Lounge",
+                image: "https://picsum.photos/seed/jazz/300/200"
+            ),
+            PlaylistItem(
+                id: "4",
+                name: "Electronic Essentials",
+                image: "https://picsum.photos/seed/electronic/300/200"
+            )
+        ]
     }
 }

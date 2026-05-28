@@ -166,8 +166,7 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(sut.playbackShuffle)
 
         // When
-        sut.handleShuffle()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleShuffle()
 
         // Then
         XCTAssertTrue(sut.playbackShuffle)
@@ -180,8 +179,7 @@ final class AppStateTests: XCTestCase {
         sut.playbackShuffle = true
 
         // When
-        sut.handleShuffle()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleShuffle()
 
         // Then
         XCTAssertFalse(sut.playbackShuffle)
@@ -195,8 +193,7 @@ final class AppStateTests: XCTestCase {
         mockSpotify.setShuffleError = SpotifyError.apiError("Failed")
 
         // When
-        sut.handleShuffle()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleShuffle()
 
         // Then - should revert to original state
         XCTAssertFalse(sut.playbackShuffle)
@@ -211,8 +208,7 @@ final class AppStateTests: XCTestCase {
         mockSpotify.resetCallCounts()
 
         // When
-        sut.handleRepeat()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleRepeat()
 
         // Then
         XCTAssertEqual(sut.playbackRepeat, "context")
@@ -225,8 +221,7 @@ final class AppStateTests: XCTestCase {
         sut.playbackRepeat = "context"
 
         // When
-        sut.handleRepeat()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleRepeat()
 
         // Then
         XCTAssertEqual(sut.playbackRepeat, "track")
@@ -238,8 +233,7 @@ final class AppStateTests: XCTestCase {
         sut.playbackRepeat = "track"
 
         // When
-        sut.handleRepeat()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleRepeat()
 
         // Then
         XCTAssertEqual(sut.playbackRepeat, "off")
@@ -252,8 +246,7 @@ final class AppStateTests: XCTestCase {
         mockSpotify.setRepeatError = SpotifyError.apiError("Failed")
 
         // When
-        sut.handleRepeat()
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleRepeat()
 
         // Then
         XCTAssertEqual(sut.playbackRepeat, "off")
@@ -267,8 +260,7 @@ final class AppStateTests: XCTestCase {
         sut.playbackVolume = 50
 
         // When
-        sut.handleVolumeChange(150)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleVolumeChange(150)
 
         // Then
         XCTAssertEqual(sut.playbackVolume, 100)
@@ -280,8 +272,7 @@ final class AppStateTests: XCTestCase {
         sut.playbackVolume = 50
 
         // When
-        sut.handleVolumeChange(-50)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleVolumeChange(-50)
 
         // Then
         XCTAssertEqual(sut.playbackVolume, 0)
@@ -293,8 +284,7 @@ final class AppStateTests: XCTestCase {
         sut.playbackVolume = 50
 
         // When
-        sut.handleVolumeChange(75)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleVolumeChange(75)
 
         // Then
         XCTAssertEqual(sut.playbackVolume, 75)
@@ -307,8 +297,7 @@ final class AppStateTests: XCTestCase {
         mockSpotify.setVolumeError = SpotifyError.apiError("Volume failed")
 
         // When
-        sut.handleVolumeChange(80)
-        await Task.sleep(100_000_000) // 100ms
+        await sut.handleVolumeChange(80)
 
         // Then
         XCTAssertEqual(sut.playbackVolume, 80) // Volume update happens before API call

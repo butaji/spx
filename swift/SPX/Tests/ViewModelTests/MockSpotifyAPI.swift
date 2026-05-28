@@ -14,6 +14,7 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
     var mockDevices: [SpotifyDevice] = []
     var mockLocalDevices: [LocalDevice] = []
     var likedTracks: Set<String> = []
+    var mockSearchResults: SpotifySearchResults?
 
     // MARK: - Error Configuration
 
@@ -35,6 +36,7 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
     var checkTrackError: Error?
     var getDevicesError: Error?
     var transferPlaybackError: Error?
+    var searchError: Error?
 
     // MARK: - Call Tracking
 
@@ -57,6 +59,7 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
     private(set) var removeTrackCallId: String?
     private(set) var checkTrackCallCount = 0
     private(set) var checkTrackCallId: String?
+    private(set) var searchCallCount = 0
 
     func resetCallCounts() {
         authorizeCallCount = 0
@@ -78,6 +81,7 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
         removeTrackCallId = nil
         checkTrackCallCount = 0
         checkTrackCallId = nil
+        searchCallCount = 0
     }
 
     // MARK: - SpotifyServiceProtocol
@@ -224,11 +228,22 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
             throw error
         }
     }
+
+    func search(query: String, types: [String], limit: Int) async throws -> SpotifySearchResults {
+        searchCallCount += 1
+        if let error = searchError {
+            throw error
+        }
+        guard let results = mockSearchResults else {
+            throw SpotifyError.noContent
+        }
+        return results
+    }
 }
 
 // MARK: - Mock Token Storage
 
-final class MockTokenStorage: TokenStorage {
+final class MockTokenStorage: TokenStorage, @unchecked Sendable {
     private var storage: [String: String] = [:]
 
     override func save(key: String, string: String) {

@@ -1,5 +1,20 @@
 import Foundation
 
+struct Followers: Codable, Hashable, Sendable {
+    let total: Int?
+    let href: String?
+}
+
+struct ExplicitContent: Codable, Hashable, Sendable {
+    let filterEnabled: Bool?
+    let filterLocked: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case filterEnabled = "filter_enabled"
+        case filterLocked = "filter_locked"
+    }
+}
+
 struct SpotifyUserProfile: Codable, Hashable, Sendable {
     let id: String?
     let displayName: String?
@@ -18,24 +33,5 @@ struct SpotifyUserProfile: Codable, Hashable, Sendable {
         case displayName = "display_name"
         case externalUrls = "external_urls"
         case explicitContent = "explicit_content"
-    }
-
-    struct Followers: Codable, Hashable, Sendable {
-        let total: Int?
-        let href: String?
-    }
-
-    struct ExternalUrls: Codable, Hashable, Sendable {
-        let spotify: String?
-    }
-
-    struct ExplicitContent: Codable, Hashable, Sendable {
-        let filterEnabled: Bool?
-        let filterLocked: Bool?
-
-        enum CodingKeys: String, CodingKey {
-            case filterEnabled = "filter_enabled"
-            case filterLocked = "filter_locked"
-        }
     }
 }

@@ -1,194 +1,253 @@
 import SwiftUI
 
 struct PlayerBarView: View {
-    var trackName: String = ""
-    var artistName: String = ""
-    var artworkUrl: String?
-    var isPlaying: Bool = false
-    var isLiked: Bool = false
-    var shuffleActive: Bool = false
-    var repeatMode: String = "off"
-    var progress: Double = 0
-    var currentTimeMs: Int = 0
-    var durationMs: Int = 0
-    var volume: Double = 0.5
+    let trackName: String
+    let artistName: String
+    let artworkUrl: String?
+    let isPlaying: Bool
+    let isLiked: Bool
+    let shuffleActive: Bool
+    let repeatMode: String
+    let progress: Double
+    let currentTimeMs: Int
+    let durationMs: Int
+    let volume: Double
 
-    var onPlayPause: (() -> Void)?
-    var onNext: (() -> Void)?
-    var onPrev: (() -> Void)?
-    var onSeek: ((Double) -> Void)?
-    var onVolumeChange: ((Double) -> Void)?
-    var onToggleShuffle: (() -> Void)?
-    var onToggleRepeat: (() -> Void)?
-    var onToggleLike: (() -> Void)?
+    let onPlayPause: () -> Void
+    let onNext: () -> Void
+    let onPrev: () -> Void
+    let onSeek: (Double) -> Void
+    let onVolumeChange: (Double) -> Void
+    let onToggleShuffle: () -> Void
+    let onToggleRepeat: () -> Void
+    let onToggleLike: () -> Void
+
+    @State private var isHoveringShuffle = false
+    @State private var isHoveringPrev = false
+    @State private var isHoveringNext = false
+    @State private var isHoveringRepeat = false
+    @State private var isHoveringPlayPause = false
+    @State private var isHoveringProgress = false
+    @State private var isHoveringLike = false
+    @State private var isHoveringVolume = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Controls row
-            HStack(spacing: 16) {
-                // Left: Track info
-                HStack(spacing: 10) {
-                    if let urlString = artworkUrl, !urlString.isEmpty {
-                        AsyncImage(url: URL(string: urlString)) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            case .failure, .empty:
-                                placeholderArtwork
-                            @unknown default:
-                                placeholderArtwork
-                            }
-                        }
-                        .frame(width: 42, height: 42)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    } else {
-                        placeholderArtwork
-                            .frame(width: 42, height: 42)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
+        HStack(spacing: 0) {
+            // LEFT ZONE
+            HStack(spacing: 12) {
+                // Mini album art
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(hex: "181818"))
+                    .frame(width: 56, height: 56)
+                    .overlay(
+                        Image(systemName: "music.note")
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(hex: "6A6A6A"))
+                    )
+                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+                    )
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(trackName.isEmpty ? "Not Playing" : trackName)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color(hex: "#f5f5f5"))
-                            .lineLimit(1)
-                            .frame(maxWidth: 160, alignment: .leading)
-
-                        Text(artistName.isEmpty ? "Unknown Artist" : artistName)
-                            .font(.system(size: 11, weight: .regular))
-                            .foregroundColor(Color(hex: "#a0a0a0"))
-                            .lineLimit(1)
-                    }
-
-                    Button(action: { onToggleLike?() }) {
-                        Image(systemName: isLiked ? "heart.fill" : "heart")
-                            .font(.system(size: 15))
-                            .foregroundColor(isLiked ? Color(hex: "#1DB954") : Color(hex: "#a0a0a0"))
-                    }
-                    .buttonStyle(.plain)
+                // Track info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(trackName)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white)
+                    Text(artistName)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "A7A7A7"))
                 }
-                .frame(width: 220, alignment: .leading)
 
-                // Center: Controls
-                HStack(spacing: 12) {
-                    Button(action: { onToggleShuffle?() }) {
+                // Heart
+                Button(action: onToggleLike) {
+                    Image(systemName: isLiked ? "heart.fill" : "heart")
+                        .font(.system(size: 16, weight: .regular))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(isLiked ? .red : Color(hex: "A7A7A7"))
+                }
+                .buttonStyle(.plain)
+                .scaleEffect(isHoveringLike ? 1.2 : 1.0)
+                .brightness(isHoveringLike ? 0.2 : 0)
+                .onHover { isHoveringLike = $0 }
+                .animation(.easeOut(duration: 0.15), value: isHoveringLike)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // CENTER ZONE
+            VStack(spacing: 4) {
+                HStack(spacing: 24) {
+                    // Shuffle
+                    Button(action: onToggleShuffle) {
                         Image(systemName: "shuffle")
                             .font(.system(size: 16))
-                            .foregroundColor(shuffleActive ? Color(hex: "#1DB954") : Color(hex: "#f5f5f5"))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(shuffleActive ? .spxAccent : .spxTextSecondary)
                     }
                     .buttonStyle(.plain)
+                    .scaleEffect(isHoveringShuffle ? 1.2 : 1.0)
+                    .brightness(isHoveringShuffle ? 0.3 : 0)
+                    .onHover { isHoveringShuffle = $0 }
+                    .animation(.easeOut(duration: 0.15), value: isHoveringShuffle)
 
-                    Button(action: { onPrev?() }) {
-                        Image(systemName: "backward.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "#f5f5f5"))
+                    // Previous
+                    Button(action: onPrev) {
+                        Image(systemName: "backward.end.fill")
+                            .font(.system(size: 20))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(.spxTextSecondary)
                     }
                     .buttonStyle(.plain)
+                    .scaleEffect(isHoveringPrev ? 1.2 : 1.0)
+                    .brightness(isHoveringPrev ? 0.3 : 0)
+                    .onHover { isHoveringPrev = $0 }
+                    .animation(.easeOut(duration: 0.15), value: isHoveringPrev)
 
-                    Button(action: { onPlayPause?() }) {
+                    // Play/Pause
+                    Button(action: onPlayPause) {
                         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(Color(hex: "#f5f5f5"))
-                            .frame(width: 32, height: 32)
-                            .background(Color(hex: "#f5f5f5").opacity(0.15))
-                            .clipShape(Circle())
+                            .font(.system(size: 28))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(.spxTextPrimary)
+                            .contentTransition(.symbolEffect(.automatic))
                     }
                     .buttonStyle(.plain)
+                    .scaleEffect(isHoveringPlayPause ? 1.15 : 1.0)
+                    .brightness(isHoveringPlayPause ? 0.2 : 0)
+                    .onHover { isHoveringPlayPause = $0 }
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHoveringPlayPause)
 
-                    Button(action: { onNext?() }) {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(Color(hex: "#f5f5f5"))
+                    // Next
+                    Button(action: onNext) {
+                        Image(systemName: "forward.end.fill")
+                            .font(.system(size: 20))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(.spxTextSecondary)
                     }
                     .buttonStyle(.plain)
+                    .scaleEffect(isHoveringNext ? 1.2 : 1.0)
+                    .brightness(isHoveringNext ? 0.3 : 0)
+                    .onHover { isHoveringNext = $0 }
+                    .animation(.easeOut(duration: 0.15), value: isHoveringNext)
 
-                    Button(action: { onToggleRepeat?() }) {
-                        Image(systemName: repeatMode == "one" ? "repeat.1" : "repeat")
+                    // Repeat
+                    Button(action: onToggleRepeat) {
+                        Image(systemName: repeatMode == "track" ? "repeat.1" : "repeat")
                             .font(.system(size: 16))
-                            .foregroundColor(repeatMode != "off" ? Color(hex: "#1DB954") : Color(hex: "#f5f5f5"))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(repeatMode != "off" ? .spxAccent : .spxTextSecondary)
                     }
                     .buttonStyle(.plain)
+                    .scaleEffect(isHoveringRepeat ? 1.2 : 1.0)
+                    .brightness(isHoveringRepeat ? 0.3 : 0)
+                    .onHover { isHoveringRepeat = $0 }
+                    .animation(.easeOut(duration: 0.15), value: isHoveringRepeat)
                 }
-                .frame(maxWidth: .infinity)
 
-                // Right: Volume
                 HStack(spacing: 8) {
-                    Image(systemName: "laptopcomputer")
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(hex: "#a0a0a0"))
+                    Text(formatTime(currentTimeMs))
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.spxTextTertiary)
 
-                    Image(systemName: volumeIcon)
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "#a0a0a0"))
-
-                    Slider(value: Binding(get: { volume }, set: { onVolumeChange?($0) }), in: 0...1)
-                        .tint(Color(hex: "#f5f5f5"))
-                        .frame(width: 80)
-                }
-                .frame(width: 200, alignment: .trailing)
-            }
-            .padding(.horizontal, 18)
-            .frame(height: 52)
-
-            // Progress bar spanning below everything
-            HStack(spacing: 8) {
-                Text(formatTime(currentTimeMs))
-                    .font(.system(size: 10, design: .monospaced).monospacedDigit())
-                    .foregroundColor(Color(hex: "#a0a0a0"))
-                    .frame(width: 36, alignment: .trailing)
-
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Rectangle()
-                            .fill(Color(hex: "#333333"))
-                            .frame(height: 3)
-
-                        Rectangle()
-                            .fill(Color(hex: "#f5f5f5"))
-                            .frame(width: geometry.size.width * progress, height: 3)
+                    GeometryReader { g in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(.separator.opacity(0.5)).frame(height: 4)
+                            Capsule().fill(.white).frame(
+                                width: g.size.width * progress,
+                                height: 4
+                            )
+                            Circle()
+                                .fill(.white)
+                                .shadow(color: .black.opacity(0.3), radius: 4)
+                                .frame(width: isHoveringProgress ? 12 : 0, height: isHoveringProgress ? 12 : 0)
+                                .position(
+                                    x: g.size.width * progress,
+                                    y: 2
+                                )
+                        }
+                        .contentShape(Rectangle())
+                        .onHover { isHoveringProgress = $0 }
+                        .animation(.easeOut(duration: 0.2), value: isHoveringProgress)
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    let newProgress = min(max(0, value.location.x / g.size.width), 1)
+                                    onSeek(newProgress)
+                                }
+                        )
                     }
-                    .cornerRadius(1.5)
+                    .frame(height: 12)
+
+                    Text(formatTime(durationMs))
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.spxTextTertiary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            // RIGHT ZONE
+            HStack(spacing: 16) {
+                Button(action: {}) {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 16))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(.spxTextSecondary)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: {}) {
+                    Image(systemName: "speaker.wave.2")
+                        .font(.system(size: 16))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(.spxTextSecondary)
+                }
+                .buttonStyle(.plain)
+
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.separator.opacity(0.5)).frame(height: 4)
+                        Capsule().fill(.white).frame(
+                            width: g.size.width * volume,
+                            height: 4
+                        )
+                        Circle()
+                            .fill(.white)
+                            .shadow(color: .black.opacity(0.3), radius: 4)
+                            .frame(width: isHoveringVolume ? 12 : 0, height: isHoveringVolume ? 12 : 0)
+                            .position(
+                                x: g.size.width * volume,
+                                y: 2
+                            )
+                    }
+                    .contentShape(Rectangle())
+                    .onHover { isHoveringVolume = $0 }
+                    .animation(.easeOut(duration: 0.2), value: isHoveringVolume)
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in
-                                let newProgress = min(max(value.location.x / geometry.size.width, 0), 1)
-                                onSeek?(newProgress)
+                                let newVolume = min(max(0, value.location.x / g.size.width), 1)
+                                onVolumeChange(newVolume)
                             }
                     )
                 }
-                .frame(height: 3)
-
-                Text(formatTime(durationMs))
-                    .font(.system(size: 10, design: .monospaced).monospacedDigit())
-                    .foregroundColor(Color(hex: "#a0a0a0"))
-                    .frame(width: 36, alignment: .leading)
+                .frame(width: 100, height: 12)
             }
-            .padding(.horizontal, 18)
-            .frame(height: 16)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(height: 68)
-        .background(Color(hex: "#111111"))
+        .frame(height: 80)
+        .padding(.horizontal, 16)
+        .background(.thinMaterial)
+        .overlay(
+            Rectangle()
+                .frame(height: 1)
+                .foregroundStyle(.separator),
+            alignment: .top
+        )
     }
 
-    private var placeholderArtwork: some View {
-        RoundedRectangle(cornerRadius: 4)
-            .fill(Color(hex: "#1a1a1a"))
-            .overlay(
-                Image(systemName: "music.note")
-                    .font(.system(size: 16))
-                    .foregroundColor(Color(hex: "#666666"))
-            )
-    }
-
-    private var volumeIcon: String {
-        if volume == 0 { return "speaker.slash.fill" }
-        if volume < 0.33 { return "speaker.fill" }
-        if volume < 0.66 { return "speaker.wave.1.fill" }
-        return "speaker.wave.2.fill"
-    }
-
-    private func formatTime(_ ms: Int) -> String {
-        let totalSeconds = ms / 1000
+    private func formatTime(_ millis: Int) -> String {
+        let totalSeconds = millis / 1000
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)

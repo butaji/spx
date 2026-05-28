@@ -5,10 +5,10 @@ import Network
 
 actor LocalCallbackServer {
     private let port: UInt16
-    private let completion: (String, String) -> Void
+    private let completion: @Sendable (String, String) -> Void
     private var listener: NWListener?
 
-    init(port: UInt16, completion: @escaping (String, String) -> Void) {
+    init(port: UInt16, completion: @escaping @Sendable (String, String) -> Void) {
         self.port = port
         self.completion = completion
     }
@@ -26,9 +26,9 @@ actor LocalCallbackServer {
 
         listener?.stateUpdateHandler = { state in
             if case .ready = state {
-                print("[OAuth] Callback server ready on port \(self.port)")
+                Log.info("[OAuth] Callback server ready on port \(self.port)", category: Log.auth)
             } else if case .failed(let error) = state {
-                print("[OAuth] Callback server failed: \(error)")
+                Log.error("[OAuth] Callback server failed: \(error)", category: Log.auth)
             }
         }
 
@@ -44,10 +44,13 @@ actor LocalCallbackServer {
         listener = nil
     }
 
-    private nonisolated func handleConnection(_ connection: NWConnection) {
+    nonisolated private func handleConnection(_ connection: NWConnection) {
         connection.start(queue: .global())
 
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
+        connection.receive(
+            minimumIncompleteLength: 1,
+            maximumLength: Constants.Network.receiveBufferSize
+        ) { [weak self] data, _, _, _ in
             guard let self = self else { return }
 
             let parsed = self.parseCallbackData(data)
@@ -58,7 +61,7 @@ actor LocalCallbackServer {
         }
     }
 
-    private nonisolated func parseCallbackData(_ data: Data?) -> (code: String?, state: String?) {
+    nonisolated private func parseCallbackData(_ data: Data?) -> (code: String?, state: String?) {
         var code: String?
         var state: String?
 
@@ -67,23 +70,21 @@ actor LocalCallbackServer {
             return (nil, nil)
         }
 
-        for line in request.components(separatedBy: "\r\n") {
-            if line.starts(with: "GET /callback?") {
-                let queryString = line.dropFirst("GET /callback?".count)
-                    .trimmingCharacters(in: .whitespaces)
-                    .components(separatedBy: " ").first ?? ""
+        for line in request.components(separatedBy: "\r\n") where line.starts(with: "GET /callback?") {
+            let queryString = line.dropFirst("GET /callback?".count)
+                .trimmingCharacters(in: .whitespaces)
+                .components(separatedBy: " ").first ?? ""
 
-                let params = parseQueryString(queryString)
-                code = params["code"]
-                state = params["state"]
-                break
-            }
+            let params = parseQueryString(queryString)
+            code = params["code"]
+            state = params["state"]
+            break
         }
 
         return (code, state)
     }
 
-    private nonisolated func parseQueryString(_ queryString: String) -> [String: String] {
+    nonisolated private func parseQueryString(_ queryString: String) -> [String: String] {
         var params: [String: String] = [:]
 
         for param in queryString.components(separatedBy: "&") {
@@ -99,7 +100,7 @@ actor LocalCallbackServer {
         return params
     }
 
-    private nonisolated func sendResponse(connection: NWConnection, code: String?) {
+    nonisolated private func sendResponse(connection: NWConnection, code: String?) {
         let body: String
         if code != nil {
             body = """

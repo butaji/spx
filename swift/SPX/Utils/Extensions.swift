@@ -3,15 +3,15 @@ import SwiftUI
 // MARK: - Time Formatting
 
 extension String {
-    static func formatDuration(ms: Int) -> String {
-        let totalSeconds = ms / 1000
+    static func formatDuration(millis: Int) -> String {
+        let totalSeconds = millis / 1000
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
 
-    static func formatDurationLong(ms: Int) -> String {
-        let totalSeconds = ms / 1000
+    static func formatDurationLong(millis: Int) -> String {
+        let totalSeconds = millis / 1000
         let hours = totalSeconds / 3600
         let minutes = (totalSeconds % 3600) / 60
         let seconds = totalSeconds % 60
@@ -27,7 +27,7 @@ extension String {
 struct CardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(Color.spxSurface)
+            .background(Color.spxElevated)
             .cornerRadius(8)
     }
 }
@@ -37,7 +37,7 @@ struct HoverStyle: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(isHovered ? Color.spxBGHover : Color.clear)
+            .background(isHovered ? Color.spxOverlay : Color.clear)
             .onHover { hovering in
                 isHovered = hovering
             }
@@ -49,7 +49,7 @@ struct EdgeModifier: ViewModifier {
         content
             .overlay(
                 Rectangle()
-                    .fill(Color.spxEdge)
+                    .fill(Color.spxBorder)
             )
     }
 }

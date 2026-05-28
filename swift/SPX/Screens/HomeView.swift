@@ -5,316 +5,341 @@ struct HomeView: View {
     let isPlaying: Bool
     let liked: Bool
     let artistDetail: SpotifyArtist?
-    let artistTopTracks: [SpotifyTrack]
     let tags: [String]
     let playlists: [PlaylistItem]
     let userName: String
     let userImage: String?
+    let artistListenCount: Int
+    let trackListenCount: Int
     let onToggleLike: () -> Void
-    let onPlayTrack: (SpotifyTrack) -> Void
-    let onNavigate: (AppView) -> Void
 
-    private let accent = Color(hex: "#1DB954")
-    private let accentSubtle = Color(hex: "1DB954").opacity(0.1)
-    private let fgSecondary = Color(hex: "#a0a0a0")
-    private let fgMuted = Color(hex: "#666666")
-    private let surface = Color(hex: "#1a1a1a")
-    private let edge = Color(hex: "#333333")
-    private let bgElevated = Color(hex: "#111111")
+    // MARK: - Hover States
+    @State private var isHoveringHeart = false
+    @State private var isHoveringDownload = false
+    @State private var isHoveringShare = false
+    @State private var isHoveringProgress = false
+    @State private var isHoveringArtist = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // Hero Section - always visible
+            VStack(alignment: .leading, spacing: 0) {
                 heroSection
-
-                // Stats Section - always visible with placeholder if no track
                 statsSection
-
-                // Tags Section
-                if !tags.isEmpty {
-                    tagsSection
-                }
-
-                // Artist Section
-                if let artist = artistDetail {
-                    artistSection(artist: artist)
-                }
-
-                // Playlists Section - always visible
+                tagsSection
+                artistSection(artist: artistDetail)
                 playlistsSection
             }
-            .padding(EdgeInsets(top: 16, leading: 24, bottom: 28, trailing: 28))
         }
-        .background(Color(hex: "#0a0a0a"))
+        .scrollIndicators(.hidden)
+        .background(Color.spxBase)
     }
 
+    // MARK: - Hero Section
     private var heroSection: some View {
-        HStack(spacing: 32) {
-            // Artwork - placeholder if no track
+        HStack(alignment: .top, spacing: 24) {
+            // Album art with elevation
             Group {
                 if let urlString = track?.imageUrl, let url = URL(string: urlString) {
                     AsyncImage(url: url) { image in
                         image.resizable().aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        placeholderArtwork
+                        artPlaceholder
                     }
                 } else {
-                    placeholderArtwork
+                    artPlaceholder
                 }
             }
-            .frame(width: 160, height: 160)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(width: 280, height: 280)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: .black.opacity(0.2), radius: 32, x: 0, y: 16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            )
 
-            // Info
+            // Metadata column
             VStack(alignment: .leading, spacing: 6) {
                 Text(track?.name ?? "Nothing playing")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(Color(hex: "#f5f5f5"))
+                    .font(.system(size: 32, weight: .bold, design: .default))
                     .tracking(-0.02)
-                    .lineLimit(2)
+                    .foregroundColor(.spxTextPrimary)
 
                 Text(track?.artist ?? "Unknown Artist")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(fgSecondary)
+                    .font(.system(size: 14))
+                    .foregroundColor(.spxTextSecondary)
 
                 if let album = track?.album {
                     Text(album)
-                        .font(.system(size: 14))
-                        .foregroundColor(fgMuted)
+                        .font(.system(size: 12))
+                        .foregroundColor(.spxTextTertiary)
                 }
 
-                Spacer()
+                // Progress bar
+                HStack(spacing: 8) {
+                    Text(formatTime(track?.progressMs ?? 0))
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.spxTextTertiary)
 
-                // Action buttons
-                HStack(spacing: 12) {
+                    GeometryReader { g in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.spxBorder).frame(height: 4)
+                            Capsule().fill(Color.spxAccent).frame(
+                                width: g.size.width * progressValue,
+                                height: 4
+                            )
+                            // Thumb handle
+                            Circle()
+                                .fill(.white)
+                                .frame(width: isHoveringProgress ? 12 : 0, height: isHoveringProgress ? 12 : 0)
+                                .offset(x: g.size.width * progressValue - 6)
+                                .animation(.easeOut(duration: 0.15), value: isHoveringProgress)
+                        }
+                    }
+                    .frame(height: 4)
+                    .onHover { isHoveringProgress = $0 }
+
+                    Text(formatTime(track?.durationMs ?? 0))
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundColor(.spxTextTertiary)
+                }
+                .frame(width: 320)
+                .padding(.top, 4)
+
+                // Action buttons with hover animations
+            HStack(alignment: .top, spacing: 16) {
                     Button(action: onToggleLike) {
                         Image(systemName: liked ? "heart.fill" : "heart")
-                            .font(.system(size: 20))
-                            .foregroundColor(liked ? accent : fgSecondary)
-                            .frame(width: 40, height: 40)
-                            .background(surface)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(edge, lineWidth: 1)
-                            )
+                            .font(.system(size: 20, weight: .regular))
+                            .scaleEffect(isHoveringHeart ? 1.15 : 1.0)
+                            .brightness(isHoveringHeart ? 0.2 : 0)
                     }
                     .buttonStyle(.plain)
+                    .onHover { isHoveringHeart = $0 }
+                    .animation(.easeOut(duration: 0.15), value: isHoveringHeart)
+
+                    Button(action: {}) {
+                        Image(systemName: "arrow.down.circle")
+                            .font(.system(size: 20, weight: .regular))
+                            .scaleEffect(isHoveringDownload ? 1.15 : 1.0)
+                            .brightness(isHoveringDownload ? 0.2 : 0)
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { isHoveringDownload = $0 }
+                    .animation(.easeOut(duration: 0.15), value: isHoveringDownload)
 
                     Button(action: {}) {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 20))
-                            .foregroundColor(fgSecondary)
-                            .frame(width: 40, height: 40)
-                            .background(surface)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(edge, lineWidth: 1)
-                            )
+                            .font(.system(size: 20, weight: .regular))
+                            .scaleEffect(isHoveringShare ? 1.15 : 1.0)
+                            .brightness(isHoveringShare ? 0.2 : 0)
                     }
                     .buttonStyle(.plain)
+                    .onHover { isHoveringShare = $0 }
+                    .animation(.easeOut(duration: 0.15), value: isHoveringShare)
+                }
+                .foregroundColor(.spxTextSecondary)
+                .padding(.top, 8)
+            }
+            .padding(.top, 8)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 24)
+    }
 
-                    Button(action: {}) {
-                        Image(systemName: "link")
-                            .font(.system(size: 20))
-                            .foregroundColor(fgSecondary)
-                            .frame(width: 40, height: 40)
-                            .background(surface)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(edge, lineWidth: 1)
-                            )
+    private var artPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 20)
+            .fill(Color.spxOverlay)
+            .overlay(
+                Image(systemName: "music.note")
+                    .font(.system(size: 48))
+                    .foregroundColor(.spxTextTertiary)
+            )
+    }
+
+    private var progressValue: Double {
+        guard let track = track, track.durationMs > 0 else { return 0 }
+        return Double(track.progressMs) / Double(track.durationMs)
+    }
+
+    private func formatTime(_ millis: Int) -> String {
+        let totalSeconds = millis / 1000
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    // MARK: - Stats Section
+    private var statsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Triangle()
+                .fill(Color.spxOverlay)
+                .frame(width: 12, height: 6)
+                .padding(.leading, 24)
+
+            Group {
+                if let track = track, !primaryArtist.isEmpty, !track.name.isEmpty {
+                    (Text("You've listened to ")
+                        .foregroundColor(Color(hex: "A7A7A7"))
+                    + Text(primaryArtist).bold()
+                    + Text(" \(artistListenCount) times and ")
+                        .foregroundColor(Color(hex: "A7A7A7"))
+                    + Text(track.name).bold()
+                    + Text(" \(trackListenCount) times.")
+                        .foregroundColor(Color(hex: "A7A7A7")))
+                    .font(.system(size: 14))
+                } else {
+                    Text("You've listened to 0 times and 0 times.")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "A7A7A7"))
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+            .background(.thinMaterial)
+            .cornerRadius(16)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+    }
+
+    private var primaryArtist: String {
+        guard let artist = track?.artist else { return "0" }
+        return artist.components(separatedBy: ",").first ?? artist
+    }
+
+    // MARK: - Tags Section
+    private var tagsSection: some View {
+        HStack(spacing: 6) {
+            Text("Popular tags:")
+                .foregroundColor(.spxTextTertiary)
+                .font(.system(size: 12))
+
+            if tags.isEmpty {
+                Text("electro swing")
+                    .foregroundColor(.spxAccent)
+                    .font(.system(size: 12))
+                Text("·")
+                    .foregroundColor(.spxTextTertiary)
+                    .font(.system(size: 12))
+                Text("trip hop")
+                    .foregroundColor(.spxAccent)
+                    .font(.system(size: 12))
+            } else {
+                ForEach(Array(tags.enumerated()), id: \.element) { index, tag in
+                    if index > 0 {
+                        Text("·")
+                            .foregroundColor(.spxTextTertiary)
+                            .font(.system(size: 12))
                     }
-                    .buttonStyle(.plain)
+                    Text(tag)
+                        .foregroundColor(.spxAccent)
+                        .font(.system(size: 12))
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+    }
+
+    // MARK: - Artist Section
+    private func artistSection(artist: SpotifyArtist?) -> some View {
+        let name = artist?.name ?? "Mr. Scruff"
+        let followers = formatFollowers(artist?.followers?.total ?? 175_608)
+        return VStack(alignment: .leading, spacing: 16) {
+            Text(name)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+                .opacity(isHoveringArtist ? 1.0 : 0.9)
+
+            HStack(alignment: .top, spacing: 16) {
+                Group {
+                    if let urlString = artist?.images?.first?.url, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            artistPlaceholder
+                        }
+                    } else {
+                        artistPlaceholder
+                    }
+                }
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: 8)
+                .scaleEffect(isHoveringArtist ? 1.05 : 1.0)
+                .animation(.easeOut(duration: 0.2), value: isHoveringArtist)
+
+                (Text("\(name) is a musical artist on Spotify. They have \(followers) followers. ")
+                    .foregroundColor(Color(hex: "A7A7A7"))
+                + Text("View more on SPX")
+                    .foregroundColor(Color(hex: "1DB954")))
+                .font(.system(size: 14))
+            }
+            .onHover { isHoveringArtist = $0 }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 32)
+    }
+
+    private var artistPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(Color.spxOverlay)
+            .overlay(
+                Image(systemName: "person.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(.spxTextTertiary)
+            )
+    }
+
+    // MARK: - Playlists Section
+    private var playlistsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Your Playlists")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.spxTextPrimary)
+
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 160, maximum: 160), spacing: 16)],
+                alignment: .leading,
+                spacing: 16
+            ) {
+                if playlists.isEmpty {
+                    ForEach(0..<4) { _ in
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.spxOverlay)
+                            .frame(width: 160, height: 160)
+                    }
+                } else {
+                    ForEach(playlists) { playlist in
+                        PlaylistCardView(name: playlist.name, imageUrl: playlist.image)
+                            .frame(width: 160, height: 160)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private var statsSection: some View {
-        Group {
-            if let track = track {
-                Text("You've listened to **\(track.artist)** 422 times and **\(track.name)** 7 times.")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(hex: "#f5f5f5"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .background(bgElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else {
-                Text("Start playing music to see your stats here.")
-                    .font(.system(size: 14))
-                    .foregroundColor(fgMuted)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .background(bgElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-        }
-    }
-
-    private var tagsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Tags")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(Color(hex: "#f5f5f5"))
-
-            HStack(spacing: 6) {
-                ForEach(tags, id: \.self) { tag in
-                    Text(tag)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 3)
-                        .background(accentSubtle)
-                        .clipShape(Capsule())
-                }
-            }
-        }
-    }
-
-    private func artistSection(artist: SpotifyArtist) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(artist.name)
-                .font(.system(size: 22, weight: .bold))
-                .foregroundColor(Color(hex: "#f5f5f5"))
-
-            HStack(spacing: 16) {
-                Group {
-                    if let urlString = artist.images?.first?.url, let url = URL(string: urlString) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Color(hex: "#1a1a1a")
-                        }
-                    } else {
-                        Color(hex: "#1a1a1a")
-                    }
-                }
-                .frame(width: 120, height: 120)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("\(artist.name) is a musical artist on Spotify. " +
-                        "They have \(formatFollowers(artist.followers?.total ?? 0)) followers.")
-                        .font(.system(size: 14))
-                        .foregroundColor(fgSecondary)
-                        .lineLimit(3)
-
-                    Text("View more on SPX")
-                        .font(.system(size: 14))
-                        .foregroundColor(accent)
-                }
-
-                Spacer()
-            }
-        }
-    }
-
-    private var playlistsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Your Playlists")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(Color(hex: "#f5f5f5"))
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    // User avatar
-                    VStack(alignment: .leading, spacing: 8) {
-                        Group {
-                            if let urlString = userImage, let url = URL(string: urlString) {
-                                AsyncImage(url: url) { image in
-                                    image.resizable().aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    Circle()
-                                        .fill(surface)
-                                        .overlay(
-                                            Image(systemName: "person.fill")
-                                                .font(.system(size: 24))
-                                                .foregroundColor(fgMuted)
-                                        )
-                                }
-                            } else {
-                                Circle()
-                                    .fill(surface)
-                                    .overlay(
-                                        Image(systemName: "person.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(fgMuted)
-                                    )
-                            }
-                        }
-                        .frame(width: 60, height: 60)
-                        .clipShape(Circle())
-
-                        Text(userName)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(Color(hex: "#f5f5f5"))
-                            .lineLimit(1)
-                    }
-                    .frame(width: 80)
-
-                    // Playlist items
-                    ForEach(playlists, id: \.id) { item in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Group {
-                                if let urlString = item.image, let url = URL(string: urlString) {
-                                    AsyncImage(url: url) { image in
-                                        image.resizable().aspectRatio(contentMode: .fill)
-                                    } placeholder: {
-                                        RoundedRectangle(cornerRadius: 6)
-                                            .fill(surface)
-                                    }
-                                } else {
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(surface)
-                                }
-                            }
-                            .frame(width: 160, height: 100)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(edge, lineWidth: 1)
-                            )
-
-                            Text(item.name)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color(hex: "#f5f5f5"))
-                                .lineLimit(1)
-                        }
-                        .frame(width: 160)
-                    }
-                }
-            }
-        }
-    }
-
-    private var placeholderArtwork: some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(surface)
-            .overlay(
-                Image(systemName: "music.note")
-                    .font(.system(size: 48))
-                    .foregroundColor(fgMuted)
-            )
+        .padding(.horizontal, 24)
+        .padding(.vertical, 32)
     }
 
     private func formatFollowers(_ count: Int) -> String {
-        if count >= 1000000 {
-            return String(format: "%.1fM", Double(count) / 1000000)
-        } else if count >= 1000 {
-            return String(format: "%.1fK", Double(count) / 1000)
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000)
+        } else if count >= 1_000 {
+            return String(format: "%.1fK", Double(count) / 1_000)
         }
         return "\(count)"
     }
 }
 
-struct PlaylistItem: Identifiable {
-    let id: String
-    let name: String
-    let image: String?
+// MARK: - Triangle Shape
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
 }

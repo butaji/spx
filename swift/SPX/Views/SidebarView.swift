@@ -1,94 +1,113 @@
 import SwiftUI
 
-enum SidebarItem: String, CaseIterable, Identifiable {
-    case nowPlaying = "Now Playing"
-    case search = "Search"
-    case library = "Library"
-    case queue = "Queue"
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .nowPlaying: return "square.grid.2x2"
-        case .search: return "magnifyingglass"
-        case .library: return "music.note"
-        case .queue: return "plus"
+struct SidebarView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private let sidebarItems: [(String, String)] = [
+        ("square.grid.2x2", "Now Playing"),
+        ("magnifyingglass", "Search"),
+        ("music.note", "Library"),
+        ("plus", "Queue")
+    ]
+    
+    private var activeItem: String {
+        switch appState.currentView {
+        case .home: return "Now Playing"
+        case .search: return "Search"
+        case .library: return "Library"
+        case .queue: return "Queue"
+        default: return "Now Playing"
         }
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Align first item with album art top
+            Spacer()
+                .frame(height: 24)
+            
+            ForEach(sidebarItems, id: \.1) { icon, label in
+                SidebarItem(
+                    icon: icon,
+                    label: label,
+                    isActive: activeItem == label
+                ) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        switch label {
+                        case "Now Playing": appState.currentView = .home
+                        case "Search": appState.currentView = .search
+                        case "Library": appState.currentView = .library(tab: nil)
+                        case "Queue": appState.currentView = .queue
+                        default: break
+                        }
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            Divider()
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+            
+            // User avatar
+            VStack(spacing: 4) {
+                Circle()
+                    .fill(.secondary.opacity(0.2))
+                    .frame(width: 32, height: 32)
+                    .overlay(
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.secondary)
+                    )
+                Text("Vitaly Baum")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.bottom, 16)
+        }
+        .frame(width: 108)
+        .background(.ultraThinMaterial)
     }
 }
 
-struct SidebarView: View {
-    @Binding var selectedItem: SidebarItem
-    @State private var hoveredItem: SidebarItem?
-
-    private let fgSecondary = Color(hex: "#a0a0a0")
-    private let fg = Color(hex: "#f5f5f5")
-    private let bgHover = Color(hex: "#1a1a1a")
-    private let accent = Color(hex: "#1DB954")
-    private let accentDim = Color(hex: "#1DB954").opacity(0.2)
-    private let fgFaint = Color(hex: "#555555")
-
+struct SidebarItem: View {
+    let icon: String
+    let label: String
+    let isActive: Bool
+    let action: () -> Void
+    
+    @State private var isHovering = false
+    
     var body: some View {
-        VStack(spacing: 2) {
-            ForEach(SidebarItem.allCases) { item in
-                navButton(for: item)
-            }
-
-            Spacer()
-
-            footerView
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 16)
-        .frame(width: 110)
-        .background(Color(hex: "#111111"))
-    }
-
-    @ViewBuilder
-    private func navButton(for item: SidebarItem) -> some View {
-        let isActive = selectedItem == item
-        let isHovered = hoveredItem == item
-
-        Button(action: { selectedItem = item }) {
+        Button(action: action) {
             VStack(spacing: 4) {
-                Image(systemName: item.icon)
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(isActive ? accent : (isHovered ? fg : fgSecondary))
-
-                Text(item.rawValue)
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .regular))
+                    .symbolRenderingMode(.hierarchical)
+                Text(label)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(isActive ? accent : (isHovered ? fg : fgSecondary))
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
+            .frame(width: 72, height: 64)
+            .foregroundStyle(isActive ? .green : .secondary)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isActive ? accentDim : (isHovered ? bgHover : Color.clear))
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isActive ? Color.green.opacity(0.15) : Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isActive ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
+                    )
             )
+            .contentShape(Rectangle())
+            .scaleEffect(isHovering && !isActive ? 1.05 : 1.0)
+            .brightness(isHovering && !isActive ? 0.1 : 0)
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
+        .animation(.easeOut(duration: 0.15), value: isHovering)
         .onHover { hovering in
-            hoveredItem = hovering ? item : nil
+            isHovering = hovering
         }
-    }
-
-    private var footerView: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(fgSecondary.opacity(0.3))
-                .frame(width: 32, height: 32)
-                .overlay(
-                    Text("U")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(fg)
-                )
-
-            Text("username")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(fgFaint)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

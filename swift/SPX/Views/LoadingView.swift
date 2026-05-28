@@ -4,15 +4,15 @@ struct LoadingView: View {
     var body: some View {
         VStack(spacing: 16) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: SPXColors.accent))
+                .progressViewStyle(CircularProgressViewStyle(tint: Color.spxAccent))
                 .scaleEffect(1.2)
 
             Text("Restoring session...")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(SPXColors.fgSecondary)
+                .foregroundColor(Color.spxTextSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(SPXColors.bg)
+        .background(Color.spxBase)
     }
 }
 

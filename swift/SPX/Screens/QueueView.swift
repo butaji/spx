@@ -11,17 +11,18 @@ struct QueueView: View {
             // Screen Title
             Text("Up Next")
                 .font(.system(size: 24, weight: .bold))
-                .foregroundColor(SPXColors.fg)
-                .padding(.bottom, SPXSpacing.x6)
+                .foregroundColor(Color.spxTextPrimary)
+                .padding(.top, 24)
+                .padding(.bottom, 24)
 
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: SPXSpacing.x4) {
+                LazyVStack(alignment: .leading, spacing: 16) {
                     // Now Playing Section
                     if let current = currentTrack {
-                        VStack(alignment: .leading, spacing: SPXSpacing.x3) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("Now Playing")
 .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(SPXColors.fgFaint)
+                                .foregroundColor(Color.spxTextTertiary)
                                 .textCase(.uppercase)
                                 .tracking(0.1)
 
@@ -31,19 +32,19 @@ struct QueueView: View {
                                 isCurrentlyPlaying: true,
                                 onTap: {}
                             )
-                            .background(SPXColors.surface.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: SPXRadius.sm))
+                            .background(Color.spxElevated.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
                     }
 
                     // Up Next Section
-                    VStack(alignment: .leading, spacing: SPXSpacing.x3) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("Next Up")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(SPXColors.fgFaint)
+                            .foregroundColor(Color.spxTextTertiary)
                             .textCase(.uppercase)
                             .tracking(0.1)
-                            .padding(.top, currentTrack != nil ? SPXSpacing.x2 : 0)
+                            .padding(.top, currentTrack != nil ? 8 : 0)
 
                         if queue.isEmpty {
                             emptyQueueView
@@ -65,25 +66,26 @@ struct QueueView: View {
                 }
                 .padding(.bottom, 100)
             }
+            .scrollIndicators(.hidden)
         }
-        .padding(.horizontal, SPXSpacing.x6)
-        .padding(.top, SPXSpacing.x4)
-        .background(SPXColors.bg)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .background(Color.spxBase)
     }
 
     // MARK: - Empty Queue View
     private var emptyQueueView: some View {
-        VStack(spacing: SPXSpacing.x3) {
+        VStack(spacing: 12) {
             Image(systemName: "music.note.list")
                 .font(.system(size: 32))
-                .foregroundColor(SPXColors.fgMuted.opacity(0.5))
+                .foregroundColor(Color.spxTextTertiary.opacity(0.5))
 
             Text("Queue is empty")
                 .font(.system(size: 14))
-                .foregroundColor(SPXColors.fgSecondary)
+                .foregroundColor(Color.spxTextSecondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, SPXSpacing.x8)
+        .padding(.vertical, 40)
     }
 
     // MARK: - Play From Queue
@@ -109,19 +111,19 @@ struct QueueItemView: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: SPXSpacing.x3) {
+        HStack(spacing: 12) {
             // Artwork
             if let imageUrl = track.album?.images?.first?.url, let url = URL(string: imageUrl) {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    RoundedRectangle(cornerRadius: 4).fill(SPXColors.surface)
+                    RoundedRectangle(cornerRadius: 4).fill(Color.spxElevated)
                 }
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             } else {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(SPXColors.surface)
+                    .fill(Color.spxElevated)
                     .frame(width: 40, height: 40)
             }
 
@@ -129,12 +131,12 @@ struct QueueItemView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.name)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(isCurrentlyPlaying ? SPXColors.accent : SPXColors.fg)
+                    .foregroundColor(isCurrentlyPlaying ? Color.spxAccent : Color.spxTextPrimary)
                     .lineLimit(1)
 
-                Text(track.artists?.map { $0.name }.joined(separator: ", ") ?? "")
+                Text(track.artists?.compactMap { $0.name }.joined(separator: ", ") ?? "")
                     .font(.system(size: 12))
-                    .foregroundColor(SPXColors.fgFaint)
+                    .foregroundColor(Color.spxTextTertiary)
                     .lineLimit(1)
             }
 
@@ -144,11 +146,11 @@ struct QueueItemView: View {
             if !isCurrentlyPlaying {
                 Text("\(index)")
                     .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(SPXColors.fgFaint)
+                    .foregroundColor(Color.spxTextTertiary)
             }
         }
-        .padding(.horizontal, SPXSpacing.x3)
-        .padding(.vertical, SPXSpacing.x2)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()

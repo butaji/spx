@@ -77,6 +77,22 @@ public final class CastProtocol {
         let requestId = pendingRequestId
         pendingRequestId += 1
 
+        sendLaunchRequest(connection: connection, requestId: requestId)
+
+        Task {
+            let result = await waitForLaunchResponseAsync(connection: connection, requestId: requestId)
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let transportId):
+                    completion(.success(transportId))
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    private func sendLaunchRequest(connection: CastConnection, requestId: Int) {
         let launchJson = """
         {
             "type": "LAUNCH",
@@ -84,84 +100,75 @@ public final class CastProtocol {
             "requestId": \(requestId)
         }
         """
-
         connection.sendJSON(
             destinationId: "receiver-0",
             namespace: "urn:x-cast:com.google.cast.receiver",
             json: launchJson
         )
-
-        // Wait for RECEIVER_STATUS or LAUNCH_ERROR response
-        Task {
-            do {
-                let transportId = try await self.waitForLaunchResponse(
-                    connection: connection,
-                    requestId: requestId
-                )
-                DispatchQueue.main.async {
-                    completion(.success(transportId))
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
-            }
-        }
     }
 
-    private func waitForLaunchResponse(
+    private func waitForLaunchResponseAsync(
         connection: CastConnection,
         requestId: Int
-    ) async throws -> String {
-        let timeout: TimeInterval = 10.0
+    ) async -> Result<String, Error> {
+        let timeout: TimeInterval = Constants.Timing.castTimeout
         let deadline = Date().addingTimeInterval(timeout)
 
         while Date() < deadline {
-            let message = try await connection.recv(timeout: 5.0)
+            do {
+                let message = try await connection.recv(timeout: 5.0)
 
-            // Only process messages from the receiver namespace
-            guard message.namespace == "urn:x-cast:com.google.cast.receiver",
-                  let jsonString = message.payloadUtf8,
-                  let data = jsonString.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let type = json["type"] as? String else {
-                continue
-            }
-
-            // Check response requestId matches our request
-            guard let responseRequestId = json["requestId"] as? Int,
-                  responseRequestId == requestId else {
-                continue
-            }
-
-            switch type {
-            case "RECEIVER_STATUS":
-                guard let status = json["status"] as? [String: Any],
-                      let applications = status["applications"] as? [[String: Any]] else {
-                    throw ProtocolError.launchFailed("Invalid RECEIVER_STATUS payload")
+                if let result = parseLaunchResponse(message: message, requestId: requestId) {
+                    return result
                 }
-
-                // Find the Spotify app
-                for app in applications {
-                    guard let appId = app["appId"] as? String,
-                          appId == "CC32E753",
-                          let transportId = app["transportId"] as? String else {
-                        continue
-                    }
-                    return transportId
-                }
-                throw ProtocolError.launchFailed("Spotify app not found in RECEIVER_STATUS")
-
-            case "LAUNCH_ERROR":
-                let errorMessage = (json["reason"] as? String) ?? "Unknown launch error"
-                throw ProtocolError.launchFailed(errorMessage)
-
-            default:
+            } catch {
                 continue
             }
         }
 
-        throw ProtocolError.launchFailed("Launch timed out after \(Int(timeout)) seconds")
+        return .failure(ProtocolError.launchFailed("Launch timed out after \(Int(timeout)) seconds"))
+    }
+
+    private func parseLaunchResponse(message: CastMessage, requestId: Int) -> Result<String, Error>? {
+        guard message.namespace == "urn:x-cast:com.google.cast.receiver",
+              let jsonString = message.payloadUtf8,
+              let data = jsonString.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = json["type"] as? String else {
+            return nil
+        }
+
+        guard let responseRequestId = json["requestId"] as? Int,
+              responseRequestId == requestId else {
+            return nil
+        }
+
+        switch type {
+        case "RECEIVER_STATUS":
+            return parseReceiverStatus(json)
+        case "LAUNCH_ERROR":
+            let errorMessage = (json["reason"] as? String) ?? "Unknown launch error"
+            return .failure(ProtocolError.launchFailed(errorMessage))
+        default:
+            return nil
+        }
+    }
+
+    private func parseReceiverStatus(_ json: [String: Any]) -> Result<String, Error> {
+        guard let status = json["status"] as? [String: Any],
+              let applications = status["applications"] as? [[String: Any]] else {
+            return .failure(ProtocolError.launchFailed("Invalid RECEIVER_STATUS payload"))
+        }
+
+        for app in applications {
+            guard let appId = app["appId"] as? String,
+                  appId == "CC32E753",
+                  let transportId = app["transportId"] as? String else {
+                continue
+            }
+            return .success(transportId)
+        }
+        return .failure(ProtocolError.launchFailed("Spotify app not found in RECEIVER_STATUS"))
     }
 
     // MARK: - App Connect
@@ -263,6 +270,17 @@ public final class CastProtocol {
     }
 
     private func handleGetInfoResponse(_ json: [String: Any]) {
+        guard let deviceInfo = extractDeviceInfo(from: json) else {
+            getInfoCompletion?(.failure(ProtocolError.invalidResponse))
+            getInfoCompletion = nil
+            return
+        }
+
+        getInfoCompletion?(.success(deviceInfo))
+        getInfoCompletion = nil
+    }
+
+    private func extractDeviceInfo(from json: [String: Any]) -> DeviceInfo? {
         guard let payload = json["payload"] as? [String: Any],
               let version = payload["version"] as? String,
               let publicKey = payload["publicKey"] as? String,
@@ -275,12 +293,10 @@ public final class CastProtocol {
               let productID = payload["productID"] as? Int,
               let status = payload["status"] as? Int,
               let statusString = payload["statusString"] as? String else {
-            getInfoCompletion?(.failure(ProtocolError.invalidResponse))
-            getInfoCompletion = nil
-            return
+            return nil
         }
 
-        let info = DeviceInfo(
+        return DeviceInfo(
             version: version,
             publicKey: publicKey,
             remoteName: remoteName,
@@ -293,9 +309,6 @@ public final class CastProtocol {
             status: status,
             statusString: statusString
         )
-
-        getInfoCompletion?(.success(info))
-        getInfoCompletion = nil
     }
 
     // MARK: - Convenience Methods

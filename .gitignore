@@ -9,5 +9,19 @@
 .idea/
 .vscode/
 
-# Swift build artifacts
-swift/SPX/.build
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+*.xcuserstate
+*.xcuserdata/
+
+# Swift Package Manager
+.swiftpm/
+**/.build/
+
+# CocoaPods (if ever used)
+Pods/
+
+# Carthage
+Carthage/Build/

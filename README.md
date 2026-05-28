@@ -4,9 +4,7 @@
 
 You're at your desk. It's 2009. Last.fm's desktop scrobbler is running in the background, dutifully logging every track. You know exactly how many times you've played "Archangel" by Burial (it's 478, and you remember the exact day you hit 400).
 
-**SPX** is what happens when you take that soul and build it with **Tauri + Rust** — not Electron. Native performance, real scrobbling, obsessive listening stats. Light on RAM. Heavy on nostalgia.
-
-![Recent Activity](screenshots/recent-activity.png)
+**SPX** is what happens when you take that soul and build it with **Swift + SwiftUI** — native macOS performance, real scrobbling, obsessive listening stats. Light on RAM. Heavy on nostalgia.
 
 ---
 
@@ -14,7 +12,7 @@ You're at your desk. It's 2009. Last.fm's desktop scrobbler is running in the ba
 
 | Problem | Solution |
 |---------|----------|
-| Spotify desktop uses 300MB+ RAM | **Rust + native WebView** = ~50MB |
+| Spotify desktop uses 300MB+ RAM | **Swift + native WebView** = ~50MB |
 | No scrobble counts | Real play counts, listening history |
 | Clunky UI | Dark liquid-glass, keyboard-first |
 | Can't develop offline | Built-in **mock mode** |
@@ -24,65 +22,33 @@ You're at your desk. It's 2009. Last.fm's desktop scrobbler is running in the ba
 ## Features
 
 **Playback:** Full control, Spotify Connect, queue management
-**Library:** Search, browse, home recommendations  
+**Library:** Search, browse, home recommendations
 **Stats:** Scrobble counts, listening history, retro data viz
 **UI:** Liquid-glass dark theme, native macOS titlebar, keyboard shortcuts
 **Dev:** Mock mode, hot reload, zero Spotify account needed
 
 ---
 
+## Requirements
+
+- macOS 14.0+ (Sonoma or later)
+- Swift 5.9+
+
+---
+
 ## Quick Start
 
 ```bash
-npm install
-SPX_MOCK=1 npm run tauri dev    # No Spotify account needed
+cd swift/SPX
+swift build
+SPX_MOCK=1 swift run    # No Spotify account needed
 ```
 
-**Real Spotify:**
+Or from the repo root:
 
-Spotify rejects `localhost` and `127.0.0.1` redirect URIs. Use **ngrok** for HTTPS tunneling:
-
-1. **Install ngrok:**
-   ```bash
-   brew install ngrok
-   ```
-
-2. **Sign up** at [ngrok.com](https://ngrok.com) (free tier)
-
-3. **Add your authtoken:**
-   ```bash
-   ngrok config add-authtoken YOUR_TOKEN
-   ```
-
-4. **Create a Spotify app** at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
-
-5. **Start ngrok tunnel** (separate terminal):
-   ```bash
-   ngrok http 1420
-   ```
-   Copy the HTTPS URL (e.g., `https://abc123.ngrok-free.app`)
-
-6. **Add redirect URI to Spotify app:**
-   - In Spotify Dashboard → Edit Settings → Web API
-   - Add: `https://abc123.ngrok-free.app/callback` (your ngrok URL + `/callback`)
-
-7. **Create your `.env` file:**
-   ```bash
-   echo 'VITE_SPOTIFY_CLIENT_ID="your_client_id"' > .env
-   ```
-
-8. **Start the app:** `npm run tauri dev`
-
-9. **Click "Connect Spotify"** — a browser tab opens
-
-10. **Approve SPX access** in Spotify's authorization page
-
-11. **Spotify redirects you** to your ngrok URL
-    - The callback server built into SPX intercepts this automatically
-
-12. **You're authenticated!** The ngrok URL must stay running while using SPX.
-
-> **Note:** Keep `ngrok http 1420` running in a terminal while using SPX. Free tier ngrok URLs change on restart.
+```bash
+./run.sh --mock
+```
 
 ---
 
@@ -90,22 +56,23 @@ Spotify rejects `localhost` and `127.0.0.1` redirect URIs. Use **ngrok** for HTT
 
 | Layer | Tech |
 |-------|------|
-| Runtime | Tauri v2 (Rust) |
-| Frontend | Preact + TypeScript |
-| API | Spotify Web API + PKCE auth |
+| Runtime | Swift 5.9 |
+| UI | SwiftUI |
+| Audio | AVFoundation, Spotify Web API |
 
 ---
 
 ## Architecture
 
 ```
-SPX/
-├── src/            # Preact frontend (screens, hooks, types)
-├── src-tauri/      # Rust backend (API, auth, mock stubs)
-└── package.json
+swift/SPX/
+├── SPXApp.swift           # App entry point
+├── Views/                 # SwiftUI views
+├── ViewModels/            # ObservableObject view models
+├── Models/               # Data models
+├── Networking/           # Spotify API client
+└── Utilities/            # Helpers, extensions
 ```
-
-Rust handles all API calls. PKCE auth, auto-refreshing tokens. TypeScript everywhere.
 
 ---
 

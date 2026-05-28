@@ -5,14 +5,14 @@ import AppKit
 
 // MARK: - SpotifyAPI
 
-final class SpotifyAPI: @unchecked Sendable, SpotifyServiceProtocol {
+actor SpotifyAPI: SpotifyServiceProtocol {
 
     static let shared = SpotifyAPI()
 
     private let baseURL = "https://api.spotify.com/v1"
     private let accountBaseURL = "https://accounts.spotify.com"
-    private let redirectURI = "http://127.0.0.1:1422/callback"
-    private let localServerPort: UInt16 = 1422
+    private let redirectURI = "http://127.0.0.1:\(Constants.Network.oauthCallbackPort)/callback"
+    private let localServerPort: UInt16 = Constants.Network.oauthCallbackPort
 
     private var accessToken: String?
     private var refreshToken: String?
@@ -20,13 +20,23 @@ final class SpotifyAPI: @unchecked Sendable, SpotifyServiceProtocol {
     private var tokenScope: String?
 
     private var currentTask: Task<Void, Never>?
+    private var tokensLoaded = false
+
+    private func ensureTokensLoaded() async {
+        if !tokensLoaded {
+            if await !isMockMode {
+                loadTokensFromKeychain()
+            }
+            tokensLoaded = true
+        }
+    }
 
     // MARK: - Mock Mode
 
-    private static var mockModeChecked = false
-    private static var mockModeValue = false
+    @MainActor private static var mockModeChecked = false
+    @MainActor private static var mockModeValue = false
 
-    var isMockMode: Bool {
+    @MainActor var isMockMode: Bool {
         if Self.mockModeChecked { return Self.mockModeValue }
         Self.mockModeValue = ProcessInfo.processInfo.environment["SPX_MOCK"] == "1"
         Self.mockModeChecked = true
@@ -57,9 +67,7 @@ final class SpotifyAPI: @unchecked Sendable, SpotifyServiceProtocol {
         static let tokenExpiresAt = "com.spx.spotify.tokenExpiresAt"
     }
 
-    private init() {
-        loadTokensFromKeychain()
-    }
+    private init() {}
 }
 
 // MARK: - Authentication
@@ -94,7 +102,7 @@ extension SpotifyAPI {
     }
 
     private func generateState() -> String {
-        var bytes = [UInt8](repeating: 0, count: 16)
+        var bytes = [UInt8](repeating: 0, count: Constants.OAuth.stateLength)
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
         return Data(bytes).base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
@@ -159,7 +167,10 @@ extension SpotifyAPI {
             throw SpotifyError.missingClientID
         }
 
-        var request = URLRequest(url: URL(string: "\(accountBaseURL)/api/token")!)
+        guard let url = URL(string: "\(accountBaseURL)/api/token") else {
+            throw SpotifyError.invalidURL
+        }
+        var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
@@ -209,7 +220,10 @@ extension SpotifyAPI {
             throw SpotifyError.noRefreshToken
         }
 
-        var request = URLRequest(url: URL(string: "\(accountBaseURL)/api/token")!)
+        guard let url = URL(string: "\(accountBaseURL)/api/token") else {
+            throw SpotifyError.invalidURL
+        }
+        var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
@@ -234,12 +248,17 @@ extension SpotifyAPI {
                    expiresIn: tokenResponse.expiresIn)
     }
 
+    private var isMockModeEnv: Bool {
+        ProcessInfo.processInfo.environment["SPX_MOCK"] == "1"
+    }
+
     private func saveTokens(accessToken: String, refreshToken: String?, expiresIn: Int, scope: String? = nil) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.tokenExpiresAt = Date().addingTimeInterval(TimeInterval(expiresIn))
         self.tokenScope = scope
 
+        guard !isMockModeEnv else { return }
         let storage = TokenStorage.shared
         storage.save(key: KeychainKey.accessToken, string: accessToken)
         if let refreshToken = refreshToken {
@@ -249,6 +268,7 @@ extension SpotifyAPI {
     }
 
     private func loadTokensFromKeychain() {
+        guard !isMockModeEnv else { return }
         let storage = TokenStorage.shared
         accessToken = storage.read(key: KeychainKey.accessToken)
         refreshToken = storage.read(key: KeychainKey.refreshToken)
@@ -263,13 +283,14 @@ extension SpotifyAPI {
         refreshToken = nil
         tokenExpiresAt = nil
 
+        guard !isMockModeEnv else { return }
         let storage = TokenStorage.shared
         storage.delete(key: KeychainKey.accessToken)
         storage.delete(key: KeychainKey.refreshToken)
         storage.delete(key: KeychainKey.tokenExpiresAt)
     }
 
-    var isAuthenticated: Bool { accessToken != nil }
+    // Note: isAuthenticated removed - use performRequest which checks tokens internally
 }
 
 // MARK: - Local Server
@@ -287,7 +308,7 @@ extension SpotifyAPI {
                         try await server.start()
                     } catch {
                         // Server error logged but not propagated
-                        print("Local server error: \(error)")
+                        Log.error("Local server error: \(error)", category: Log.auth)
                     }
                 }
             }
@@ -308,8 +329,10 @@ extension SpotifyAPI {
         _ endpoint: String,
         method: String = "GET",
         body: Data? = nil,
-        queryItems: [URLQueryItem]? = nil
+        queryItems: [URLQueryItem]? = nil,
+        retryCount: Int = 0
     ) async throws -> T {
+        await ensureTokensLoaded()
         try await refreshAccessTokenIfNeeded()
 
         guard let token = accessToken else {
@@ -327,13 +350,17 @@ extension SpotifyAPI {
             throw SpotifyError.invalidResponse
         }
 
-        return try await handleResponse(
-            httpResponse: httpResponse,
-            data: data,
+        let context = RequestContext(
             endpoint: endpoint,
             method: method,
             body: body,
-            queryItems: queryItems
+            queryItems: queryItems,
+            retryCount: retryCount
+        )
+        return try await handleResponse(
+            httpResponse: httpResponse,
+            data: data,
+            context: context
         )
     }
 
@@ -354,20 +381,34 @@ extension SpotifyAPI {
         return request
     }
 
+    private struct RequestContext {
+        let endpoint: String
+        let method: String
+        let body: Data?
+        let queryItems: [URLQueryItem]?
+        let retryCount: Int
+    }
+
     private func handleResponse<T: Decodable>(
         httpResponse: HTTPURLResponse,
         data: Data,
-        endpoint: String,
-        method: String,
-        body: Data?,
-        queryItems: [URLQueryItem]?
+        context: RequestContext
     ) async throws -> T {
         switch httpResponse.statusCode {
         case 200...299:
             return try JSONDecoder().decode(T.self, from: data)
         case 401:
+            guard context.retryCount < 1 else {
+                throw SpotifyError.tokenRefreshFailed
+            }
             try await refreshTokens()
-            return try await performRequest(endpoint, method: method, body: body, queryItems: queryItems)
+            return try await performRequest(
+                context.endpoint,
+                method: context.method,
+                body: context.body,
+                queryItems: context.queryItems,
+                retryCount: context.retryCount + 1
+            )
         case 204:
             if let empty = EmptyResponse() as? T {
                 return empty
@@ -388,15 +429,18 @@ extension SpotifyAPI {
     private func performVoidRequest(
         _ endpoint: String,
         method: String = "GET",
-        body: Data? = nil
+        body: Data? = nil,
+        queryItems: [URLQueryItem]? = nil,
+        retryCount: Int = 0
     ) async throws {
+        await ensureTokensLoaded()
         try await refreshAccessTokenIfNeeded()
 
         guard let token = accessToken else {
             throw SpotifyError.notAuthenticated
         }
 
-        guard let url = URL(string: "\(baseURL)\(endpoint)") else {
+        guard let url = buildURL(endpoint: endpoint, queryItems: queryItems) else {
             throw SpotifyError.invalidURL
         }
 
@@ -413,8 +457,17 @@ extension SpotifyAPI {
         }
 
         if httpResponse.statusCode == 401 {
+            guard retryCount < 1 else {
+                throw SpotifyError.tokenRefreshFailed
+            }
             try await refreshTokens()
-            try await performVoidRequest(endpoint, method: method, body: body)
+            try await performVoidRequest(
+                endpoint,
+                method: method,
+                body: body,
+                queryItems: queryItems,
+                retryCount: retryCount + 1
+            )
             return
         }
 
@@ -459,21 +512,18 @@ extension SpotifyAPI {
 
     func seek(to positionMs: Int) async throws {
         let queryItems = [URLQueryItem(name: "position_ms", value: "\(positionMs)")]
-        try await performVoidRequest("/me/player/seek", method: "PUT", body: nil)
-        let _: EmptyResponse = try await performRequest("/me/player/seek", method: "PUT", queryItems: queryItems)
+        try await performVoidRequest("/me/player/seek", method: "PUT", body: nil, queryItems: queryItems)
     }
 
     func setVolume(_ percent: Int) async throws {
         let clamped = max(0, min(100, percent))
         let queryItems = [URLQueryItem(name: "volume_percent", value: "\(clamped)")]
-        try await performVoidRequest("/me/player/volume", method: "PUT", body: nil)
-        let _: EmptyResponse = try await performRequest("/me/player/volume", method: "PUT", queryItems: queryItems)
+        try await performVoidRequest("/me/player/volume", method: "PUT", body: nil, queryItems: queryItems)
     }
 
     func setShuffle(_ enabled: Bool) async throws {
         let queryItems = [URLQueryItem(name: "state", value: enabled ? "true" : "false")]
-        try await performVoidRequest("/me/player/shuffle", method: "PUT", body: nil)
-        let _: EmptyResponse = try await performRequest("/me/player/shuffle", method: "PUT", queryItems: queryItems)
+        try await performVoidRequest("/me/player/shuffle", method: "PUT", body: nil, queryItems: queryItems)
     }
 
     func setRepeat(_ mode: String) async throws {
@@ -482,8 +532,7 @@ extension SpotifyAPI {
             throw SpotifyError.invalidParameter("Repeat mode must be one of: \(validModes)")
         }
         let queryItems = [URLQueryItem(name: "state", value: mode)]
-        try await performVoidRequest("/me/player/repeat", method: "PUT", body: nil)
-        let _: EmptyResponse = try await performRequest("/me/player/repeat", method: "PUT", queryItems: queryItems)
+        try await performVoidRequest("/me/player/repeat", method: "PUT", body: nil, queryItems: queryItems)
     }
 
     func getDevices() async throws -> [SpotifyDevice] {
@@ -526,42 +575,47 @@ extension SpotifyAPI {
         NSWorkspace.shared.open(authURL)
         #endif
 
-        let result: (code: String, state: String)?
+        let result = try await waitForCallback(serverTask: serverTask)
+
+        guard let callbackURL = buildCallbackURL(code: result.code, state: result.state) else {
+            throw SpotifyError.invalidURL
+        }
+        try await authenticateWithCallback(url: callbackURL)
+    }
+
+    private func waitForCallback(
+        serverTask: Task<(code: String, state: String)?, Error>
+    ) async throws -> (code: String, state: String) {
         do {
-            result = try await withThrowingTaskGroup(
+            let result = try await withThrowingTaskGroup(
                 of: (code: String, state: String)?.self
             ) { group -> (code: String, state: String)? in
-                // Server task
                 group.addTask { [self] in
                     try await serverTask.value
                 }
 
-                // Timeout task (60 seconds like Tauri)
                 group.addTask {
                     try await Task.sleep(nanoseconds: 60 * 1_000_000_000)
                     throw SpotifyError.callbackTimeout
                 }
 
-                // Return whichever completes first
                 guard let result = try await group.next() else {
                     throw SpotifyError.authenticationFailed
                 }
                 group.cancelAll()
                 return result
             }
+            guard let result = result else {
+                throw SpotifyError.authenticationFailed
+            }
+            return result
         } catch {
             serverTask.cancel()
             throw error
         }
-
-        guard let result = result else {
-            throw SpotifyError.authenticationFailed
-        }
-
-        try await authenticateWithCallback(url: buildCallbackURL(code: result.code, state: result.state))
     }
 
-    private func buildCallbackURL(code: String, state: String) -> URL {
+    private func buildCallbackURL(code: String, state: String) -> URL? {
         var components = URLComponents()
         components.scheme = "http"
         components.host = "127.0.0.1"
@@ -571,7 +625,7 @@ extension SpotifyAPI {
             URLQueryItem(name: "code", value: code),
             URLQueryItem(name: "state", value: state)
         ]
-        return components.url!
+        return components.url
     }
 
     func resume() async throws {
@@ -612,12 +666,12 @@ extension SpotifyAPI {
 
 extension SpotifyAPI {
 
-    func search(query: String, types: [String], limit: Int = 20, offset: Int = 0) async throws -> SpotifySearchResults {
+    func search(query: String, types: [String], limit: Int) async throws -> SpotifySearchResults {
         let queryItems = [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "type", value: types.joined(separator: ",")),
             URLQueryItem(name: "limit", value: "\(limit)"),
-            URLQueryItem(name: "offset", value: "\(offset)")
+            URLQueryItem(name: "offset", value: "0")
         ]
         return try await performRequest("/search", queryItems: queryItems)
     }
@@ -867,15 +921,15 @@ struct SpotifySavedTracks: Codable, Sendable {
     let offset: Int?
     let next: String?
     let previous: String?
+}
 
-    struct SavedTrack: Codable, Sendable {
-        let addedAt: String?
-        let track: SpotifyTrack
+struct SavedTrack: Codable, Sendable {
+    let addedAt: String?
+    let track: SpotifyTrack
 
-        enum CodingKeys: String, CodingKey {
-            case addedAt = "added_at"
-            case track
-        }
+    enum CodingKeys: String, CodingKey {
+        case addedAt = "added_at"
+        case track
     }
 }
 
@@ -886,16 +940,14 @@ struct SpotifySavedAlbums: Codable, Sendable {
     let offset: Int?
     let next: String?
     let previous: String?
-
-    struct SavedAlbum: Codable, Sendable {
-        let addedAt: String?
-        let album: SpotifyAlbum
-
-        enum CodingKeys: String, CodingKey {
-            case addedAt = "added_at"
-            case album
-        }
-    }
 }
 
+struct SavedAlbum: Codable, Sendable {
+    let addedAt: String?
+    let album: SpotifyAlbum
 
+    enum CodingKeys: String, CodingKey {
+        case addedAt = "added_at"
+        case album
+    }
+}

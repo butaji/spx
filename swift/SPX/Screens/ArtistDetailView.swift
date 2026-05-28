@@ -35,73 +35,76 @@ struct ArtistDetailView: View {
             }
             .padding(.bottom, 100)
         }
-        .background(SPXColors.bg)
+        .background(Color.spxBase)
     }
 
     // MARK: - Artist Hero View
     private var artistHeroView: some View {
-        HStack(alignment: .bottom, spacing: SPXSpacing.x7) {
-            // Artist Image (Round)
+        HStack(alignment: .bottom, spacing: 32) {
+            // Artist Image
             if let imageUrl = artist?.images?.first?.url, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { image in
+                AsyncImage(url: url, content: { image in
                     image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Circle()
-                        .fill(SPXColors.surface)
+                }, placeholder: {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.spxElevated)
                         .overlay(
                             ProgressView()
-                                .tint(SPXColors.fgMuted)
+                                .tint(Color.spxTextTertiary)
                         )
-                }
-                .frame(width: 240, height: 240)
-                .clipShape(Circle())
-                .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                })
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
-                Circle()
-                    .fill(SPXColors.surface)
-                    .frame(width: 240, height: 240)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.spxElevated)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.spxBorder, lineWidth: 1)
+                    )
+                    .frame(width: 80, height: 80)
                     .overlay(
                         Image(systemName: "person.fill")
                             .font(.system(size: 64))
-                            .foregroundColor(SPXColors.fgMuted)
+                            .foregroundColor(Color.spxTextTertiary)
                     )
             }
 
             // Artist Info
-            VStack(alignment: .leading, spacing: SPXSpacing.x3) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Artist")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(SPXColors.fgFaint)
+                    .font(.system(size: 12))
+                    .foregroundColor(Color.spxTextTertiary)
                     .textCase(.uppercase)
                     .tracking(0.1)
 
                 Text(artist?.name ?? "Unknown Artist")
-                    .font(.system(size: 48, weight: .bold))
-                    .foregroundColor(SPXColors.fg)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(Color.spxTextPrimary)
                     .lineLimit(1)
 
                 // Meta info
-                HStack(spacing: SPXSpacing.x2) {
+                HStack(spacing: 8) {
                     Text("\(formatFollowers(artist?.followers?.total ?? 0)) followers")
                         .font(.system(size: 13))
-                        .foregroundColor(SPXColors.fgMuted)
+                        .foregroundColor(Color.spxTextTertiary)
 
                     if let genres = artist?.genres, !genres.isEmpty {
                         Text("·")
-                            .foregroundColor(SPXColors.fgFaint)
+                            .foregroundColor(Color.spxTextTertiary)
 
                         Text(genres.prefix(3).joined(separator: ", "))
                             .font(.system(size: 13))
-                            .foregroundColor(SPXColors.accent)
+                            .foregroundColor(Color.spxAccent)
                     }
                 }
 
                 // Popularity
                 if let popularity = artist?.popularity {
-                    HStack(spacing: SPXSpacing.x3) {
+                    HStack(spacing: 12) {
                         Text("Popularity")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(SPXColors.fgFaint)
+                            .foregroundColor(Color.spxTextTertiary)
                             .textCase(.uppercase)
                             .tracking(0.05)
 
@@ -109,44 +112,50 @@ struct ArtistDetailView: View {
                         GeometryReader { geometry in
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 3)
-                                    .fill(SPXColors.bgElevated)
+                                    .fill(Color.spxElevated)
                                     .frame(height: 5)
 
                                 RoundedRectangle(cornerRadius: 3)
-                                    .fill(SPXColors.accent)
-                                    .frame(width: geometry.size.width * CGFloat(popularity) / 100, height: 5)
+                                    .fill(Color.spxAccent)
+                                    .frame(
+                                        width: geometry.size.width * CGFloat(popularity)
+                                            / 100,
+                                        height: 5
+                                    )
                             }
                         }
                         .frame(width: 120, height: 5)
 
                         Text("\(popularity)%")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(SPXColors.fgMuted)
+                            .foregroundColor(Color.spxTextTertiary)
                     }
                 }
 
                 // Play Button
                 Button(action: onPlayTopTracks) {
-                    HStack(spacing: SPXSpacing.x2) {
+                    HStack(spacing: 8) {
                         Image(systemName: "play.fill")
                             .font(.system(size: 18))
                         Text("Play")
                     }
                     .foregroundColor(.black)
-                    .padding(.horizontal, SPXSpacing.x5)
-                    .padding(.vertical, SPXSpacing.x3)
-                    .background(SPXColors.accent)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(Color.spxAccent)
                     .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .padding(.top, SPXSpacing.x2)
+                .accessibilityLabel("Play popular tracks")
+                .accessibilityIdentifier("play-artist-button")
+                .padding(.top, 8)
             }
 
             Spacer()
         }
-        .padding(.horizontal, SPXSpacing.x6)
-        .padding(.top, SPXSpacing.x4)
-        .padding(.bottom, SPXSpacing.x6)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .padding(.bottom, 24)
     }
 
     // MARK: - Loading View
@@ -154,7 +163,7 @@ struct ArtistDetailView: View {
         VStack {
             Spacer()
             ProgressView()
-                .tint(SPXColors.accent)
+                .tint(Color.spxAccent)
             Spacer()
         }
         .frame(maxWidth: .infinity, minHeight: 200)
@@ -162,14 +171,14 @@ struct ArtistDetailView: View {
 
     // MARK: - Content View
     private var contentView: some View {
-        VStack(alignment: .leading, spacing: SPXSpacing.x8) {
+        VStack(alignment: .leading, spacing: 40) {
             // Popular Tracks Section
             if !topTracks.isEmpty {
-                VStack(alignment: .leading, spacing: SPXSpacing.x4) {
+                VStack(alignment: .leading, spacing: 16) {
                     Text("Popular")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(SPXColors.fg)
-                        .padding(.horizontal, SPXSpacing.x6)
+                        .foregroundColor(Color.spxTextPrimary)
+                        .padding(.horizontal, 24)
 
                     LazyVStack(spacing: 0) {
                         ForEach(Array(topTracks.enumerated()), id: \.element.id) { index, track in
@@ -182,19 +191,25 @@ struct ArtistDetailView: View {
                             )
                         }
                     }
-                    .padding(.horizontal, SPXSpacing.x6)
+                    .padding(.horizontal, 24)
                 }
             }
 
             // Discography Section
             if !albums.isEmpty {
-                VStack(alignment: .leading, spacing: SPXSpacing.x4) {
+                VStack(alignment: .leading, spacing: 16) {
                     Text("Discography")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(SPXColors.fg)
-                        .padding(.horizontal, SPXSpacing.x6)
+                        .foregroundColor(Color.spxTextPrimary)
+                        .padding(.horizontal, 24)
 
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: SPXSpacing.x4)], spacing: SPXSpacing.x4) {
+                    let columns = [
+                        GridItem(
+                            .adaptive(minimum: 160),
+                            spacing: 16
+                        )
+                    ]
+                    LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(albums, id: \.id) { album in
                             ArtistAlbumView(album: album)
                                 .onTapGesture {
@@ -202,7 +217,7 @@ struct ArtistDetailView: View {
                                 }
                         }
                     }
-                    .padding(.horizontal, SPXSpacing.x6)
+                    .padding(.horizontal, 24)
                 }
             }
         }
@@ -218,36 +233,36 @@ struct ArtistTrackRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: SPXSpacing.x3) {
+        HStack(spacing: 12) {
             Text("\(index + 1)")
                 .font(.system(size: 12, design: .monospaced))
-                .foregroundColor(SPXColors.fgFaint)
+                .foregroundColor(Color.spxTextTertiary)
                 .frame(width: 36, alignment: .center)
 
             // Artwork
             if let imageUrl = track.album?.images?.first?.url, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { image in
+                AsyncImage(url: url, content: { image in
                     image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: 4).fill(SPXColors.surface)
-                }
+                }, placeholder: {
+                    RoundedRectangle(cornerRadius: 4).fill(Color.spxElevated)
+                })
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             } else {
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(SPXColors.surface)
+                    .fill(Color.spxElevated)
                     .frame(width: 40, height: 40)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(track.name)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(SPXColors.fg)
+                    .foregroundColor(Color.spxTextPrimary)
                     .lineLimit(1)
 
                 Text(track.album?.name ?? "")
                     .font(.system(size: 11))
-                    .foregroundColor(SPXColors.fgFaint)
+                    .foregroundColor(Color.spxTextTertiary)
                     .lineLimit(1)
             }
 
@@ -257,18 +272,22 @@ struct ArtistTrackRow: View {
             Button(action: onTap) {
                 Image(systemName: "play.fill")
                     .font(.system(size: 12))
-                    .foregroundColor(isHovered ? .black : SPXColors.fgSecondary)
+                    .foregroundColor(isHovered ? .black : Color.spxTextSecondary)
             }
             .buttonStyle(.plain)
             .opacity(isHovered ? 1 : 0)
             .frame(width: 28, height: 28)
-            .background(isHovered ? SPXColors.accent : Color.clear)
+            .background(isHovered ? Color.spxAccent : Color.clear)
             .clipShape(Circle())
         }
-        .padding(.horizontal, SPXSpacing.x4)
-        .padding(.vertical, SPXSpacing.x2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
         .background(isHovered ? Color.white.opacity(0.04) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: SPXRadius.sm))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(track.name) from \(track.album?.name ?? "unknown album")")
+        .accessibilityHint("Double tap to play")
+        .accessibilityIdentifier("artist-track-row-\(index)")
         .onHover { hovering in
             isHovered = hovering
         }
@@ -283,35 +302,35 @@ struct ArtistAlbumView: View {
     let album: ArtistAlbum
 
     var body: some View {
-        VStack(alignment: .leading, spacing: SPXSpacing.x2) {
+        VStack(alignment: .leading, spacing: 8) {
             // Album Artwork
             if let imageUrl = album.images?.first?.url, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { image in
+                AsyncImage(url: url, content: { image in
                     image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    RoundedRectangle(cornerRadius: SPXRadius.sm)
-                        .fill(SPXColors.surface)
+                }, placeholder: {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.spxElevated)
                         .overlay(
                             ProgressView()
-                                .tint(SPXColors.fgMuted)
+                                .tint(Color.spxTextTertiary)
                         )
-                }
+                })
                 .frame(width: 160, height: 160)
-                .clipShape(RoundedRectangle(cornerRadius: SPXRadius.sm))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
-                RoundedRectangle(cornerRadius: SPXRadius.sm)
-                    .fill(SPXColors.surface)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.spxElevated)
                     .frame(width: 160, height: 160)
             }
 
             Text(album.name)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(SPXColors.fg)
+                .foregroundColor(Color.spxTextPrimary)
                 .lineLimit(1)
 
             Text("\(album.albumType) · \(album.releaseDate?.prefix(4).description ?? "")")
                 .font(.system(size: 11))
-                .foregroundColor(SPXColors.fgFaint)
+                .foregroundColor(Color.spxTextTertiary)
                 .lineLimit(1)
         }
         .frame(width: 160)

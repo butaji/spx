@@ -8,21 +8,22 @@ public struct CastDevice {
     public let name: String      // Friendly name (fn)
     public let model: String     // Model name (md)
     public let host: String      // IP address
-    public let port: Int         // Always 8009
+    public let port: Int         // Always Cast port
 
-    public init(id: String, name: String, model: String, host: String, port: Int = 8009) {
+    public init(id: String, name: String, model: String, host: String, port: Int? = nil) {
         self.id = id
         self.name = name
         self.model = model
         self.host = host
-        self.port = port
+        self.port = port ?? Int(Constants.Network.castPort)
     }
 }
 
 // MARK: - MDNSDiscovery
 
 /// Discovers Cast devices using Bonjour/mDNS.
-public final class MDNSDiscovery: NSObject {
+/// NSObject-based classes with delegate patterns are not Sendable but we manage thread-safety manually.
+public final class MDNSDiscovery: NSObject, @unchecked Sendable {
     private var serviceBrowser: NetServiceBrowser?
     private var discoveredServices: [NetService] = []
     private var resolvingServices: [NetService] = []
@@ -38,6 +39,11 @@ public final class MDNSDiscovery: NSObject {
 
     /// Starts discovery for `_googlecast._tcp` services.
     public func startDiscovery(completion: @escaping ([CastDevice]) -> Void) {
+        startDiscovery(timeout: self.timeout, completion: completion)
+    }
+
+    /// Starts discovery with specific timeout.
+    public func startDiscovery(timeout: TimeInterval, completion: @escaping ([CastDevice]) -> Void) {
         discoveryCompletion = completion
         devices = []
         discoveredServices = []
@@ -70,7 +76,9 @@ public final class MDNSDiscovery: NSObject {
         discoveryCompletion = nil
     }
 
-    private func parseTXTRecord(_ txtRecord: [String: Data]) -> (id: String?, name: String?, model: String?) {
+    /// Parses mDNS TXT record and returns device info tuple.
+    /// Made internal for testing purposes.
+    func parseTXTRecord(_ txtRecord: [String: Data]) -> (id: String?, name: String?, model: String?) {
         var id: String?
         var name: String?
         var model: String?
@@ -135,7 +143,7 @@ extension MDNSDiscovery: NetServiceBrowserDelegate {
 
 extension MDNSDiscovery: NetServiceDelegate {
     public func netServiceDidResolveAddress(_ sender: NetService) {
-        guard let host = sender.hostName,
+        guard sender.hostName != nil,
               let addresses = sender.addresses,
               !addresses.isEmpty else {
             return
@@ -178,7 +186,7 @@ extension MDNSDiscovery: NetServiceDelegate {
             deviceModel = parsed.model
         }
 
-        return (deviceId, deviceName, deviceModel)
+        return (id: deviceId, name: deviceName, model: deviceModel)
     }
 
     private func extractIPAddress(from addresses: [Data]) -> String? {
