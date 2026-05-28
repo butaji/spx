@@ -57,6 +57,8 @@ struct LibraryView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(tab.rawValue)
+                    .accessibilityIdentifier("library-tab-\(tab.rawValue.lowercased())")
                 }
             }
             .padding(.bottom, 16)
@@ -90,6 +92,7 @@ struct LibraryView: View {
         .padding(.horizontal, 24)
         .padding(.top, 16)
         .background(Color.spxBase)
+        .accessibilityIdentifier("library-view")
     }
 
     // MARK: - Current Items
@@ -110,6 +113,7 @@ struct LibraryView: View {
                     .onTapGesture {
                         onNavigate(AppView.playlist(id: playlist.id, name: playlist.name))
                     }
+                    .accessibilityIdentifier("library-playlist-\(playlist.id ?? UUID().uuidString)")
             }
         }
         .padding(.bottom, 100)
@@ -125,6 +129,7 @@ struct LibraryView: View {
                             onNavigate(AppView.album(id: id, name: album.name))
                         }
                     }
+                    .accessibilityIdentifier("library-album-\(album.id ?? UUID().uuidString)")
             }
         }
         .padding(.bottom, 100)
@@ -141,6 +146,7 @@ struct LibraryView: View {
                         onPlayContext(track.uri)
                     }
                 )
+                .accessibilityIdentifier("library-track-row-\(index)")
             }
         }
         .padding(.bottom, 100)

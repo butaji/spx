@@ -2,17 +2,26 @@ import SwiftUI
 import Carbon.HIToolbox
 import os.log
 
-class HotkeyManager: ObservableObject {
+@MainActor
+final class HotkeyManager {
+
     private var monitor: Any?
-    weak var appState: AppState?
+    private var _appState: AppState?
     private let logger = Logger(subsystem: "com.spx", category: "Hotkeys")
+
+    var appState: AppState? {
+        get { _appState }
+        set { _appState = newValue }
+    }
+
+    init() {}
 
     func start(appState: AppState) {
         guard monitor == nil else {
             logger.debug("Hotkey monitor already registered")
             return
         }
-        self.appState = appState
+        self._appState = appState
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self = self else { return event }
             let consumed = self.handle(event)
@@ -95,12 +104,12 @@ class HotkeyManager: ObservableObject {
     }
 
     nonisolated private func navigate(to view: AppView) {
-        Task { @MainActor in self.appState?.currentView = view }
+        Task { @MainActor in self._appState?.currentView = view }
     }
 
     nonisolated private func trigger(_ action: @escaping @MainActor (AppState) async -> Void) {
         Task { @MainActor in
-            if let appState = self.appState {
+            if let appState = self._appState {
                 await action(appState)
             }
         }

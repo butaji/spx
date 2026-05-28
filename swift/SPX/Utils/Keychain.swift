@@ -1,14 +1,39 @@
 import Security
 import Foundation
 
-class TokenStorage: @unchecked Sendable {
+// MARK: - TokenStorageProtocol
 
-    static let shared = TokenStorage()
+/// Protocol for token storage operations
+protocol TokenStorageProtocol: Sendable {
+    func save(key: String, string: String)
+    func read(key: String) -> String?
+    func delete(key: String)
+    func update(key: String, string: String)
+}
+
+// MARK: - KeychainTokenStorage
+
+final class KeychainTokenStorage: TokenStorageProtocol, @unchecked Sendable {
 
     private let service = "com.spx.spotify"
     private let defaults = UserDefaults.standard
 
-    private var hasMigrated = false
+    // Use NSLock for atomic migration check
+    private let migrationLock = NSLock()
+    private var _hasMigrated = false
+
+    private var hasMigrated: Bool {
+        get {
+            migrationLock.lock()
+            defer { migrationLock.unlock() }
+            return _hasMigrated
+        }
+        set {
+            migrationLock.lock()
+            defer { migrationLock.unlock() }
+            _hasMigrated = newValue
+        }
+    }
 
     init() {}
 
@@ -95,18 +120,28 @@ class TokenStorage: @unchecked Sendable {
 
 // MARK: - Mock Token Storage (no keychain prompts)
 
-class MockTokenStorage: TokenStorage {
+final class MockTokenStorage: TokenStorageProtocol, @unchecked Sendable {
     private var storage: [String: String] = [:]
-    
-    override func save(key: String, string: String) {
+
+    init() {}
+
+    func save(key: String, string: String) {
         storage[key] = string
     }
-    
-    override func read(key: String) -> String? {
+
+    func read(key: String) -> String? {
         storage[key]
     }
-    
-    override func delete(key: String) {
+
+    func delete(key: String) {
         storage.removeValue(forKey: key)
+    }
+
+    func update(key: String, string: String) {
+        storage[key] = string
+    }
+
+    func reset() {
+        storage.removeAll()
     }
 }

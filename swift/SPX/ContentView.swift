@@ -4,7 +4,7 @@ struct ContentView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var hotkeyManager = HotkeyManager()
+    @State private var hotkeyManager = HotkeyManager()
 
     var body: some View {
         if appState.isRestoring {
@@ -12,7 +12,7 @@ struct ContentView: View {
                 .background(Color.spxBase)
         } else if !appState.isAuthed {
             AuthView {
-                appState.handleStartAuth()
+                Task { await appState.handleStartAuth() }
             }
         } else {
             mainLayout

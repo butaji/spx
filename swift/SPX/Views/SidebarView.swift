@@ -43,6 +43,7 @@ struct SidebarView: View {
                         }
                     }
                 }
+                .accessibilityIdentifier("sidebar-\(label.lowercased().replacingOccurrences(of: " ", with: "-"))-button")
             }
             
             Spacer()
@@ -54,16 +55,16 @@ struct SidebarView: View {
             // User avatar
             VStack(spacing: 4) {
                 Circle()
-                    .fill(.secondary.opacity(0.2))
+                    .fill(Color.spxTextSecondary.opacity(0.2))
                     .frame(width: 32, height: 32)
                     .overlay(
                         Image(systemName: "person.fill")
                             .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color.spxTextSecondary)
                     )
                 Text("Vitaly Baum")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.spxTextSecondary)
             }
             .padding(.bottom, 16)
         }
@@ -90,13 +91,13 @@ struct SidebarItem: View {
                     .font(.system(size: 10, weight: .medium))
             }
             .frame(width: 72, height: 64)
-            .foregroundStyle(isActive ? .green : .secondary)
+            .foregroundStyle(isActive ? Color.spxAccent : Color.spxTextSecondary)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isActive ? Color.green.opacity(0.15) : Color.clear)
+                    .fill(isActive ? Color.spxAccent.opacity(0.15) : Color.clear)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(isActive ? Color.green.opacity(0.3) : Color.clear, lineWidth: 1)
+                            .stroke(isActive ? Color.spxAccent.opacity(0.3) : Color.clear, lineWidth: 1)
                     )
             )
             .contentShape(Rectangle())

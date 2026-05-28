@@ -11,24 +11,6 @@ enum Constants {
         static let receiveBufferSize = 65536
     }
 
-    // MARK: - UI Dimensions (deprecated - use SPXSize tokens)
-    enum Layout {
-        static let sidebarWidth: CGFloat = 80
-        static let playerBarHeight: CGFloat = 80
-        static let playerBarContentHeight: CGFloat = 54
-        static let playerBarVolumeWidth: CGFloat = 180
-        static let volumeSliderWidth: CGFloat = 100
-        static let timeLabelWidth: CGFloat = 40
-        static let gridMinimumWidth: CGFloat = 160
-
-        enum ContentPadding {
-            static let top: CGFloat = 32
-            static let leading: CGFloat = 32
-            static let bottom: CGFloat = 48
-            static let trailing: CGFloat = 32
-        }
-    }
-
     // MARK: - Image Sizes
     enum ImageSize {
         static let albumArtwork: CGFloat = 240
@@ -49,10 +31,5 @@ enum Constants {
     // MARK: - OAuth
     enum OAuth {
         static let stateLength: Int = 16
-    }
-
-    // MARK: - Calculation
-    enum Calculation {
-        static let popularityDivisor: Double = 100.0
     }
 }

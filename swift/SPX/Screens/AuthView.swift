@@ -85,6 +85,8 @@ struct AuthView: View {
                         .buttonStyle(.plain)
                         .focusable(false)
                         .opacity(isAppeared ? 1 : 0)
+                        .accessibilityLabel("Cancel")
+                        .accessibilityIdentifier("cancel-auth-button")
                     }
 
                     Text("Requires a Spotify Premium account")
@@ -245,7 +247,7 @@ struct MeshGradientBackground: View {
                     // Secondary purple orb
                     AnimatedOrb(
                         size: 400,
-                        color: Color.purple,
+                        color: Color.spxAccent,
                         opacity: 0.06,
                         position: CGPoint(
                             x: geometry.size.width * 0.75,
@@ -271,7 +273,7 @@ struct MeshGradientBackground: View {
                     // Subtle blue
                     AnimatedOrb(
                         size: 300,
-                        color: Color.blue,
+                        color: Color.spxAccent,
                         opacity: 0.04,
                         position: CGPoint(
                             x: geometry.size.width * 0.15,
@@ -418,6 +420,8 @@ struct ConnectButton: View {
                 isHovered = hovering
             }
         }
+        .accessibilityLabel("Connect with Spotify")
+        .accessibilityIdentifier("connect-spotify-button")
     }
 }
 
@@ -596,6 +600,8 @@ struct ErrorAuthView: View {
                 .buttonStyle(.plain)
                 .opacity(isAppeared ? 1 : 0)
                 .offset(y: isAppeared ? 0 : 10)
+                .accessibilityLabel("Try Again")
+                .accessibilityIdentifier("retry-auth-button")
             }
         }
         .onAppear {

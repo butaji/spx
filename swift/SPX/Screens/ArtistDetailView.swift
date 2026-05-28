@@ -36,6 +36,7 @@ struct ArtistDetailView: View {
             .padding(.bottom, 100)
         }
         .background(Color.spxBase)
+        .accessibilityIdentifier("artist-detail-view")
     }
 
     // MARK: - Artist Hero View
@@ -215,6 +216,7 @@ struct ArtistDetailView: View {
                                 .onTapGesture {
                                     onPlayContext("spotify:album:\(album.id)")
                                 }
+                                .accessibilityIdentifier("artist-album-\(album.id)")
                         }
                     }
                     .padding(.horizontal, 24)

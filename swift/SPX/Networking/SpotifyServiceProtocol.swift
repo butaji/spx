@@ -3,7 +3,7 @@ import Foundation
 // MARK: - SpotifyServiceProtocol
 
 /// Protocol defining Spotify API operations for testability and dependency injection
-protocol SpotifyServiceProtocol: AnyObject {
+protocol SpotifyServiceProtocol: AnyObject, Sendable {
     // Authentication
     func authorize() async throws
     func getCurrentUser() async throws -> SpotifyUserProfile

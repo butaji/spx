@@ -7,8 +7,6 @@ import AppKit
 
 actor SpotifyAPI: SpotifyServiceProtocol {
 
-    static let shared = SpotifyAPI()
-
     private let baseURL = "https://api.spotify.com/v1"
     private let accountBaseURL = "https://accounts.spotify.com"
     private let redirectURI = "http://127.0.0.1:\(Constants.Network.oauthCallbackPort)/callback"
@@ -22,9 +20,16 @@ actor SpotifyAPI: SpotifyServiceProtocol {
     private var currentTask: Task<Void, Never>?
     private var tokensLoaded = false
 
+    // Token storage for dependency injection
+    private let tokenStorage: TokenStorageProtocol
+
+    init(tokenStorage: TokenStorageProtocol) {
+        self.tokenStorage = tokenStorage
+    }
+
     private func ensureTokensLoaded() async {
         if !tokensLoaded {
-            if await !isMockMode {
+            if !isMockMode {
                 loadTokensFromKeychain()
             }
             tokensLoaded = true
@@ -33,14 +38,8 @@ actor SpotifyAPI: SpotifyServiceProtocol {
 
     // MARK: - Mock Mode
 
-    @MainActor private static var mockModeChecked = false
-    @MainActor private static var mockModeValue = false
-
-    @MainActor var isMockMode: Bool {
-        if Self.mockModeChecked { return Self.mockModeValue }
-        Self.mockModeValue = ProcessInfo.processInfo.environment["SPX_MOCK"] == "1"
-        Self.mockModeChecked = true
-        return Self.mockModeValue
+    private var isMockMode: Bool {
+        ProcessInfo.processInfo.environment["SPX_MOCK"] == "1"
     }
 
     // MARK: - Required Scopes
@@ -66,15 +65,13 @@ actor SpotifyAPI: SpotifyServiceProtocol {
         static let refreshToken = "com.spx.spotify.refreshToken"
         static let tokenExpiresAt = "com.spx.spotify.tokenExpiresAt"
     }
-
-    private init() {}
 }
 
 // MARK: - Authentication
 
 extension SpotifyAPI {
 
-    struct AuthTokens: Codable {
+    struct AuthTokens: Codable, Sendable {
         let accessToken: String
         let refreshToken: String?
         let expiresAt: Date?
@@ -248,31 +245,25 @@ extension SpotifyAPI {
                    expiresIn: tokenResponse.expiresIn)
     }
 
-    private var isMockModeEnv: Bool {
-        ProcessInfo.processInfo.environment["SPX_MOCK"] == "1"
-    }
-
     private func saveTokens(accessToken: String, refreshToken: String?, expiresIn: Int, scope: String? = nil) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.tokenExpiresAt = Date().addingTimeInterval(TimeInterval(expiresIn))
         self.tokenScope = scope
 
-        guard !isMockModeEnv else { return }
-        let storage = TokenStorage.shared
-        storage.save(key: KeychainKey.accessToken, string: accessToken)
+        guard !isMockMode else { return }
+        tokenStorage.save(key: KeychainKey.accessToken, string: accessToken)
         if let refreshToken = refreshToken {
-            storage.save(key: KeychainKey.refreshToken, string: refreshToken)
+            tokenStorage.save(key: KeychainKey.refreshToken, string: refreshToken)
         }
-        storage.save(key: KeychainKey.tokenExpiresAt, string: "\(tokenExpiresAt?.timeIntervalSince1970 ?? 0)")
+        tokenStorage.save(key: KeychainKey.tokenExpiresAt, string: "\(tokenExpiresAt?.timeIntervalSince1970 ?? 0)")
     }
 
     private func loadTokensFromKeychain() {
-        guard !isMockModeEnv else { return }
-        let storage = TokenStorage.shared
-        accessToken = storage.read(key: KeychainKey.accessToken)
-        refreshToken = storage.read(key: KeychainKey.refreshToken)
-        if let expiresString = storage.read(key: KeychainKey.tokenExpiresAt),
+        guard !isMockMode else { return }
+        accessToken = tokenStorage.read(key: KeychainKey.accessToken)
+        refreshToken = tokenStorage.read(key: KeychainKey.refreshToken)
+        if let expiresString = tokenStorage.read(key: KeychainKey.tokenExpiresAt),
            let interval = Double(expiresString) {
             tokenExpiresAt = Date(timeIntervalSince1970: interval)
         }
@@ -283,11 +274,10 @@ extension SpotifyAPI {
         refreshToken = nil
         tokenExpiresAt = nil
 
-        guard !isMockModeEnv else { return }
-        let storage = TokenStorage.shared
-        storage.delete(key: KeychainKey.accessToken)
-        storage.delete(key: KeychainKey.refreshToken)
-        storage.delete(key: KeychainKey.tokenExpiresAt)
+        guard !isMockMode else { return }
+        tokenStorage.delete(key: KeychainKey.accessToken)
+        tokenStorage.delete(key: KeychainKey.refreshToken)
+        tokenStorage.delete(key: KeychainKey.tokenExpiresAt)
     }
 
     // Note: isAuthenticated removed - use performRequest which checks tokens internally

@@ -3,8 +3,8 @@ import Foundation
 // MARK: - CastProtocol
 
 /// High-level Cast protocol orchestrator.
-public final class CastProtocol {
-    public typealias Completion<T> = (Result<T, Error>) -> Void
+public final class CastProtocol: @unchecked Sendable {
+    public typealias Completion<T> = @Sendable (Result<T, Error>) -> Void
 
     public enum ProtocolError: Error {
         case notConnected

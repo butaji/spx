@@ -135,7 +135,8 @@ final class MDNSDiscoveryTests: XCTestCase {
         discovery.stopDiscovery()
 
         // Verify stop doesn't throw - if it did, we'd get an exception
-        XCTAssertTrue(true)
+        // Testing that calling stop twice is safe
+        XCTAssertNotNil(discovery)
     }
 
     func testStartDiscoveryWithCustomTimeout() {
@@ -144,18 +145,16 @@ final class MDNSDiscoveryTests: XCTestCase {
 
         // Just verify we can call startDiscovery without crashing
         // The actual discovery completion depends on network and is tested elsewhere
-        var didCallCompletion = false
-
         discovery.startDiscovery(timeout: 0.0) { _ in
-            didCallCompletion = true
+            // Completion may or may not fire with 0 timeout
         }
 
         // Immediately stop to prevent any network activity
         discovery.stopDiscovery()
 
-        // With 0 timeout, the completion should fire quickly via DispatchQueue
+        // With 0 timeout, the completion may or may not fire
         // We verify the API works by checking stop doesn't throw
-        XCTAssertTrue(true)
+        XCTAssertNotNil(discovery)
     }
 
     func testStopDiscoveryCanBeCalledMultipleTimes() {
@@ -166,38 +165,27 @@ final class MDNSDiscoveryTests: XCTestCase {
         discovery.stopDiscovery()
         discovery.stopDiscovery()
 
-        XCTAssertTrue(true)
+        // If we get here without crashing, the test passes
+        XCTAssertNotNil(discovery)
     }
 
-    func testDiscoveryCompletionIsNilAfterStop() {
-        let discovery = MDNSDiscovery()
+    func testDiscoveryConfigurationIsPreserved() {
+        let discovery = MDNSDiscovery(timeout: 15.0)
 
-        var completionCalled = false
-
-        discovery.startDiscovery(timeout: 0.01) { _ in
-            completionCalled = true
-        }
-
-        discovery.stopDiscovery()
-
-        // Verify stop cleared the completion handler
-        // The next line should not crash even if completion was never called
-        XCTAssertTrue(true)
+        // Verify timeout was set correctly
+        XCTAssertEqual(discovery.timeout, 15.0)
     }
 
     // MARK: - Service Type Filtering
 
     func testServiceTypeIsGoogleCast() {
         // Verify the service type used matches Cast protocol
-        let serviceType = "_googlecast._tcp"
-        XCTAssertTrue(serviceType.contains("googlecast"))
-        XCTAssertTrue(serviceType.contains("_tcp"))
+        XCTAssertEqual(MDNSDiscovery.serviceType, "_googlecast._tcp")
     }
 
     func testDiscoveryUsesLocalDomain() {
         // Verify local domain is used for mDNS discovery
-        let domain = "local."
-        XCTAssertTrue(domain.hasSuffix("local."))
+        XCTAssertEqual(MDNSDiscovery.domain, "local.")
     }
 
     // MARK: - CastDevice Creation

@@ -5,12 +5,12 @@ import Foundation
 /// Manual protobuf encode/decode for CastMessage.
 /// Wire format: field_tag + value, where field_tag = (field_number << 3) | wire_type
 /// Wire types: 0 = varint, 2 = length-delimited (strings/bytes)
-public struct CastMessage {
-    public enum ProtocolVersion: Int32 {
+public struct CastMessage: Sendable {
+    public enum ProtocolVersion: Int32, Sendable {
         case castV210 = 0
     }
 
-    public enum PayloadType: Int32 {
+    public enum PayloadType: Int32, Sendable {
         case string = 0
         case binary = 1
     }

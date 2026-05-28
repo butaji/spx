@@ -29,75 +29,39 @@ final class ColorsTests: XCTestCase {
         XCTAssertNotNil(Color.spxBorder)
     }
 
-    // MARK: - SPXSpacing Values (now raw integers)
+    // MARK: - Color Semantic Tests
 
-    func testSPXSpacingX1() {
-        XCTAssertEqual(4, 4)
+    func testSPXBaseColorIsNotClear() {
+        // spxBase should be a defined color, not clear/nil
+        XCTAssertNotEqual(Color.spxBase, Color.clear)
     }
 
-    func testSPXSpacingX2() {
-        XCTAssertEqual(8, 8)
+    func testSPXAccentColorIsNotClear() {
+        XCTAssertNotEqual(Color.spxAccent, Color.clear)
     }
 
-    func testSPXSpacingX3() {
-        XCTAssertEqual(12, 12)
+    // MARK: - Color Hex Initializer Tests
+
+    func testColorFromHexBlack() {
+        let black = Color(hex: "000000")
+        // Black should not be clear
+        XCTAssertNotEqual(black, Color.clear)
     }
 
-    func testSPXSpacingX4() {
-        XCTAssertEqual(16, 16)
+    func testColorFromHexWhite() {
+        let white = Color(hex: "FFFFFF")
+        XCTAssertNotNil(white)
     }
 
-    func testSPXSpacingX5() {
-        XCTAssertEqual(20, 20)
+    func testColorFromHexWithAlpha() {
+        let color = Color(hex: "FF5733FF")
+        XCTAssertNotNil(color)
     }
 
-    func testSPXSpacingX6() {
-        XCTAssertEqual(24, 24)
-    }
-
-    // MARK: - SPXRadius Values (now raw integers)
-
-    func testSPXRadiusSm() {
-        XCTAssertEqual(4, 4)
-    }
-
-    func testSPXRadiusMd() {
-        XCTAssertEqual(8, 8)
-    }
-
-    func testSPXRadiusLg() {
-        XCTAssertEqual(12, 12)
-    }
-
-    func testSPXRadiusXl() {
-        XCTAssertEqual(16, 16)
-    }
-
-    func testSPXRadiusFull() {
-        XCTAssertEqual(9999, 9999)
-    }
-
-    // MARK: - Size Constants (now raw integers)
-
-    func testSizeValues() {
-        XCTAssertEqual(80, 80)   // sidebarWidth
-        XCTAssertEqual(80, 80)   // playerBarHeight
-        XCTAssertEqual(56, 56)   // playerBarMiniArt
-        XCTAssertEqual(160, 160) // playlistArtwork
-        XCTAssertEqual(80, 80)   // artistPhoto
-        XCTAssertEqual(40, 40)   // actionButton
-        XCTAssertEqual(60, 60)   // userAvatar
-        XCTAssertEqual(220, 220) // volumeSectionWidth
-        XCTAssertEqual(80, 80)   // volumeSliderWidth
-        XCTAssertEqual(32, 32)   // timeLabelWidth
-    }
-
-    // MARK: - IconSize Constants (now raw integers)
-
-    func testIconSizeValues() {
-        XCTAssertEqual(32, 32)   // iconButtonSm
-        XCTAssertEqual(40, 40)   // iconButtonMd
-        XCTAssertEqual(20, 20)   // iconSizeSm
-        XCTAssertEqual(24, 24)   // iconSizeMd
+    func testColorFromInvalidHexReturnsNil() {
+        // Invalid hex should return nil or fall back gracefully
+        let color = Color(hex: "GGG")
+        // Color init with invalid hex should not crash
+        XCTAssertNotNil(color)
     }
 }

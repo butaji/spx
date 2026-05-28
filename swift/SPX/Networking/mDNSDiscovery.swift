@@ -22,8 +22,12 @@ public struct CastDevice {
 // MARK: - MDNSDiscovery
 
 /// Discovers Cast devices using Bonjour/mDNS.
-/// NSObject-based classes with delegate patterns are not Sendable but we manage thread-safety manually.
+/// Thread-safety: NSObject-based NetServiceBrowser/NetService delegate callbacks arrive on
+/// arbitrary threads; all UI updates and mutable state are dispatched to DispatchQueue.main.
 public final class MDNSDiscovery: NSObject, @unchecked Sendable {
+    public static let serviceType = "_googlecast._tcp"
+    public static let domain = "local."
+
     private var serviceBrowser: NetServiceBrowser?
     private var discoveredServices: [NetService] = []
     private var resolvingServices: [NetService] = []
@@ -53,7 +57,7 @@ public final class MDNSDiscovery: NSObject, @unchecked Sendable {
         serviceBrowser?.delegate = self
 
         // Search for Cast services
-        serviceBrowser?.searchForServices(ofType: "_googlecast._tcp", inDomain: "local.")
+        serviceBrowser?.searchForServices(ofType: Self.serviceType, inDomain: Self.domain)
 
         // Set timeout
         DispatchQueue.main.asyncAfter(deadline: .now() + timeout) { [weak self] in

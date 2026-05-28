@@ -21,7 +21,7 @@ struct QueueView: View {
                     if let current = currentTrack {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Now Playing")
-.font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(Color.spxTextTertiary)
                                 .textCase(.uppercase)
                                 .tracking(0.1)
@@ -34,6 +34,7 @@ struct QueueView: View {
                             )
                             .background(Color.spxElevated.opacity(0.06))
                             .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .accessibilityIdentifier("queue-now-playing")
                         }
                     }
 
@@ -59,6 +60,7 @@ struct QueueView: View {
                                             playFromQueue(index: index + 1)
                                         }
                                     )
+                                    .accessibilityIdentifier("queue-track-\(index)")
                                 }
                             }
                         }
@@ -71,6 +73,7 @@ struct QueueView: View {
         .padding(.horizontal, 24)
         .padding(.top, 16)
         .background(Color.spxBase)
+        .accessibilityIdentifier("queue-view")
     }
 
     // MARK: - Empty Queue View

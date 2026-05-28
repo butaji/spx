@@ -77,7 +77,9 @@ final class CastTLSVerifier {
 // MARK: - CastConnection
 
 /// TLS connection to Cast device with length-prefixed framing and heartbeat.
-/// NWConnection is not Sendable but we manage thread-safety manually via DispatchQueue.
+/// Thread-safety: All mutable state (NWConnection, Timer, callbacks) is accessed exclusively
+/// on DispatchQueue.main via async dispatch. NWConnection, Timer, and callbacks are not
+/// independently Sendable but our dispatch discipline ensures safe access patterns.
 public final class CastConnection: @unchecked Sendable {
     public typealias MessageHandler = (CastMessage) -> Void
     public typealias ErrorHandler = (Error) -> Void

@@ -17,21 +17,18 @@ final class AuthState {
 
     private var authTask: Task<Void, Never>?
     private let spotifyService: SpotifyServiceProtocol
-    private let tokenStorage: TokenStorage
+    private let tokenStorage: TokenStorageProtocol
 
     // MARK: - Init
 
-    init(spotifyService: SpotifyServiceProtocol, tokenStorage: TokenStorage) {
+    init(spotifyService: SpotifyServiceProtocol, tokenStorage: TokenStorageProtocol) {
         self.spotifyService = spotifyService
         self.tokenStorage = tokenStorage
     }
 
     // MARK: - Auth
 
-    func handleStartAuth(
-        onSuccess: @escaping () async -> Void,
-        onError: @escaping (Error) -> Void
-    ) {
+    func handleStartAuth() async {
         isAuthLoading = true
 
         authTask = Task {
@@ -39,10 +36,8 @@ final class AuthState {
                 try await spotifyService.authorize()
                 isAuthed = true
                 isAuthLoading = false
-                await onSuccess()
             } catch {
                 isAuthLoading = false
-                onError(error)
             }
         }
     }
@@ -53,12 +48,11 @@ final class AuthState {
         isAuthLoading = false
     }
 
-    func handleLogout(stopPlaybackPolling: @escaping () -> Void) {
+    func handleLogout() {
         tokenStorage.delete(key: "spotify_access_token")
         tokenStorage.delete(key: "spotify_refresh_token")
         isAuthed = false
         userProfile = nil
-        stopPlaybackPolling()
     }
 
     func restoreSession(

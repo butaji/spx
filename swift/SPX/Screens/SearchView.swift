@@ -40,6 +40,7 @@ struct SearchView: View {
                     .onSubmit {
                         performSearch()
                     }
+                    .accessibilityIdentifier("search-textfield")
 
                 Button(action: performSearch) {
                     Image(systemName: "magnifyingglass")
@@ -47,6 +48,8 @@ struct SearchView: View {
                         .font(.system(size: 16))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Search")
+                .accessibilityIdentifier("search-submit-button")
             }
             .padding(12)
             .background(Color.spxElevated)
@@ -75,6 +78,8 @@ struct SearchView: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(filter.rawValue)
+                        .accessibilityIdentifier("search-filter-\(filter.rawValue.lowercased())")
                     }
                 }
                 .padding(.bottom, 16)
@@ -116,6 +121,7 @@ struct SearchView: View {
         .padding(.horizontal, 24)
         .padding(.top, 16)
         .background(Color.spxBase)
+        .accessibilityIdentifier("search-view")
     }
 
     // MARK: - All Results View
@@ -319,6 +325,10 @@ struct SearchTrackRow: View {
         .onTapGesture {
             onPlay()
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(track.name) by \(track.artists?.compactMap { $0.name }.joined(separator: ", ") ?? "")")
+        .accessibilityHint("Double tap to play")
+        .accessibilityIdentifier("search-track-row-\(index)")
     }
 }
 

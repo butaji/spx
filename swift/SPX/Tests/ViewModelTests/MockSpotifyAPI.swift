@@ -60,6 +60,9 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
     private(set) var checkTrackCallCount = 0
     private(set) var checkTrackCallId: String?
     private(set) var searchCallCount = 0
+    private(set) var getDevicesCallCount = 0
+    private(set) var transferPlaybackCallCount = 0
+    private(set) var transferPlaybackDeviceId: String?
 
     func resetCallCounts() {
         authorizeCallCount = 0
@@ -82,6 +85,9 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
         checkTrackCallCount = 0
         checkTrackCallId = nil
         searchCallCount = 0
+        getDevicesCallCount = 0
+        transferPlaybackCallCount = 0
+        transferPlaybackDeviceId = nil
     }
 
     // MARK: - SpotifyServiceProtocol
@@ -213,6 +219,7 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
     }
 
     func getDevices() async throws -> [SpotifyDevice] {
+        getDevicesCallCount += 1
         if let error = getDevicesError {
             throw error
         }
@@ -224,6 +231,8 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
     }
 
     func transferPlayback(to deviceId: String) async throws {
+        transferPlaybackCallCount += 1
+        transferPlaybackDeviceId = deviceId
         if let error = transferPlaybackError {
             throw error
         }
@@ -238,31 +247,5 @@ final class MockSpotifyAPI: SpotifyServiceProtocol {
             throw SpotifyError.noContent
         }
         return results
-    }
-}
-
-// MARK: - Mock Token Storage
-
-final class MockTokenStorage: TokenStorage, @unchecked Sendable {
-    private var storage: [String: String] = [:]
-
-    override func save(key: String, string: String) {
-        storage[key] = string
-    }
-
-    override func read(key: String) -> String? {
-        return storage[key]
-    }
-
-    override func delete(key: String) {
-        storage.removeValue(forKey: key)
-    }
-
-    override func update(key: String, string: String) {
-        storage[key] = string
-    }
-
-    func reset() {
-        storage.removeAll()
     }
 }

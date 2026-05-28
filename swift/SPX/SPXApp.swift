@@ -30,15 +30,15 @@ struct SPXApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     private let spotifyAPI: SpotifyAPI
-    private let tokenStorage: TokenStorage
+    private let tokenStorage: TokenStorageProtocol
     private let appState: AppState
     private let isPreviewMode: Bool
 
     init() {
         let preview = ProcessInfo.processInfo.environment["SPX_MOCK"] == "1"
         self.isPreviewMode = preview
-        self.spotifyAPI = SpotifyAPI.shared
-        self.tokenStorage = preview ? MockTokenStorage() : TokenStorage.shared
+        self.tokenStorage = preview ? MockTokenStorage() : KeychainTokenStorage()
+        self.spotifyAPI = SpotifyAPI(tokenStorage: tokenStorage)
 
         let state = AppState(
             spotifyService: spotifyAPI,

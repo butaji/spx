@@ -305,12 +305,12 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - Auth Tests
 
-    func testHandleStartAuthSetsIsAuthLoading() {
+    func testHandleStartAuthSetsIsAuthLoading() async {
         // Given
         XCTAssertFalse(sut.isAuthLoading)
 
         // When
-        sut.handleStartAuth()
+        await sut.handleStartAuth()
 
         // Then - should be true immediately after calling
         XCTAssertTrue(sut.isAuthLoading)

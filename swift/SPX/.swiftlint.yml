@@ -6,7 +6,6 @@ disabled_rules:
   - trailing_whitespace
   - blanket_disable_command
   - implicit_return
-  - identifier_name
   - multiple_closures_with_trailing_closure
   - redundant_string_enum_value
 
@@ -44,12 +43,25 @@ opt_in_rules:
   - vertical_parameter_alignment_on_call
   - vertical_whitespace_closing_braces
 
+# Identifier name (with min_length to avoid single-char names)
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  max_length:
+    warning: 40
+    error: 60
+  excluded:
+    - id
+    - x
+    - y
+
 # File length rule
 file_length:
   warning: 1000
   error: 1000
 
-# Function body length
+# Function body length (warning > error)
 function_body_length:
   warning: 50
   error: 40
@@ -72,5 +84,4 @@ type_body_length:
 # Exclude directories
 excluded:
   - .build
-  - Tests
   - Package.swift

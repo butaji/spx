@@ -35,6 +35,7 @@ final class PlaybackState {
     // MARK: - Private
 
     private var playbackPollingTask: Task<Void, Never>?
+    private var volumeDebounceTask: Task<Void, Never>?
     private let spotifyService: SpotifyServiceProtocol
 
     // MARK: - Init
@@ -107,11 +108,31 @@ final class PlaybackState {
     }
 
     func handleVolumeUp() async {
-        await handleVolumeChange(playbackVolume + 5)
+        volumeDebounceTask?.cancel()
+        volumeDebounceTask = Task {
+            playbackVolume = max(0, min(100, playbackVolume + 5))
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            do {
+                try await spotifyService.setVolume(playbackVolume)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     func handleVolumeDown() async {
-        await handleVolumeChange(playbackVolume - 5)
+        volumeDebounceTask?.cancel()
+        volumeDebounceTask = Task {
+            playbackVolume = max(0, min(100, playbackVolume - 5))
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            do {
+                try await spotifyService.setVolume(playbackVolume)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     func handleToggleMute() {
@@ -213,9 +234,10 @@ final class PlaybackState {
             playbackVolume = state.device?.volumePercent ?? 50
             playbackShuffle = state.shuffleState ?? false
             playbackRepeat = state.repeatState?.rawValue ?? "off"
-            likedTrack = state.item != nil
-                ? (try await spotifyService.checkTrack(id: state.item?.id ?? ""))
-                : false
+            likedTrack = false
+            if let trackId = state.item?.id, !trackId.isEmpty {
+                likedTrack = try await spotifyService.checkTrack(id: trackId)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

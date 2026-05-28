@@ -11,6 +11,7 @@ final class DeviceState {
 
     var localDevices: [LocalDevice] = []
     var spotifyDevices: [SpotifyDevice] = []
+    var error: Error?
 
     // MARK: - Private
 
@@ -32,19 +33,20 @@ final class DeviceState {
 
                 localDevices = try await local
                 spotifyDevices = try await spotify
+                error = nil
             } catch {
-                // Error handled by coordinator
+                self.error = error
             }
         }
     }
 
-    func transferPlayback(to deviceId: String, onComplete: @escaping () -> Void) {
+    func transferPlayback(to deviceId: String) {
         Task {
             do {
                 try await spotifyService.transferPlayback(to: deviceId)
-                onComplete()
+                error = nil
             } catch {
-                // Error handled by coordinator
+                self.error = error
             }
         }
     }

@@ -32,6 +32,7 @@ struct HomeView: View {
         }
         .scrollIndicators(.hidden)
         .background(Color.spxBase)
+        .accessibilityIdentifier("home-scroll-view")
     }
 
     // MARK: - Hero Section
@@ -116,6 +117,8 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                     .onHover { isHoveringHeart = $0 }
                     .animation(.easeOut(duration: 0.15), value: isHoveringHeart)
+                    .accessibilityLabel(liked ? "Unlike" : "Like")
+                    .accessibilityIdentifier("home-like-button")
 
                     Button(action: {}) {
                         Image(systemName: "arrow.down.circle")
@@ -126,6 +129,8 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                     .onHover { isHoveringDownload = $0 }
                     .animation(.easeOut(duration: 0.15), value: isHoveringDownload)
+                    .accessibilityLabel("Download")
+                    .accessibilityIdentifier("home-download-button")
 
                     Button(action: {}) {
                         Image(systemName: "square.and.arrow.up")
@@ -136,6 +141,8 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                     .onHover { isHoveringShare = $0 }
                     .animation(.easeOut(duration: 0.15), value: isHoveringShare)
+                    .accessibilityLabel("Share")
+                    .accessibilityIdentifier("home-share-button")
                 }
                 .foregroundColor(.spxTextSecondary)
                 .padding(.top, 8)
@@ -179,18 +186,18 @@ struct HomeView: View {
             Group {
                 if let track = track, !primaryArtist.isEmpty, !track.name.isEmpty {
                     (Text("You've listened to ")
-                        .foregroundColor(Color(hex: "A7A7A7"))
+                        .foregroundColor(Color.spxTextSecondary)
                     + Text(primaryArtist).bold()
                     + Text(" \(artistListenCount) times and ")
-                        .foregroundColor(Color(hex: "A7A7A7"))
+                        .foregroundColor(Color.spxTextSecondary)
                     + Text(track.name).bold()
                     + Text(" \(trackListenCount) times.")
-                        .foregroundColor(Color(hex: "A7A7A7")))
+                        .foregroundColor(Color.spxTextSecondary))
                     .font(.system(size: 14))
                 } else {
                     Text("You've listened to 0 times and 0 times.")
                         .font(.system(size: 14))
-                        .foregroundColor(Color(hex: "A7A7A7"))
+                        .foregroundColor(Color.spxTextSecondary)
                 }
             }
             .padding(.horizontal, 24)
@@ -270,9 +277,9 @@ struct HomeView: View {
                 .animation(.easeOut(duration: 0.2), value: isHoveringArtist)
 
                 (Text("\(name) is a musical artist on Spotify. They have \(followers) followers. ")
-                    .foregroundColor(Color(hex: "A7A7A7"))
+                    .foregroundColor(Color.spxTextSecondary)
                 + Text("View more on SPX")
-                    .foregroundColor(Color(hex: "1DB954")))
+                    .foregroundColor(Color.spxAccent))
                 .font(.system(size: 14))
             }
             .onHover { isHoveringArtist = $0 }

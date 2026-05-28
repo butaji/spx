@@ -113,11 +113,14 @@ struct AlbumDetailView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 16)
+                .accessibilityLabel("Play album")
+                .accessibilityIdentifier("album-detail-play-button")
             }
         }
         .padding(.horizontal, 24)
         .padding(.top, 16)
         .padding(.bottom, 24)
+        .accessibilityIdentifier("album-detail-view")
     }
 
     // MARK: - Loading View
@@ -245,5 +248,9 @@ struct AlbumTrackRow: View {
         .onTapGesture {
             onTap()
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(track.name) by \(track.artists?.compactMap { $0.name }.joined(separator: ", ") ?? "")")
+        .accessibilityHint("Double tap to play")
+        .accessibilityIdentifier("album-track-row-\(index)")
     }
 }

@@ -518,26 +518,37 @@ final class AppStatePlaybackTests: XCTestCase {
 
     // MARK: - Devices Tests
 
-    func testRefreshDevicesUpdatesBothDeviceLists() async {
+    func testRefreshDevicesCallsAPI() {
         // Given
         mockSpotify.mockDevices = [testDevice]
+        mockSpotify.resetCallCounts()
 
         // When
         sut.refreshDevices()
 
-        // Then - just verify no crash and appError is nil (devices update is async)
-        // The actual device population happens in the Task
-        XCTAssertTrue(true)
+        // Then - verify the API was called (async, so give it a moment)
+        let expectation = expectation(description: "devices refreshed")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertEqual(mockSpotify.getDevicesCallCount, 1)
     }
 
-    func testTransferPlaybackCallsAPI() async {
+    func testTransferPlaybackCallsAPI() {
         // Given
         mockSpotify.resetCallCounts()
 
         // When
         sut.transferPlayback(to: "device456")
 
-        // Then - the API call is made asynchronously
-        XCTAssertTrue(true)
+        // Then - verify the API was called (async, so give it a moment)
+        let expectation = expectation(description: "transfer playback")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertEqual(mockSpotify.transferPlaybackCallCount, 1)
+        XCTAssertEqual(mockSpotify.transferPlaybackDeviceId, "device456")
     }
 }

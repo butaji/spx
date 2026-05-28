@@ -110,7 +110,7 @@ final class AppState {
 
     init(
         spotifyService: SpotifyServiceProtocol,
-        tokenStorage: TokenStorage
+        tokenStorage: TokenStorageProtocol
     ) {
         self.spotifyService = spotifyService
         self.auth = AuthState(spotifyService: spotifyService, tokenStorage: tokenStorage)
@@ -143,17 +143,14 @@ final class AppState {
 
     // MARK: - Auth Handlers (Coordinator)
 
-    func handleStartAuth() {
+    func handleStartAuth() async {
         appError = nil
 
-        auth.handleStartAuth(
-            onSuccess: { [weak self] in
-                await self?.restoreSession()
-            },
-            onError: { [weak self] error in
-                self?.appError = error.localizedDescription
-            }
-        )
+        await auth.handleStartAuth()
+
+        if auth.isAuthed {
+            await restoreSession()
+        }
     }
 
     func cancelAuth() {
@@ -162,9 +159,8 @@ final class AppState {
     }
 
     func handleLogout() {
-        auth.handleLogout { [weak self] in
-            self?.playback.stopPlaybackPolling()
-        }
+        auth.handleLogout()
+        playback.stopPlaybackPolling()
         navigation.resetToHome()
     }
 
@@ -326,11 +322,15 @@ final class AppState {
 
     func refreshDevices() {
         devices.refreshDevices()
+        if let error = devices.error {
+            appError = error.localizedDescription
+        }
     }
 
     func transferPlayback(to deviceId: String) {
-        devices.transferPlayback(to: deviceId) { [weak self] in
-            self?.devices.refreshDevices()
+        devices.transferPlayback(to: deviceId)
+        if let error = devices.error {
+            appError = error.localizedDescription
         }
     }
 

@@ -17,31 +17,32 @@ struct ThemeColors {
 }
 
 // MARK: - Theme Presets
+// Note: Colors are sourced from Color extension in Colors.swift for consistency
 
 extension ThemeColors {
     static let dark = ThemeColors(
-        background: Color(hex: "0A0A0A"),
-        elevated: Color(hex: "141414"),
-        overlay: Color(hex: "1E1E1E"),
+        background: .spxBase,
+        elevated: .spxElevated,
+        overlay: .spxOverlay,
         surface: Color(hex: "242424"),
         primaryText: .white,
-        secondaryText: Color(hex: "A7A7A7"),
-        tertiaryText: Color(hex: "6A6A6A"),
-        accent: Color(hex: "1DB954"),
+        secondaryText: .spxTextSecondary,
+        tertiaryText: .spxTextTertiary,
+        accent: .spxAccent,
         accentHover: Color(hex: "1ED760"),
-        border: Color(hex: "2A2A2A"),
+        border: .spxBorder,
         divider: Color(hex: "333333")
     )
 
     static let light = ThemeColors(
         background: Color(hex: "F5F5F7"),
-        elevated: Color(hex: "FFFFFF"),
+        elevated: .white,
         overlay: Color(hex: "E8E8ED"),
         surface: Color(hex: "DEDEE3"),
         primaryText: Color(hex: "1D1D1F"),
         secondaryText: Color(hex: "6E6E73"),
         tertiaryText: Color(hex: "86868B"),
-        accent: Color(hex: "1DB954"),
+        accent: .spxAccent,
         accentHover: Color(hex: "1ED760"),
         border: Color(hex: "D2D2D7"),
         divider: Color(hex: "E5E5EA")
