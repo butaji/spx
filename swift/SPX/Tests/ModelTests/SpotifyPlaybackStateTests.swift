@@ -5,8 +5,8 @@ final class SpotifyPlaybackStateTests: XCTestCase {
 
     // MARK: - JSON Decoding Tests
 
-    func testDecodingFullPlaybackState() throws {
-        let json = """
+    private var fullPlaybackStateJSON: Data {
+        Data("""
         {
             "is_playing": true,
             "shuffle_state": false,
@@ -47,11 +47,10 @@ final class SpotifyPlaybackStateTests: XCTestCase {
                 "uri": "spotify:album:album123"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
+    }
 
-        let decoder = JSONDecoder()
-        let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
-
+    private func assertFullPlaybackStateDecoded(_ state: SpotifyPlaybackState) {
         XCTAssertEqual(state.isPlaying, true)
         XCTAssertEqual(state.shuffleState, false)
         XCTAssertEqual(state.repeatState, .context)
@@ -59,12 +58,17 @@ final class SpotifyPlaybackStateTests: XCTestCase {
         XCTAssertEqual(state.timestamp, 1716200000000)
     }
 
+    func testDecodingFullPlaybackState() throws {
+        let state = try JSONDecoder().decode(SpotifyPlaybackState.self, from: fullPlaybackStateJSON)
+        assertFullPlaybackStateDecoded(state)
+    }
+
     func testDecodingMinimalPlaybackState() throws {
-        let json = """
+        let json = Data("""
         {
             "is_playing": false
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -80,7 +84,7 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testDecodingPlaybackStateWithNullOptionals() throws {
-        let json = """
+        let json = Data("""
         {
             "is_playing": null,
             "shuffle_state": null,
@@ -91,7 +95,7 @@ final class SpotifyPlaybackStateTests: XCTestCase {
             "device": null,
             "context": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -108,12 +112,12 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     // MARK: - Repeat State Tests
 
     func testDecodingRepeatStateOff() throws {
-        let json = """
+        let json = Data("""
         {
             "is_playing": true,
             "repeat_state": "off"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -122,12 +126,12 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testDecodingRepeatStateContext() throws {
-        let json = """
+        let json = Data("""
         {
             "is_playing": true,
             "repeat_state": "context"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -136,12 +140,12 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testDecodingRepeatStateTrack() throws {
-        let json = """
+        let json = Data("""
         {
             "is_playing": true,
             "repeat_state": "track"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -152,7 +156,7 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     // MARK: - Device Info Nested Decoding Tests
 
     func testDecodingFullDevice() throws {
-        let json = """
+        let json = Data("""
         {
             "device": {
                 "id": "deviceFull",
@@ -170,13 +174,16 @@ final class SpotifyPlaybackStateTests: XCTestCase {
                 "deviceIp": "10.0.0.1"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
 
         XCTAssertNotNil(state.device)
-        let device = state.device!
+        guard let device = state.device else {
+            XCTFail("Expected device to be present")
+            return
+        }
         XCTAssertEqual(device.id, "deviceFull")
         XCTAssertEqual(device.name, "Full Device")
         XCTAssertEqual(device.volumePercent, 80)
@@ -193,13 +200,13 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testDecodingMinimalDevice() throws {
-        let json = """
+        let json = Data("""
         {
             "device": {
                 "name": "Minimal Device"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -213,7 +220,7 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testDecodingDeviceWithAllNullOptionals() throws {
-        let json = """
+        let json = Data("""
         {
             "device": {
                 "id": null,
@@ -231,7 +238,7 @@ final class SpotifyPlaybackStateTests: XCTestCase {
                 "deviceIp": null
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -245,7 +252,7 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     // MARK: - Context Decoding Tests
 
     func testDecodingFullContext() throws {
-        let json = """
+        let json = Data("""
         {
             "context": {
                 "type": "playlist",
@@ -256,13 +263,16 @@ final class SpotifyPlaybackStateTests: XCTestCase {
                 "uri": "spotify:playlist:playlist123"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
 
         XCTAssertNotNil(state.context)
-        let context = state.context!
+        guard let context = state.context else {
+            XCTFail("Expected context to be present")
+            return
+        }
         XCTAssertEqual(context.type, "playlist")
         XCTAssertEqual(context.href, "https://api.spotify.com/v1/playlists/playlist123")
         XCTAssertEqual(context.uri, "spotify:playlist:playlist123")
@@ -271,13 +281,13 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testDecodingMinimalContext() throws {
-        let json = """
+        let json = Data("""
         {
             "context": {
                 "type": "album"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -290,14 +300,14 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testDecodingContextWithNullExternalUrls() throws {
-        let json = """
+        let json = Data("""
         {
             "context": {
                 "type": "artist",
                 "external_urls": null
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -307,32 +317,32 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testDecodingContextWithVariousTypes() throws {
-        let albumContext = """
+        let albumContext = Data("""
         {
             "context": {
                 "type": "album",
                 "uri": "spotify:album:album123"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let artistContext = """
+        let artistContext = Data("""
         {
             "context": {
                 "type": "artist",
                 "uri": "spotify:artist:artist123"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let playlistContext = """
+        let playlistContext = Data("""
         {
             "context": {
                 "type": "playlist",
                 "uri": "spotify:playlist:playlist123"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let albumState = try decoder.decode(SpotifyPlaybackState.self, from: albumContext)
@@ -347,7 +357,7 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     // MARK: - Item Decoding Tests
 
     func testDecodingPlaybackStateWithItem() throws {
-        let json = """
+        let json = Data("""
         {
             "is_playing": true,
             "item": {
@@ -357,7 +367,7 @@ final class SpotifyPlaybackStateTests: XCTestCase {
                 "duration_ms": 180000
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state = try decoder.decode(SpotifyPlaybackState.self, from: json)
@@ -371,23 +381,23 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     // MARK: - Equality and Hashable Tests
 
     func testPlaybackStateEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "is_playing": true,
             "shuffle_state": false,
             "repeat_state": "off",
             "progress_ms": 30000
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "is_playing": true,
             "shuffle_state": false,
             "repeat_state": "off",
             "progress_ms": 30000
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state1 = try decoder.decode(SpotifyPlaybackState.self, from: json1)
@@ -397,17 +407,17 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testPlaybackStateInequality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "is_playing": true
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "is_playing": false
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state1 = try decoder.decode(SpotifyPlaybackState.self, from: json1)
@@ -417,21 +427,21 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testContextEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "type": "album",
             "href": "https://example.com",
             "uri": "spotify:album:123"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "type": "album",
             "href": "https://example.com",
             "uri": "spotify:album:123"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let context1 = try decoder.decode(Context.self, from: json1)
@@ -441,19 +451,19 @@ final class SpotifyPlaybackStateTests: XCTestCase {
     }
 
     func testPlaybackStateHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "is_playing": true,
             "progress_ms": 10000
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "is_playing": true,
             "progress_ms": 10000
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let state1 = try decoder.decode(SpotifyPlaybackState.self, from: json1)

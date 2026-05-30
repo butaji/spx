@@ -6,7 +6,7 @@ final class LocalDeviceTests: XCTestCase {
     // MARK: - Full JSON Decoding Tests
 
     func testDecodingFullLocalDevice() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "MacBook Pro",
             "ip": "192.168.1.100",
@@ -18,7 +18,7 @@ final class LocalDeviceTests: XCTestCase {
             "service_type": "video",
             "friendly_name": "My MacBook"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -35,7 +35,7 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testDecodingLocalDeviceWithAllFields() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Test Device",
             "ip": "10.0.0.1",
@@ -47,7 +47,7 @@ final class LocalDeviceTests: XCTestCase {
             "service_type": "audio",
             "friendly_name": "Friendly Device"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -66,13 +66,13 @@ final class LocalDeviceTests: XCTestCase {
     // MARK: - Minimal JSON Decoding Tests
 
     func testDecodingMinimalLocalDevice() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Minimal Device",
             "ip": "127.0.0.1",
             "port": 80
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -89,13 +89,13 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testDecodingLocalDeviceWithOnlyRequiredFields() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Required Only",
             "ip": "0.0.0.0",
             "port": 443
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -108,7 +108,7 @@ final class LocalDeviceTests: XCTestCase {
     // MARK: - Null Handling Tests
 
     func testDecodingLocalDeviceWithNullOptionals() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Null Device",
             "ip": "192.168.0.1",
@@ -120,7 +120,7 @@ final class LocalDeviceTests: XCTestCase {
             "service_type": null,
             "friendly_name": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -137,13 +137,13 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testDecodingLocalDeviceWithNullIpAddress() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Null IP Device",
             "ip": null,
             "port": 8080
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -156,13 +156,13 @@ final class LocalDeviceTests: XCTestCase {
     // MARK: - CodingKeys Tests
 
     func testLocalDeviceCodingKeysIpField() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Coding Keys Test",
             "ip": "172.16.0.1",
             "port": 8888
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -171,14 +171,14 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testLocalDeviceCodingKeysIsActiveField() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Active Test",
             "ip": "10.0.0.1",
             "port": 8080,
             "is_active": true
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -187,14 +187,14 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testLocalDeviceCodingKeysServiceTypeField() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Service Type Test",
             "ip": "10.0.0.2",
             "port": 9090,
             "service_type": "music"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -203,14 +203,14 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testLocalDeviceCodingKeysFriendlyNameField() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Friendly Name Test",
             "ip": "10.0.0.3",
             "port": 7777,
             "friendly_name": "My Cool Device"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -221,7 +221,7 @@ final class LocalDeviceTests: XCTestCase {
     // MARK: - Equality Tests
 
     func testLocalDeviceEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "name": "Equal Device",
             "ip": "192.168.1.1",
@@ -233,9 +233,9 @@ final class LocalDeviceTests: XCTestCase {
             "service_type": "audio",
             "friendly_name": "Device One"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "name": "Equal Device",
             "ip": "192.168.1.1",
@@ -247,7 +247,7 @@ final class LocalDeviceTests: XCTestCase {
             "service_type": "audio",
             "friendly_name": "Device One"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device1 = try decoder.decode(LocalDevice.self, from: json1)
@@ -257,21 +257,21 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testLocalDeviceInequality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "name": "Device A",
             "ip": "10.0.0.1",
             "port": 8080
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "name": "Device B",
             "ip": "10.0.0.2",
             "port": 9090
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device1 = try decoder.decode(LocalDevice.self, from: json1)
@@ -281,23 +281,23 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testLocalDeviceInequalityById() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "name": "Same Name",
             "ip": "10.0.0.1",
             "port": 8080,
             "id": "id1"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "name": "Same Name",
             "ip": "10.0.0.1",
             "port": 8080,
             "id": "id2"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device1 = try decoder.decode(LocalDevice.self, from: json1)
@@ -309,23 +309,23 @@ final class LocalDeviceTests: XCTestCase {
     // MARK: - Hashable Tests
 
     func testLocalDeviceHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "name": "Hash Device",
             "ip": "192.168.1.100",
             "port": 8080,
             "id": "hashId"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "name": "Hash Device",
             "ip": "192.168.1.100",
             "port": 8080,
             "id": "hashId"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device1 = try decoder.decode(LocalDevice.self, from: json1)
@@ -339,23 +339,23 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testLocalDeviceHashableDifferentIds() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "name": "Same Device",
             "ip": "10.0.0.1",
             "port": 8080,
             "id": "unique1"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "name": "Same Device",
             "ip": "10.0.0.1",
             "port": 8080,
             "id": "unique2"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device1 = try decoder.decode(LocalDevice.self, from: json1)
@@ -369,13 +369,13 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testLocalDeviceHashableInDictionary() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Dict Device",
             "ip": "10.0.0.5",
             "port": 6000
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)
@@ -392,13 +392,13 @@ final class LocalDeviceTests: XCTestCase {
         let ports = [0, 1, 80, 443, 8080, 65535]
 
         for port in ports {
-            let json = """
+            let json = Data("""
             {
                 "name": "Port Test",
                 "ip": "127.0.0.1",
                 "port": \(port)
             }
-            """.data(using: .utf8)!
+            """.utf8)
 
             let decoder = JSONDecoder()
             let device = try decoder.decode(LocalDevice.self, from: json)
@@ -410,14 +410,14 @@ final class LocalDeviceTests: XCTestCase {
         let serviceTypes = ["audio", "video", "music", "podcast", "unknown"]
 
         for serviceType in serviceTypes {
-            let json = """
+            let json = Data("""
             {
                 "name": "Service Test",
                 "ip": "10.0.0.1",
                 "port": 8080,
                 "service_type": "\(serviceType)"
             }
-            """.data(using: .utf8)!
+            """.utf8)
 
             let decoder = JSONDecoder()
             let device = try decoder.decode(LocalDevice.self, from: json)
@@ -426,7 +426,7 @@ final class LocalDeviceTests: XCTestCase {
     }
 
     func testLocalDeviceWithVariousBooleanFields() throws {
-        let json = """
+        let json = Data("""
         {
             "name": "Bool Test",
             "ip": "10.0.0.1",
@@ -434,7 +434,7 @@ final class LocalDeviceTests: XCTestCase {
             "is_active": true,
             "canTransfer": false
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let device = try decoder.decode(LocalDevice.self, from: json)

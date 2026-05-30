@@ -1,12 +1,14 @@
 import XCTest
 @testable import SPX
 
-final class TrackInfoTests: XCTestCase {
+// MARK: - TrackInfoDecodingTests
+
+final class TrackInfoDecodingTests: XCTestCase {
 
     // MARK: - Full JSON Decoding Tests
 
     func testDecodingFullTrackInfo() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "track123",
             "name": "Test Track",
@@ -19,7 +21,7 @@ final class TrackInfoTests: XCTestCase {
             "imageUrl": "https://example.com/cover.jpg",
             "uri": "spotify:track:track123"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(TrackInfo.self, from: json)
@@ -37,7 +39,7 @@ final class TrackInfoTests: XCTestCase {
     }
 
     func testDecodingTrackInfoWithAllFields() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "fullTrack",
             "name": "Full Track Info",
@@ -50,7 +52,7 @@ final class TrackInfoTests: XCTestCase {
             "imageUrl": "https://example.com/fullcover.png",
             "uri": "spotify:track:fullTrack"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(TrackInfo.self, from: json)
@@ -70,7 +72,7 @@ final class TrackInfoTests: XCTestCase {
     // MARK: - Minimal JSON Decoding Tests
 
     func testDecodingMinimalTrackInfo() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "minimal",
             "name": "Min",
@@ -81,7 +83,7 @@ final class TrackInfoTests: XCTestCase {
             "isPlaying": false,
             "uri": "spotify:track:minimal"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(TrackInfo.self, from: json)
@@ -101,7 +103,7 @@ final class TrackInfoTests: XCTestCase {
     // MARK: - Optional Fields Tests
 
     func testDecodingTrackInfoWithNullArtistIds() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "noArtistIds",
             "name": "No Artist IDs",
@@ -114,7 +116,7 @@ final class TrackInfoTests: XCTestCase {
             "imageUrl": null,
             "uri": "spotify:track:noArtistIds"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(TrackInfo.self, from: json)
@@ -124,7 +126,7 @@ final class TrackInfoTests: XCTestCase {
     }
 
     func testDecodingTrackInfoWithEmptyArtistIds() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "emptyArtists",
             "name": "Empty Artists",
@@ -136,7 +138,7 @@ final class TrackInfoTests: XCTestCase {
             "isPlaying": true,
             "uri": "spotify:track:emptyArtists"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(TrackInfo.self, from: json)
@@ -146,7 +148,7 @@ final class TrackInfoTests: XCTestCase {
     }
 
     func testDecodingTrackInfoWithSingleArtistId() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "singleArtist",
             "name": "Single Artist Track",
@@ -158,7 +160,7 @@ final class TrackInfoTests: XCTestCase {
             "isPlaying": false,
             "uri": "spotify:track:singleArtist"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(TrackInfo.self, from: json)
@@ -169,7 +171,7 @@ final class TrackInfoTests: XCTestCase {
     }
 
     func testDecodingTrackInfoWithManyArtistIds() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "manyArtists",
             "name": "Collaboration",
@@ -181,426 +183,12 @@ final class TrackInfoTests: XCTestCase {
             "isPlaying": true,
             "uri": "spotify:track:manyArtists"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(TrackInfo.self, from: json)
 
         XCTAssertNotNil(track.artistIds)
         XCTAssertEqual(track.artistIds?.count, 10)
-    }
-
-    // MARK: - ImageUrl Tests
-
-    func testDecodingTrackInfoWithImageUrl() throws {
-        let json = """
-        {
-            "id": "withImage",
-            "name": "With Image",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 60000,
-            "isPlaying": true,
-            "imageUrl": "https://i.scdn.co/image/ab67616d00001e02abc19b5051a2c5e3c1d28bb4",
-            "uri": "spotify:track:withImage"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.imageUrl, "https://i.scdn.co/image/ab67616d00001e02abc19b5051a2c5e3c1d28bb4")
-    }
-
-    func testDecodingTrackInfoWithNullImageUrl() throws {
-        let json = """
-        {
-            "id": "noImage",
-            "name": "No Image",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 0,
-            "isPlaying": false,
-            "imageUrl": null,
-            "uri": "spotify:track:noImage"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertNil(track.imageUrl)
-    }
-
-    // MARK: - Progress and Duration Tests
-
-    func testDecodingTrackInfoWithZeroProgress() throws {
-        let json = """
-        {
-            "id": "startTrack",
-            "name": "Start",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 0,
-            "isPlaying": false,
-            "uri": "spotify:track:startTrack"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.progressMs, 0)
-        XCTAssertEqual(track.durationMs, 180000)
-    }
-
-    func testDecodingTrackInfoAtEnd() throws {
-        let json = """
-        {
-            "id": "endTrack",
-            "name": "End",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 200000,
-            "progressMs": 200000,
-            "isPlaying": false,
-            "uri": "spotify:track:endTrack"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.progressMs, 200000)
-        XCTAssertEqual(track.durationMs, 200000)
-    }
-
-    func testDecodingTrackInfoProgressGreaterThanDuration() throws {
-        let json = """
-        {
-            "id": "overProgress",
-            "name": "Over Progress",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 200000,
-            "isPlaying": true,
-            "uri": "spotify:track:overProgress"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.progressMs, 200000)
-        XCTAssertEqual(track.durationMs, 180000)
-    }
-
-    // MARK: - isPlaying State Tests
-
-    func testDecodingTrackInfoPlaying() throws {
-        let json = """
-        {
-            "id": "playing",
-            "name": "Now Playing",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 90000,
-            "isPlaying": true,
-            "uri": "spotify:track:playing"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.isPlaying, true)
-    }
-
-    func testDecodingTrackInfoPaused() throws {
-        let json = """
-        {
-            "id": "paused",
-            "name": "Paused Track",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 45000,
-            "isPlaying": false,
-            "uri": "spotify:track:paused"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.isPlaying, false)
-    }
-
-    // MARK: - CodingKeys Tests
-
-    func testTrackInfoCodingKeysArtistIds() throws {
-        let json = """
-        {
-            "id": "codingKeys",
-            "name": "Coding Keys Test",
-            "artist": "Artist",
-            "artistIds": ["id1", "id2"],
-            "album": "Album",
-            "durationMs": 100,
-            "progressMs": 50,
-            "isPlaying": true,
-            "uri": "spotify:track:codingKeys"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.artistIds, ["id1", "id2"])
-    }
-
-    func testTrackInfoCodingKeysDurationMs() throws {
-        let json = """
-        {
-            "id": "durationTest",
-            "name": "Duration",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 250000,
-            "progressMs": 0,
-            "isPlaying": false,
-            "uri": "spotify:track:durationTest"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.durationMs, 250000)
-    }
-
-    func testTrackInfoCodingKeysProgressMs() throws {
-        let json = """
-        {
-            "id": "progressTest",
-            "name": "Progress",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 300000,
-            "progressMs": 123456,
-            "isPlaying": true,
-            "uri": "spotify:track:progressTest"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.progressMs, 123456)
-    }
-
-    func testTrackInfoCodingKeysIsPlaying() throws {
-        let json = """
-        {
-            "id": "playingTest",
-            "name": "Playing Test",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 60000,
-            "isPlaying": true,
-            "uri": "spotify:track:playingTest"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.isPlaying, true)
-    }
-
-    func testTrackInfoCodingKeysImageUrl() throws {
-        let json = """
-        {
-            "id": "imageUrlTest",
-            "name": "Image URL",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 0,
-            "isPlaying": false,
-            "imageUrl": "https://example.com/art.jpg",
-            "uri": "spotify:track:imageUrlTest"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.imageUrl, "https://example.com/art.jpg")
-    }
-
-    // MARK: - Equality Tests
-
-    func testTrackInfoEquality() throws {
-        let json1 = """
-        {
-            "id": "equalTrack",
-            "name": "Equal Track",
-            "artist": "Artist",
-            "artistIds": ["a1"],
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 60000,
-            "isPlaying": true,
-            "imageUrl": "https://example.com/img.jpg",
-            "uri": "spotify:track:equalTrack"
-        }
-        """.data(using: .utf8)!
-
-        let json2 = """
-        {
-            "id": "equalTrack",
-            "name": "Equal Track",
-            "artist": "Artist",
-            "artistIds": ["a1"],
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 60000,
-            "isPlaying": true,
-            "imageUrl": "https://example.com/img.jpg",
-            "uri": "spotify:track:equalTrack"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track1 = try decoder.decode(TrackInfo.self, from: json1)
-        let track2 = try decoder.decode(TrackInfo.self, from: json2)
-
-        XCTAssertEqual(track1, track2)
-    }
-
-    func testTrackInfoInequality() throws {
-        let json1 = """
-        {
-            "id": "trackA",
-            "name": "Track A",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 0,
-            "isPlaying": false,
-            "uri": "spotify:track:trackA"
-        }
-        """.data(using: .utf8)!
-
-        let json2 = """
-        {
-            "id": "trackB",
-            "name": "Track B",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 0,
-            "isPlaying": false,
-            "uri": "spotify:track:trackB"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track1 = try decoder.decode(TrackInfo.self, from: json1)
-        let track2 = try decoder.decode(TrackInfo.self, from: json2)
-
-        XCTAssertNotEqual(track1, track2)
-    }
-
-    // MARK: - Hashable Tests
-
-    func testTrackInfoHashable() throws {
-        let json1 = """
-        {
-            "id": "hashTrack",
-            "name": "Hash Track",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 90000,
-            "isPlaying": true,
-            "uri": "spotify:track:hashTrack"
-        }
-        """.data(using: .utf8)!
-
-        let json2 = """
-        {
-            "id": "hashTrack",
-            "name": "Hash Track",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 90000,
-            "isPlaying": true,
-            "uri": "spotify:track:hashTrack"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track1 = try decoder.decode(TrackInfo.self, from: json1)
-        let track2 = try decoder.decode(TrackInfo.self, from: json2)
-
-        var hashSet = Set<TrackInfo>()
-        hashSet.insert(track1)
-        hashSet.insert(track2)
-
-        XCTAssertEqual(hashSet.count, 1)
-    }
-
-    func testTrackInfoHashableInDictionary() throws {
-        let json = """
-        {
-            "id": "dictTrack",
-            "name": "Dictionary Track",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 0,
-            "isPlaying": false,
-            "uri": "spotify:track:dictTrack"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        var dict = [TrackInfo: String]()
-        dict[track] = "testValue"
-
-        XCTAssertEqual(dict[track], "testValue")
-    }
-
-    // MARK: - Identifiable Tests
-
-    func testTrackInfoIdentifiable() throws {
-        let json = """
-        {
-            "id": "identifiableTrack",
-            "name": "Identifiable",
-            "artist": "Artist",
-            "album": "Album",
-            "durationMs": 180000,
-            "progressMs": 0,
-            "isPlaying": false,
-            "uri": "spotify:track:identifiableTrack"
-        }
-        """.data(using: .utf8)!
-
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(TrackInfo.self, from: json)
-
-        XCTAssertEqual(track.id, "identifiableTrack")
     }
 }

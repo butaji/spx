@@ -35,7 +35,8 @@ struct PlaylistDetailView: View {
             if let imageUrl = playlist?.images?.first?.url, let url = URL(string: imageUrl) {
                 AsyncImage(url: url, content: { image in
                     image.resizable().aspectRatio(contentMode: .fill)
-                },                 placeholder: {
+                },
+                placeholder: {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(Color.spxElevated)
                         .overlay(
@@ -228,7 +229,9 @@ struct PlaylistTrackRow: View {
         .background(isHovered ? Color.spxOverlay : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(track.name) by \(track.artists?.map { $0.name }.compactMap { $0 }.joined(separator: ", ") ?? "")")
+        .accessibilityLabel(
+            "\(track.name) by \(track.artists?.map { $0.name }.compactMap { $0 }.joined(separator: ", ") ?? "")"
+        )
         .accessibilityHint("Double tap to play")
         .accessibilityIdentifier("playlist-track-row-\(index)")
         .onHover { hovering in

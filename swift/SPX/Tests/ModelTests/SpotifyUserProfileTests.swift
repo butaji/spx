@@ -5,8 +5,8 @@ final class SpotifyUserProfileTests: XCTestCase {
 
     // MARK: - Full JSON Decoding Tests
 
-    func testDecodingFullUserProfile() throws {
-        let json = """
+    private var fullUserProfileJSON: Data {
+        Data("""
         {
             "id": "user123",
             "display_name": "Test User",
@@ -31,11 +31,10 @@ final class SpotifyUserProfileTests: XCTestCase {
                 "filter_locked": false
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
+    }
 
-        let decoder = JSONDecoder()
-        let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
-
+    private func assertFullUserProfileDecoded(_ profile: SpotifyUserProfile) {
         XCTAssertEqual(profile.id, "user123")
         XCTAssertEqual(profile.displayName, "Test User")
         XCTAssertEqual(profile.email, "test@example.com")
@@ -63,12 +62,17 @@ final class SpotifyUserProfileTests: XCTestCase {
         XCTAssertEqual(profile.explicitContent?.filterLocked, false)
     }
 
+    func testDecodingFullUserProfile() throws {
+        let profile = try JSONDecoder().decode(SpotifyUserProfile.self, from: fullUserProfileJSON)
+        assertFullUserProfileDecoded(profile)
+    }
+
     func testDecodingUserProfileWithMinimalData() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "minimalUser"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -87,7 +91,7 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testDecodingUserProfileWithNullOptionals() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "nullUser",
             "display_name": null,
@@ -101,7 +105,7 @@ final class SpotifyUserProfileTests: XCTestCase {
             "external_urls": null,
             "explicit_content": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -120,7 +124,7 @@ final class SpotifyUserProfileTests: XCTestCase {
     // MARK: - Followers Tests
 
     func testDecodingUserProfileWithFollowers() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "followerUser",
             "followers": {
@@ -128,7 +132,7 @@ final class SpotifyUserProfileTests: XCTestCase {
                 "href": "https://api.spotify.com/v1/users/followerUser/followers"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -139,12 +143,12 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testDecodingUserProfileWithNullFollowers() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "noFollowers",
             "followers": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -153,14 +157,14 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testDecodingUserProfileWithFollowersZeroTotal() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "newUser",
             "followers": {
                 "total": 0
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -173,7 +177,7 @@ final class SpotifyUserProfileTests: XCTestCase {
     // MARK: - ExplicitContent Tests
 
     func testDecodingUserProfileWithExplicitContent() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "explicitUser",
             "explicit_content": {
@@ -181,7 +185,7 @@ final class SpotifyUserProfileTests: XCTestCase {
                 "filter_locked": true
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -192,7 +196,7 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testDecodingUserProfileWithExplicitContentAllNull() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "cleanUser",
             "explicit_content": {
@@ -200,7 +204,7 @@ final class SpotifyUserProfileTests: XCTestCase {
                 "filter_locked": null
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -213,14 +217,14 @@ final class SpotifyUserProfileTests: XCTestCase {
     // MARK: - Images Tests
 
     func testDecodingUserProfileWithSingleImage() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "imageUser",
             "images": [
                 {"url": "https://example.com/user.jpg", "height": 300, "width": 300}
             ]
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -233,12 +237,12 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testDecodingUserProfileWithEmptyImagesArray() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "noImageUser",
             "images": []
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -248,14 +252,14 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testDecodingUserProfileWithImageNullDimensions() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "nullDimImage",
             "images": [
                 {"url": "https://example.com/image.jpg", "height": null, "width": null}
             ]
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -269,14 +273,14 @@ final class SpotifyUserProfileTests: XCTestCase {
     // MARK: - ExternalUrls Tests
 
     func testDecodingUserProfileWithExternalUrls() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "socialUser",
             "external_urls": {
                 "spotify": "https://open.spotify.com/user/socialUser"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)
@@ -288,7 +292,7 @@ final class SpotifyUserProfileTests: XCTestCase {
     // MARK: - Equality and Hashable Tests
 
     func testUserProfileEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "equalUser",
             "display_name": "Equal Name",
@@ -296,9 +300,9 @@ final class SpotifyUserProfileTests: XCTestCase {
             "country": "US",
             "product": "free"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "equalUser",
             "display_name": "Equal Name",
@@ -306,7 +310,7 @@ final class SpotifyUserProfileTests: XCTestCase {
             "country": "US",
             "product": "free"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile1 = try decoder.decode(SpotifyUserProfile.self, from: json1)
@@ -316,17 +320,17 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testUserProfileInequality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "userA"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "userB"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile1 = try decoder.decode(SpotifyUserProfile.self, from: json1)
@@ -336,19 +340,19 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testUserProfileHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "hashUser",
             "display_name": "Hash User"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "hashUser",
             "display_name": "Hash User"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile1 = try decoder.decode(SpotifyUserProfile.self, from: json1)
@@ -362,19 +366,19 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testFollowersEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "total": 100,
             "href": "https://example.com/followers"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "total": 100,
             "href": "https://example.com/followers"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let followers1 = try decoder.decode(Followers.self, from: json1)
@@ -385,19 +389,19 @@ final class SpotifyUserProfileTests: XCTestCase {
     }
 
     func testExplicitContentEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "filter_enabled": true,
             "filter_locked": false
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "filter_enabled": true,
             "filter_locked": false
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let content1 = try decoder.decode(ExplicitContent.self, from: json1)
@@ -410,7 +414,7 @@ final class SpotifyUserProfileTests: XCTestCase {
     // MARK: - CodingKeys Tests
 
     func testSpotifyUserProfileCodingKeys() throws {
-        let json = """
+        let json = Data("""
         {
             "display_name": "Coding Keys Test",
             "external_urls": {
@@ -421,7 +425,7 @@ final class SpotifyUserProfileTests: XCTestCase {
                 "filter_locked": true
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let profile = try decoder.decode(SpotifyUserProfile.self, from: json)

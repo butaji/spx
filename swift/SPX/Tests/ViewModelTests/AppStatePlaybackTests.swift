@@ -43,10 +43,12 @@ final class AppStatePlaybackTests: XCTestCase {
         super.tearDown()
     }
 
-    private func setupTestData() {
-        testImage = SpotifyImage(url: "https://example.com/image.jpg", height: 640, width: 640)
+    private func createTestImage() -> SpotifyImage {
+        SpotifyImage(url: "https://example.com/image.jpg", height: 640, width: 640)
+    }
 
-        testArtist = SpotifyArtist(
+    private func createTestArtist() -> SpotifyArtist {
+        SpotifyArtist(
             id: "artist123",
             name: "Test Artist",
             genres: ["rock"],
@@ -55,35 +57,45 @@ final class AppStatePlaybackTests: XCTestCase {
             popularity: 80,
             uri: nil
         )
+    }
 
-        testAlbum = SpotifyAlbum(
+    private func createTestAlbum(image: SpotifyImage, artist: SpotifyArtist) -> SpotifyAlbum {
+        SpotifyAlbum(
             id: "album123",
             name: "Test Album",
-            images: [testImage],
+            images: [image],
             uri: "spotify:album:123",
-            artists: [testArtist],
+            artists: [artist],
             releaseDate: "2024-01-01",
             tracks: nil,
             albumType: "album",
             totalTracks: 10
         )
+    }
 
-        testTrack = SpotifyTrack(
+    private func createTestTrack(
+        artist: SpotifyArtist,
+        album: SpotifyAlbum,
+        image: SpotifyImage
+    ) -> SpotifyTrack {
+        SpotifyTrack(
             id: "track123",
             name: "Test Track",
             uri: "spotify:track:123",
             durationMs: 180000,
-            artists: [testArtist],
-            album: testAlbum,
-            images: [testImage],
+            artists: [artist],
+            album: album,
+            images: [image],
             trackNumber: 1,
             discNumber: 1,
             explicit: false,
             popularity: 75,
             previewUrl: nil
         )
+    }
 
-        testDevice = SpotifyDevice(
+    private func createTestDevice() -> SpotifyDevice {
+        SpotifyDevice(
             id: "device123",
             name: "MacBook Pro",
             volumePercent: 75,
@@ -98,20 +110,26 @@ final class AppStatePlaybackTests: XCTestCase {
             needsWakeUp: false,
             deviceIp: nil
         )
+    }
 
-        testPlaybackState = SpotifyPlaybackState(
+    private func createTestPlaybackState(
+        track: SpotifyTrack,
+        device: SpotifyDevice
+    ) -> SpotifyPlaybackState {
+        SpotifyPlaybackState(
             isPlaying: true,
             shuffleState: false,
             repeatState: .off,
             progressMs: 30000,
-            item: testTrack,
-            device: testDevice,
+            item: track,
+            device: device,
             timestamp: 1234567890,
             context: nil
         )
+    }
 
-        mockSpotify.mockPlaybackState = testPlaybackState
-        mockSpotify.mockUserProfile = SpotifyUserProfile(
+    private func createMockUserProfile() -> SpotifyUserProfile {
+        SpotifyUserProfile(
             id: "user123",
             displayName: "Test User",
             images: nil,
@@ -124,6 +142,18 @@ final class AppStatePlaybackTests: XCTestCase {
             uri: nil,
             explicitContent: nil
         )
+    }
+
+    private func setupTestData() {
+        testImage = createTestImage()
+        testArtist = createTestArtist()
+        testAlbum = createTestAlbum(image: testImage, artist: testArtist)
+        testTrack = createTestTrack(artist: testArtist, album: testAlbum, image: testImage)
+        testDevice = createTestDevice()
+        testPlaybackState = createTestPlaybackState(track: testTrack, device: testDevice)
+
+        mockSpotify.mockPlaybackState = testPlaybackState
+        mockSpotify.mockUserProfile = createMockUserProfile()
     }
 
     // MARK: - Play/Pause Tests

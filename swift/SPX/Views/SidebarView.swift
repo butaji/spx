@@ -43,7 +43,9 @@ struct SidebarView: View {
                         }
                     }
                 }
-                .accessibilityIdentifier("sidebar-\(label.lowercased().replacingOccurrences(of: " ", with: "-"))-button")
+                .accessibilityIdentifier(
+                    "sidebar-\(label.lowercased().replacingOccurrences(of: " ", with: "-"))-button"
+                )
             }
             
             Spacer()

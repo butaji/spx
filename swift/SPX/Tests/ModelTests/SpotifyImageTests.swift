@@ -6,13 +6,13 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - Full JSON Decoding Tests
 
     func testDecodingFullSpotifyImage() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://i.scdn.co/image/ab67616d00001e02abc19b5051a2c5e3c1d28bb4",
             "height": 640,
             "width": 640
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -23,13 +23,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithAllFields() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/image.jpg",
             "height": 1000,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -42,11 +42,11 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - Minimal JSON Decoding Tests
 
     func testDecodingMinimalSpotifyImage() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/minimal.jpg"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -59,13 +59,13 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - Null Handling Tests
 
     func testDecodingSpotifyImageWithNullDimensions() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/nulls.jpg",
             "height": null,
             "width": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -76,13 +76,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithNullHeight() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/nullheight.jpg",
             "height": null,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -93,13 +93,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithNullWidth() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/nullwidth.jpg",
             "height": 300,
             "width": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -112,13 +112,13 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - Dimension Value Tests
 
     func testDecodingSpotifyImageWithZeroDimensions() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/zero.jpg",
             "height": 0,
             "width": 0
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -128,13 +128,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithLargeDimensions() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/large.jpg",
             "height": 99999,
             "width": 88888
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -144,13 +144,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithSquareDimensions() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/square.jpg",
             "height": 500,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -160,13 +160,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithRectangularDimensions() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/rect.jpg",
             "height": 300,
             "width": 600
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -179,13 +179,13 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - URL Format Tests
 
     func testDecodingSpotifyImageWithSpotifyUrl() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://i.scdn.co/image/ab67616d00001e02abc19b5051a2c5e3c1d28bb4",
             "height": 640,
             "width": 640
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -194,13 +194,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithHttpUrl() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "http://example.com/image.jpg",
             "height": 100,
             "width": 200
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -209,13 +209,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithDataUrl() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "data:image/png;base64,abc123",
             "height": 64,
             "width": 64
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -226,21 +226,21 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - Equality Tests
 
     func testSpotifyImageEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "url": "https://example.com/equal.jpg",
             "height": 500,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "url": "https://example.com/equal.jpg",
             "height": 500,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image1 = try decoder.decode(SpotifyImage.self, from: json1)
@@ -250,21 +250,21 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testSpotifyImageInequalityByUrl() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "url": "https://example.com/image1.jpg",
             "height": 500,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "url": "https://example.com/image2.jpg",
             "height": 500,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image1 = try decoder.decode(SpotifyImage.self, from: json1)
@@ -274,21 +274,21 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testSpotifyImageInequalityByHeight() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "url": "https://example.com/same.jpg",
             "height": 500,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "url": "https://example.com/same.jpg",
             "height": 600,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image1 = try decoder.decode(SpotifyImage.self, from: json1)
@@ -298,21 +298,21 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testSpotifyImageInequalityByWidth() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "url": "https://example.com/same.jpg",
             "height": 500,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "url": "https://example.com/same.jpg",
             "height": 500,
             "width": 600
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image1 = try decoder.decode(SpotifyImage.self, from: json1)
@@ -324,21 +324,21 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - Hashable Tests
 
     func testSpotifyImageHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "url": "https://example.com/hash.jpg",
             "height": 300,
             "width": 300
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "url": "https://example.com/hash.jpg",
             "height": 300,
             "width": 300
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image1 = try decoder.decode(SpotifyImage.self, from: json1)
@@ -352,17 +352,17 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testSpotifyImageHashableDifferentUrls() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "url": "https://example.com/hash1.jpg"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "url": "https://example.com/hash2.jpg"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image1 = try decoder.decode(SpotifyImage.self, from: json1)
@@ -376,13 +376,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testSpotifyImageHashableInDictionary() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/dict.jpg",
             "height": 100,
             "width": 100
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -394,21 +394,21 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testSpotifyImageHashableWithNullDimensions() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "url": "https://example.com/nullhash.jpg",
             "height": null,
             "width": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "url": "https://example.com/nullhash.jpg",
             "height": null,
             "width": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image1 = try decoder.decode(SpotifyImage.self, from: json1)
@@ -421,13 +421,13 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - Array Decoding Tests
 
     func testDecodingSpotifyImageArray() throws {
-        let json = """
+        let json = Data("""
         [
             {"url": "https://example.com/img1.jpg", "height": 640, "width": 640},
             {"url": "https://example.com/img2.jpg", "height": 320, "width": 320},
             {"url": "https://example.com/img3.jpg", "height": 160, "width": 160}
         ]
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let images = try decoder.decode([SpotifyImage].self, from: json)
@@ -442,9 +442,9 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingEmptySpotifyImageArray() throws {
-        let json = """
+        let json = Data("""
         []
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let images = try decoder.decode([SpotifyImage].self, from: json)
@@ -453,14 +453,14 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageArrayWithMixedDimensions() throws {
-        let json = """
+        let json = Data("""
         [
             {"url": "https://example.com/full.jpg", "height": 500, "width": 500},
             {"url": "https://example.com/noheight.jpg", "width": 300},
             {"url": "https://example.com/nowidth.jpg", "height": 400},
             {"url": "https://example.com/minimal.jpg"}
         ]
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let images = try decoder.decode([SpotifyImage].self, from: json)
@@ -475,13 +475,13 @@ final class SpotifyImageTests: XCTestCase {
     // MARK: - Special Character URL Tests
 
     func testDecodingSpotifyImageWithSpecialCharactersInUrl() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/image with spaces.jpg",
             "height": 100,
             "width": 100
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)
@@ -490,13 +490,13 @@ final class SpotifyImageTests: XCTestCase {
     }
 
     func testDecodingSpotifyImageWithQueryParamsInUrl() throws {
-        let json = """
+        let json = Data("""
         {
             "url": "https://example.com/image.jpg?size=large&format=jpg",
             "height": 500,
             "width": 500
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let image = try decoder.decode(SpotifyImage.self, from: json)

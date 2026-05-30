@@ -5,8 +5,8 @@ final class SpotifyAlbumTests: XCTestCase {
 
     // MARK: - JSON Decoding Tests
 
-    func testDecodingFullAlbum() throws {
-        let json = """
+    private var fullAlbumJSON: Data {
+        Data("""
         {
             "id": "album123",
             "name": "Test Album",
@@ -45,11 +45,10 @@ final class SpotifyAlbumTests: XCTestCase {
             "album_type": "album",
             "total_tracks": 10
         }
-        """.data(using: .utf8)!
+        """.utf8)
+    }
 
-        let decoder = JSONDecoder()
-        let album = try decoder.decode(SpotifyAlbum.self, from: json)
-
+    private func assertFullAlbumDecoded(_ album: SpotifyAlbum) {
         XCTAssertEqual(album.id, "album123")
         XCTAssertEqual(album.name, "Test Album")
         XCTAssertEqual(album.uri, "spotify:album:album123")
@@ -62,13 +61,18 @@ final class SpotifyAlbumTests: XCTestCase {
         XCTAssertEqual(album.artists?.first?.name, "Album Artist")
     }
 
+    func testDecodingFullAlbum() throws {
+        let album = try JSONDecoder().decode(SpotifyAlbum.self, from: fullAlbumJSON)
+        assertFullAlbumDecoded(album)
+    }
+
     func testDecodingMinimalAlbum() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "album456",
             "name": "Minimal Album"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let album = try decoder.decode(SpotifyAlbum.self, from: json)
@@ -85,7 +89,7 @@ final class SpotifyAlbumTests: XCTestCase {
     }
 
     func testDecodingAlbumWithNullOptionals() throws {
-        let json = """
+        let json = Data("""
         {
             "id": null,
             "name": "Null Album",
@@ -97,7 +101,7 @@ final class SpotifyAlbumTests: XCTestCase {
             "album_type": null,
             "total_tracks": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let album = try decoder.decode(SpotifyAlbum.self, from: json)
@@ -115,8 +119,8 @@ final class SpotifyAlbumTests: XCTestCase {
 
     // MARK: - Album with Tracks Tests
 
-    func testDecodingAlbumWithTracks() throws {
-        let json = """
+    private var albumWithTracksJSON: Data {
+        Data("""
         {
             "id": "albumWithTracks",
             "name": "Album With Tracks",
@@ -147,11 +151,10 @@ final class SpotifyAlbumTests: XCTestCase {
                 "total": 25
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
+    }
 
-        let decoder = JSONDecoder()
-        let album = try decoder.decode(SpotifyAlbum.self, from: json)
-
+    private func assertAlbumWithTracksDecoded(_ album: SpotifyAlbum) {
         XCTAssertNotNil(album.tracks)
         XCTAssertEqual(album.tracks?.total, 25)
         XCTAssertEqual(album.tracks?.items.count, 3)
@@ -161,8 +164,13 @@ final class SpotifyAlbumTests: XCTestCase {
         XCTAssertEqual(album.tracks?.items[2].id, "trackC")
     }
 
+    func testDecodingAlbumWithTracks() throws {
+        let album = try JSONDecoder().decode(SpotifyAlbum.self, from: albumWithTracksJSON)
+        assertAlbumWithTracksDecoded(album)
+    }
+
     func testDecodingAlbumWithEmptyTracks() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "emptyAlbum",
             "name": "Empty Album",
@@ -171,7 +179,7 @@ final class SpotifyAlbumTests: XCTestCase {
                 "total": 0
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let album = try decoder.decode(SpotifyAlbum.self, from: json)
@@ -184,13 +192,13 @@ final class SpotifyAlbumTests: XCTestCase {
     // MARK: - Missing Optional Fields Tests
 
     func testDecodingAlbumWithMissingImages() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "noImagesAlbum",
             "name": "No Images Album",
             "uri": "spotify:album:noImagesAlbum"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let album = try decoder.decode(SpotifyAlbum.self, from: json)
@@ -200,13 +208,13 @@ final class SpotifyAlbumTests: XCTestCase {
     }
 
     func testDecodingAlbumWithMissingArtists() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "noArtistsAlbum",
             "name": "No Artists Album",
             "artists": []
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let album = try decoder.decode(SpotifyAlbum.self, from: json)
@@ -216,7 +224,7 @@ final class SpotifyAlbumTests: XCTestCase {
     }
 
     func testDecodingAlbumWithPartialTracksData() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "partialAlbum",
             "name": "Partial Album",
@@ -230,7 +238,7 @@ final class SpotifyAlbumTests: XCTestCase {
                 ]
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let album = try decoder.decode(SpotifyAlbum.self, from: json)
@@ -244,23 +252,23 @@ final class SpotifyAlbumTests: XCTestCase {
     // MARK: - Equality and Hashable Tests
 
     func testAlbumEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "albumEq",
             "name": "Equal Album",
             "album_type": "single",
             "total_tracks": 5
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "albumEq",
             "name": "Equal Album",
             "album_type": "single",
             "total_tracks": 5
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let album1 = try decoder.decode(SpotifyAlbum.self, from: json1)
@@ -270,19 +278,19 @@ final class SpotifyAlbumTests: XCTestCase {
     }
 
     func testAlbumInequality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "albumA",
             "name": "Album A"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "albumB",
             "name": "Album B"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let album1 = try decoder.decode(SpotifyAlbum.self, from: json1)
@@ -292,19 +300,19 @@ final class SpotifyAlbumTests: XCTestCase {
     }
 
     func testAlbumTracksHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "items": [{"id": "t1", "name": "Track 1", "uri": "spotify:track:t1"}],
             "total": 1
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "items": [{"id": "t1", "name": "Track 1", "uri": "spotify:track:t1"}],
             "total": 1
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let tracks1 = try decoder.decode(SpotifyAlbum.Tracks.self, from: json1)

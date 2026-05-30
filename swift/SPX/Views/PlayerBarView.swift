@@ -173,11 +173,11 @@ struct PlayerBarCenterSection: View {
                     .foregroundColor(.spxTextTertiary)
                     .accessibilityLabel("Current time: \(formatTime(currentTimeMs))")
 
-                GeometryReader { g in
+                GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Capsule().fill(.separator.opacity(0.5)).frame(height: 4)
                         Capsule().fill(.white).frame(
-                            width: g.size.width * progress,
+                            width: geometry.size.width * progress,
                             height: 4
                         )
                         Circle()
@@ -185,7 +185,7 @@ struct PlayerBarCenterSection: View {
                             .shadow(color: .black.opacity(0.3), radius: 4)
                             .frame(width: isHoveringProgress ? 12 : 0, height: isHoveringProgress ? 12 : 0)
                             .position(
-                                x: g.size.width * progress,
+                                x: geometry.size.width * progress,
                                 y: 2
                             )
                     }
@@ -195,7 +195,7 @@ struct PlayerBarCenterSection: View {
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in
-                                let newProgress = min(max(0, value.location.x / g.size.width), 1)
+                                let newProgress = min(max(0, value.location.x / geometry.size.width), 1)
                                 onSeek(newProgress)
                             }
                     )
@@ -250,11 +250,11 @@ struct PlayerBarRightSection: View {
             .accessibilityLabel("Volume")
             .accessibilityIdentifier("playerbar-volume-button")
 
-            GeometryReader { g in
+            GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule().fill(.separator.opacity(0.5)).frame(height: 4)
                     Capsule().fill(.white).frame(
-                        width: g.size.width * volume,
+                        width: geometry.size.width * volume,
                         height: 4
                     )
                     Circle()
@@ -262,7 +262,7 @@ struct PlayerBarRightSection: View {
                         .shadow(color: .black.opacity(0.3), radius: 4)
                         .frame(width: isHoveringVolume ? 12 : 0, height: isHoveringVolume ? 12 : 0)
                         .position(
-                            x: g.size.width * volume,
+                            x: geometry.size.width * volume,
                             y: 2
                         )
                 }
@@ -272,7 +272,7 @@ struct PlayerBarRightSection: View {
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in
-                            let newVolume = min(max(0, value.location.x / g.size.width), 1)
+                            let newVolume = min(max(0, value.location.x / geometry.size.width), 1)
                             onVolumeChange(newVolume)
                         }
                 )

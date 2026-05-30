@@ -101,8 +101,8 @@ final class AppStateTests: XCTestCase {
         let maxDepth = 50
 
         // When - navigate many times
-        for i in 0..<100 {
-            sut.navigate(to: .playlist(id: "\(i)", name: "Playlist \(i)"))
+        for step in 0..<100 {
+            sut.navigate(to: .playlist(id: "\(step)", name: "Playlist \(step)"))
         }
 
         // Then - history should be capped at maxDepth + 1 (current view)

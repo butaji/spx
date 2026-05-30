@@ -3,24 +3,35 @@ import XCTest
 
 // MARK: - MockURLProtocol
 
+private struct MockResponse {
+    let data: Data?
+    let response: URLResponse?
+    let error: Error?
+}
+
 final class MockURLProtocol: URLProtocol {
     static var pendingRequests: [(URLRequest) -> Void] = []
-    static var mockResponses: [URL: (Data?, URLResponse?, Error?)] = [:]
+    static var mockResponses: [URL: MockResponse] = [:]
 
     static func reset() {
         pendingRequests.removeAll()
         mockResponses.removeAll()
     }
 
-    static func registerMockResponse(url: URL, data: Data?, response: URLResponse?, error: Error?) {
-        mockResponses[url] = (data, response, error)
+    static func registerMockResponse(
+        url: URL,
+        data: Data?,
+        response: URLResponse?,
+        error: Error?
+    ) {
+        mockResponses[url] = MockResponse(data: data, response: response, error: error)
     }
 
-    override class func canInit(with request: URLRequest) -> Bool {
+    override static func canInit(with request: URLRequest) -> Bool {
         return true
     }
 
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+    override static func canonicalRequest(for request: URLRequest) -> URLRequest {
         return request
     }
 
@@ -30,21 +41,35 @@ final class MockURLProtocol: URLProtocol {
             handler(self.request)
         }
 
-        if let mock = MockURLProtocol.mockResponses[request.url ?? URL(string: "https://example.com")!] {
-            if let error = mock.2 {
-                client?.urlProtocol(self, didFailWithError: error)
-            } else {
-                if let response = mock.1 {
-                    client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .allowed)
-                }
-                if let data = mock.0 {
-                    client?.urlProtocol(self, didLoad: data)
-                }
+        guard let mockURL = request.url,
+              let mock = MockURLProtocol.mockResponses[mockURL] else {
+            guard let requestURL = request.url else {
                 client?.urlProtocolDidFinishLoading(self)
+                return
             }
-        } else {
-            let response = HTTPURLResponse(url: request.url!, statusCode: 404, httpVersion: nil, headerFields: nil)!
+            guard let response = HTTPURLResponse(
+                url: requestURL,
+                statusCode: 404,
+                httpVersion: nil,
+                headerFields: nil
+            ) else {
+                client?.urlProtocolDidFinishLoading(self)
+                return
+            }
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .allowed)
+            client?.urlProtocolDidFinishLoading(self)
+            return
+        }
+
+        if let error = mock.error {
+            client?.urlProtocol(self, didFailWithError: error)
+        } else {
+            if let response = mock.response {
+                client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .allowed)
+            }
+            if let data = mock.data {
+                client?.urlProtocol(self, didLoad: data)
+            }
             client?.urlProtocolDidFinishLoading(self)
         }
     }
@@ -76,7 +101,7 @@ final class SpotifyAPITests: XCTestCase {
     // MARK: - GET /v1/me/player/devices
 
     func testGetDevicesReturnsParsedDevices() throws {
-        let devicesResponse = """
+        let devicesResponse = Data("""
         {
             "devices": [
                 {
@@ -103,7 +128,7 @@ final class SpotifyAPITests: XCTestCase {
                 }
             ]
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         // Verify the JSON can be parsed
         let response = try JSONDecoder().decode(DevicesResponse.self, from: devicesResponse)
@@ -113,7 +138,7 @@ final class SpotifyAPITests: XCTestCase {
     }
 
     func testDevicesJSONParsing() {
-        let json = """
+        let json = Data("""
         {
             "devices": [
                 {
@@ -125,7 +150,7 @@ final class SpotifyAPITests: XCTestCase {
                 }
             ]
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let response = try? JSONDecoder().decode(DevicesResponse.self, from: json)
 
@@ -214,7 +239,8 @@ final class SpotifyAPITests: XCTestCase {
         let verifier = generateCodeVerifier()
 
         // PKCE verifier uses base64url charset (no +, /, =)
-        let allowedChars = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+        let base64urlChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        let allowedChars = CharacterSet(charactersIn: base64urlChars)
         for char in verifier.unicodeScalars {
             XCTAssertTrue(allowedChars.contains(char), "Invalid character: \(char)")
         }
@@ -292,16 +318,29 @@ final class SpotifyAPITests: XCTestCase {
 
     func testMockURLProtocolInterceptsRequest() {
         let expectation = self.expectation(description: "Request intercepted")
+        guard let testURL = URL(string: "https://example.com/test") else {
+            XCTFail("Failed to create test URL")
+            return
+        }
 
         MockURLProtocol.pendingRequests.append { request in
             XCTAssertEqual(request.url?.path, "/test")
             expectation.fulfill()
         }
 
+        guard let httpResponse = HTTPURLResponse(
+            url: testURL,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: nil
+        ) else {
+            XCTFail("Failed to create HTTPURLResponse")
+            return
+        }
         MockURLProtocol.registerMockResponse(
-            url: URL(string: "https://example.com/test")!,
-            data: "test".data(using: .utf8),
-            response: HTTPURLResponse(url: URL(string: "https://example.com/test")!, statusCode: 200, httpVersion: nil, headerFields: nil),
+            url: testURL,
+            data: Data("test".utf8),
+            response: httpResponse,
             error: nil
         )
 
@@ -309,7 +348,7 @@ final class SpotifyAPITests: XCTestCase {
         config.protocolClasses = [MockURLProtocol.self]
         let session = URLSession(configuration: config)
 
-        let task = session.dataTask(with: URL(string: "https://example.com/test")!)
+        let task = session.dataTask(with: testURL)
         task.resume()
 
         waitForExpectations(timeout: 1)
@@ -317,11 +356,15 @@ final class SpotifyAPITests: XCTestCase {
 
     func testMockURLProtocolReturnsError() {
         let expectation = self.expectation(description: "Error returned")
+        guard let testURL = URL(string: "https://example.com/error") else {
+            XCTFail("Failed to create test URL")
+            return
+        }
 
         let testError = NSError(domain: "test", code: -1, userInfo: nil)
 
         MockURLProtocol.registerMockResponse(
-            url: URL(string: "https://example.com/error")!,
+            url: testURL,
             data: nil,
             response: nil,
             error: testError
@@ -331,7 +374,7 @@ final class SpotifyAPITests: XCTestCase {
         config.protocolClasses = [MockURLProtocol.self]
         let session = URLSession(configuration: config)
 
-        let task = session.dataTask(with: URL(string: "https://example.com/error")!) { _, response, error in
+        let task = session.dataTask(with: testURL) { _, _, error in
             XCTAssertNotNil(error)
             expectation.fulfill()
         }

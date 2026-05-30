@@ -333,9 +333,11 @@ final class AppState {
             appError = error.localizedDescription
         }
     }
+}
 
 // MARK: - Preview Mode
 
+extension AppState {
     func populateMockData() {
         auth.isAuthed = true
         populateMockUserProfile()

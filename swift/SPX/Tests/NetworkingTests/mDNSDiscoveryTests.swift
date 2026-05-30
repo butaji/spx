@@ -7,9 +7,9 @@ final class MDNSDiscoveryTests: XCTestCase {
 
     func testParseTXTRecordWithAllFields() {
         var txtRecord: [String: Data] = [:]
-        txtRecord["id"] = "device-uuid-123".data(using: .utf8)
-        txtRecord["fn"] = "Living Room TV".data(using: .utf8)
-        txtRecord["md"] = "Chromecast Ultra".data(using: .utf8)
+        txtRecord["id"] = Data("device-uuid-123".utf8)
+        txtRecord["fn"] = Data("Living Room TV".utf8)
+        txtRecord["md"] = Data("Chromecast Ultra".utf8)
 
         let discovery = MDNSDiscovery()
         let result = discovery.parseTXTRecord(txtRecord)
@@ -21,7 +21,7 @@ final class MDNSDiscoveryTests: XCTestCase {
 
     func testParseTXTRecordWithPartialFields() {
         var txtRecord: [String: Data] = [:]
-        txtRecord["fn"] = "Bedroom Speaker".data(using: .utf8)
+        txtRecord["fn"] = Data("Bedroom Speaker".utf8)
         // id and md not present
 
         let discovery = MDNSDiscovery()
@@ -34,9 +34,9 @@ final class MDNSDiscoveryTests: XCTestCase {
 
     func testParseTXTRecordWithEmptyValues() {
         var txtRecord: [String: Data] = [:]
-        txtRecord["id"] = "".data(using: .utf8)
-        txtRecord["fn"] = "".data(using: .utf8)
-        txtRecord["md"] = "".data(using: .utf8)
+        txtRecord["id"] = Data("".utf8)
+        txtRecord["fn"] = Data("".utf8)
+        txtRecord["md"] = Data("".utf8)
 
         let discovery = MDNSDiscovery()
         let result = discovery.parseTXTRecord(txtRecord)
@@ -48,9 +48,9 @@ final class MDNSDiscoveryTests: XCTestCase {
 
     func testParseTXTRecordCaseInsensitive() {
         var txtRecord: [String: Data] = [:]
-        txtRecord["ID"] = "uppercase-id".data(using: .utf8)
-        txtRecord["FN"] = "Uppercase Name".data(using: .utf8)
-        txtRecord["MD"] = "Uppercase Model".data(using: .utf8)
+        txtRecord["ID"] = Data("uppercase-id".utf8)
+        txtRecord["FN"] = Data("Uppercase Name".utf8)
+        txtRecord["MD"] = Data("Uppercase Model".utf8)
 
         let discovery = MDNSDiscovery()
         let result = discovery.parseTXTRecord(txtRecord)
@@ -62,11 +62,11 @@ final class MDNSDiscoveryTests: XCTestCase {
 
     func testParseTXTRecordUnknownKeysIgnored() {
         var txtRecord: [String: Data] = [:]
-        txtRecord["id"] = "my-id".data(using: .utf8)
-        txtRecord["fn"] = "My Device".data(using: .utf8)
-        txtRecord["md"] = "Model X".data(using: .utf8)
-        txtRecord["unknown_key"] = "should be ignored".data(using: .utf8)
-        txtRecord["another_key"] = "also ignored".data(using: .utf8)
+        txtRecord["id"] = Data("my-id".utf8)
+        txtRecord["fn"] = Data("My Device".utf8)
+        txtRecord["md"] = Data("Model X".utf8)
+        txtRecord["unknown_key"] = Data("should be ignored".utf8)
+        txtRecord["another_key"] = Data("also ignored".utf8)
 
         let discovery = MDNSDiscovery()
         let result = discovery.parseTXTRecord(txtRecord)
@@ -79,7 +79,7 @@ final class MDNSDiscoveryTests: XCTestCase {
     func testParseTXTRecordBinaryData() {
         var txtRecord: [String: Data] = [:]
         txtRecord["id"] = Data([0x01, 0x02, 0x03])
-        txtRecord["fn"] = "Test".data(using: .utf8)
+        txtRecord["fn"] = Data("Test".utf8)
 
         let discovery = MDNSDiscovery()
         let result = discovery.parseTXTRecord(txtRecord)
@@ -97,9 +97,9 @@ final class MDNSDiscoveryTests: XCTestCase {
         // Test the TXT record parsing logic directly
         // (full NetService delegate testing requires more complex mocking)
         var txtRecord: [String: Data] = [:]
-        txtRecord["id"] = "cast-123".data(using: .utf8)
-        txtRecord["fn"] = "Kitchen Chromecast".data(using: .utf8)
-        txtRecord["md"] = "Chromecast Audio".data(using: .utf8)
+        txtRecord["id"] = Data("cast-123".utf8)
+        txtRecord["fn"] = Data("Kitchen Chromecast".utf8)
+        txtRecord["md"] = Data("Chromecast Audio".utf8)
 
         let parsed = discovery.parseTXTRecord(txtRecord)
 

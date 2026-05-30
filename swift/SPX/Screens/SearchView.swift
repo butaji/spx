@@ -67,7 +67,9 @@ struct SearchView: View {
                         Button(action: { selectedFilter = filter }) {
                             Text(filter.rawValue)
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(selectedFilter == filter ? Color.spxTextPrimary : Color.spxTextTertiary)
+                                .foregroundColor(
+                                    selectedFilter == filter ? Color.spxTextPrimary : Color.spxTextTertiary
+                                )
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
                                 .background(selectedFilter == filter ? Color.spxElevated : Color.clear)

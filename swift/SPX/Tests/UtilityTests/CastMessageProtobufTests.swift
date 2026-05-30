@@ -209,16 +209,16 @@ final class CastMessageProtobufTests: XCTestCase {
         // Field 6 (payload_utf8): tag 0x32, length 2, "hi"
         // Find payload field by scanning
         var foundPayload = false
-        var i = 0
-        while i < data.count - 1 {
-            if data[i] == 0x32 { // payload_utf8 tag
-                XCTAssertEqual(data[i + 1], 0x02) // length 2
-                let payload = String(data: data.subdata(in: (i + 2)..<(i + 4)), encoding: .utf8)
+        var index = 0
+        while index < data.count - 1 {
+            if data[index] == 0x32 { // payload_utf8 tag
+                XCTAssertEqual(data[index + 1], 0x02) // length 2
+                let payload = String(data: data.subdata(in: (index + 2)..<(index + 4)), encoding: .utf8)
                 XCTAssertEqual(payload, "hi")
                 foundPayload = true
                 break
             }
-            i += 1
+            index += 1
         }
         XCTAssertTrue(foundPayload)
     }
@@ -237,7 +237,7 @@ final class CastMessageProtobufTests: XCTestCase {
         let data = msg.marshal()
 
         // Should only have required fields, no payload_utf8 since it's nil
-        XCTAssertTrue(data.count > 0)
+        XCTAssertFalse(data.isEmpty)
         // Should not contain field 6 tag (0x32) since payload is nil
         XCTAssertFalse(data.contains(0x32))
     }
@@ -291,7 +291,7 @@ final class CastMessageProtobufTests: XCTestCase {
         let data = msg.marshal()
 
         // Should successfully marshal unicode string
-        XCTAssertTrue(data.count > 0)
+        XCTAssertFalse(data.isEmpty)
         let decoded = CastMessage.unmarshal(data)
         XCTAssertNotNil(decoded)
         XCTAssertEqual(decoded?.sourceId, "日本語")
@@ -308,7 +308,7 @@ final class CastMessageProtobufTests: XCTestCase {
 
         let data = msg.marshal()
 
-        XCTAssertTrue(data.count > 0)
+        XCTAssertFalse(data.isEmpty)
         let decoded = CastMessage.unmarshal(data)
         XCTAssertNotNil(decoded)
         XCTAssertEqual(decoded?.payloadUtf8, "{\"message\":\"こんにちは\"}")
@@ -325,7 +325,7 @@ final class CastMessageProtobufTests: XCTestCase {
 
         let data = msg.marshal()
 
-        XCTAssertTrue(data.count > 0)
+        XCTAssertFalse(data.isEmpty)
         let decoded = CastMessage.unmarshal(data)
         XCTAssertNotNil(decoded)
         XCTAssertEqual(decoded?.payloadUtf8, "🎵 Hello 🌍")
@@ -370,7 +370,11 @@ final class CastMessageProtobufTests: XCTestCase {
         XCTAssertEqual(decoded?.payloadUtf8, original.payloadUtf8)
 
         // Verify re-encoding produces identical bytes
-        let reEncoded = decoded!.marshal()
+        guard let unwrappedDecoded = decoded else {
+            XCTFail("Expected decoded to be present")
+            return
+        }
+        let reEncoded = unwrappedDecoded.marshal()
         XCTAssertEqual(encoded, reEncoded)
     }
 
@@ -389,16 +393,16 @@ final class CastMessageProtobufTests: XCTestCase {
 
         // Find field 7 (payload_binary) tag 0x3A
         var foundBinary = false
-        var i = 0
-        while i < data.count {
-            if data[i] == 0x3A { // tag for field 7
-                XCTAssertEqual(data[i + 1], 0x03) // length 3
-                let payloadData = data.subdata(in: (i + 2)..<(i + 5))
+        var index = 0
+        while index < data.count {
+            if data[index] == 0x3A { // tag for field 7
+                XCTAssertEqual(data[index + 1], 0x03) // length 3
+                let payloadData = data.subdata(in: (index + 2)..<(index + 5))
                 XCTAssertEqual(payloadData, Data([0x00, 0xFF, 0x42]))
                 foundBinary = true
                 break
             }
-            i += 1
+            index += 1
         }
         XCTAssertTrue(foundBinary)
     }

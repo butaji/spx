@@ -5,8 +5,8 @@ final class SpotifyPlaylistTests: XCTestCase {
 
     // MARK: - JSON Decoding Tests
 
-    func testDecodingFullPlaylist() throws {
-        let json = """
+    private var fullPlaylistJSON: Data {
+        Data("""
         {
             "id": "playlist123",
             "name": "Test Playlist",
@@ -34,11 +34,10 @@ final class SpotifyPlaylistTests: XCTestCase {
                 "href": "https://api.spotify.com/v1/playlists/playlist123/tracks"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
+    }
 
-        let decoder = JSONDecoder()
-        let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
-
+    private func assertFullPlaylistDecoded(_ playlist: SpotifyPlaylist) {
         XCTAssertEqual(playlist.id, "playlist123")
         XCTAssertEqual(playlist.name, "Test Playlist")
         XCTAssertEqual(playlist.description, "A test playlist description")
@@ -52,13 +51,18 @@ final class SpotifyPlaylistTests: XCTestCase {
         XCTAssertEqual(playlist.images?[0].url, "https://example.com/playlist.jpg")
     }
 
+    func testDecodingFullPlaylist() throws {
+        let playlist = try JSONDecoder().decode(SpotifyPlaylist.self, from: fullPlaylistJSON)
+        assertFullPlaylistDecoded(playlist)
+    }
+
     func testDecodingMinimalPlaylist() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "playlist456",
             "name": "Minimal Playlist"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -78,7 +82,7 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testDecodingPlaylistWithNullOptionals() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "playlistNull",
             "name": "Null Playlist",
@@ -93,7 +97,7 @@ final class SpotifyPlaylistTests: XCTestCase {
             "owner": null,
             "tracks": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -108,7 +112,7 @@ final class SpotifyPlaylistTests: XCTestCase {
     // MARK: - Playlist Items Tests
 
     func testDecodingPlaylistWithTracks() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "playlistWithTracks",
             "name": "Playlist With Tracks",
@@ -117,7 +121,7 @@ final class SpotifyPlaylistTests: XCTestCase {
                 "href": "https://api.spotify.com/v1/playlists/playlistWithTracks/tracks"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -128,7 +132,7 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testDecodingPlaylistWithEmptyTracks() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "emptyPlaylist",
             "name": "Empty Playlist",
@@ -137,7 +141,7 @@ final class SpotifyPlaylistTests: XCTestCase {
                 "href": null
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -150,7 +154,7 @@ final class SpotifyPlaylistTests: XCTestCase {
     // MARK: - Owner Info Tests
 
     func testDecodingPlaylistWithFullOwner() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "playlistOwner",
             "name": "Owner Playlist",
@@ -164,7 +168,7 @@ final class SpotifyPlaylistTests: XCTestCase {
                 }
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -179,7 +183,7 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testDecodingPlaylistWithMinimalOwner() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "minimalOwnerPlaylist",
             "name": "Minimal Owner Playlist",
@@ -187,7 +191,7 @@ final class SpotifyPlaylistTests: XCTestCase {
                 "id": "owner456"
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -201,7 +205,7 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testDecodingPlaylistWithOwnerNullExternalUrls() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "nullUrlsPlaylist",
             "name": "Null URLs Playlist",
@@ -211,7 +215,7 @@ final class SpotifyPlaylistTests: XCTestCase {
                 "external_urls": null
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -224,12 +228,12 @@ final class SpotifyPlaylistTests: XCTestCase {
     // MARK: - Missing Optional Fields Tests
 
     func testDecodingPlaylistWithMissingDescription() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "noDescPlaylist",
             "name": "No Description Playlist"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -239,13 +243,13 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testDecodingPlaylistWithMissingImages() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "noImagesPlaylist",
             "name": "No Images Playlist",
             "images": []
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -255,12 +259,12 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testDecodingPlaylistWithMissingOwner() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "noOwnerPlaylist",
             "name": "No Owner Playlist"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist = try decoder.decode(SpotifyPlaylist.self, from: json)
@@ -271,23 +275,23 @@ final class SpotifyPlaylistTests: XCTestCase {
     // MARK: - Equality Tests
 
     func testPlaylistEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "playlistEq",
             "name": "Equal Playlist",
             "collaborative": false,
             "public": true
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "playlistEq",
             "name": "Equal Playlist",
             "collaborative": false,
             "public": true
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist1 = try decoder.decode(SpotifyPlaylist.self, from: json1)
@@ -297,19 +301,19 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testPlaylistInequality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "playlistA",
             "name": "Playlist A"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "playlistB",
             "name": "Playlist B"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist1 = try decoder.decode(SpotifyPlaylist.self, from: json1)
@@ -319,21 +323,21 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testOwnerEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "ownerEq",
             "display_name": "Equal Owner",
             "href": "https://example.com"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "ownerEq",
             "display_name": "Equal Owner",
             "href": "https://example.com"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let owner1 = try decoder.decode(Owner.self, from: json1)
@@ -345,19 +349,19 @@ final class SpotifyPlaylistTests: XCTestCase {
     // MARK: - Hashable Tests
 
     func testPlaylistHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "hashPlaylist",
             "name": "Hash Playlist"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "hashPlaylist",
             "name": "Hash Playlist"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let playlist1 = try decoder.decode(SpotifyPlaylist.self, from: json1)
@@ -371,19 +375,19 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testOwnerHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "hashOwner",
             "display_name": "Hash Owner"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "hashOwner",
             "display_name": "Hash Owner"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let owner1 = try decoder.decode(Owner.self, from: json1)
@@ -397,17 +401,17 @@ final class SpotifyPlaylistTests: XCTestCase {
     }
 
     func testExternalUrlsHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "spotify": "https://open.spotify.com/user/test"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "spotify": "https://open.spotify.com/user/test"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let urls1 = try decoder.decode(ExternalUrls.self, from: json1)

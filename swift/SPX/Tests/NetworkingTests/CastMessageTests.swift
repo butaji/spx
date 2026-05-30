@@ -59,7 +59,7 @@ final class CastMessageTests: XCTestCase {
         let data = msg.marshal()
 
         // Verify binary payload is present
-        XCTAssertTrue(data.count > 0)
+        XCTAssertFalse(data.isEmpty)
 
         // Verify round-trip: unmarshal and check payload is preserved
         let decoded = CastMessage.unmarshal(data)

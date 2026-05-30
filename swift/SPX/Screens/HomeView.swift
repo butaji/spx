@@ -81,18 +81,18 @@ struct HomeView: View {
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundColor(.spxTextTertiary)
 
-                    GeometryReader { g in
+                    GeometryReader { geometry in
                         ZStack(alignment: .leading) {
                             Capsule().fill(Color.spxBorder).frame(height: 4)
                             Capsule().fill(Color.spxAccent).frame(
-                                width: g.size.width * progressValue,
+                                width: geometry.size.width * progressValue,
                                 height: 4
                             )
                             // Thumb handle
                             Circle()
                                 .fill(.white)
                                 .frame(width: isHoveringProgress ? 12 : 0, height: isHoveringProgress ? 12 : 0)
-                                .offset(x: g.size.width * progressValue - 6)
+                                .offset(x: geometry.size.width * progressValue - 6)
                                 .animation(.easeOut(duration: 0.15), value: isHoveringProgress)
                         }
                     }
@@ -107,7 +107,7 @@ struct HomeView: View {
                 .padding(.top, 4)
 
                 // Action buttons with hover animations
-            HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
                     Button(action: onToggleLike) {
                         Image(systemName: liked ? "heart.fill" : "heart")
                             .font(.system(size: 20, weight: .regular))
@@ -187,13 +187,13 @@ struct HomeView: View {
                 if let track = track, !primaryArtist.isEmpty, !track.name.isEmpty {
                     (Text("You've listened to ")
                         .foregroundColor(Color.spxTextSecondary)
-                    + Text(primaryArtist).bold()
-                    + Text(" \(artistListenCount) times and ")
+                        + Text(primaryArtist).bold()
+                        + Text(" \(artistListenCount) times and ")
                         .foregroundColor(Color.spxTextSecondary)
-                    + Text(track.name).bold()
-                    + Text(" \(trackListenCount) times.")
+                        + Text(track.name).bold()
+                        + Text(" \(trackListenCount) times.")
                         .foregroundColor(Color.spxTextSecondary))
-                    .font(.system(size: 14))
+                        .font(.system(size: 14))
                 } else {
                     Text("You've listened to 0 times and 0 times.")
                         .font(.system(size: 14))
@@ -278,9 +278,9 @@ struct HomeView: View {
 
                 (Text("\(name) is a musical artist on Spotify. They have \(followers) followers. ")
                     .foregroundColor(Color.spxTextSecondary)
-                + Text("View more on SPX")
+                    + Text("View more on SPX")
                     .foregroundColor(Color.spxAccent))
-                .font(.system(size: 14))
+                    .font(.system(size: 14))
             }
             .onHover { isHoveringArtist = $0 }
         }

@@ -5,8 +5,8 @@ final class SpotifyTrackTests: XCTestCase {
 
     // MARK: - JSON Decoding Tests
 
-    func testDecodingFullTrack() throws {
-        let json = """
+    private var fullTrackJSON: Data {
+        Data("""
         {
             "id": "track123",
             "name": "Test Track",
@@ -43,11 +43,10 @@ final class SpotifyTrackTests: XCTestCase {
                 {"url": "https://track.image.url", "height": 640, "width": 640}
             ]
         }
-        """.data(using: .utf8)!
+        """.utf8)
+    }
 
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(SpotifyTrack.self, from: json)
-
+    private func assertFullTrackDecoded(_ track: SpotifyTrack) {
         XCTAssertEqual(track.id, "track123")
         XCTAssertEqual(track.name, "Test Track")
         XCTAssertEqual(track.uri, "spotify:track:track123")
@@ -59,14 +58,19 @@ final class SpotifyTrackTests: XCTestCase {
         XCTAssertEqual(track.previewUrl, "https://p.scdn.co/mp3-preview/abc123")
     }
 
+    func testDecodingFullTrack() throws {
+        let track = try JSONDecoder().decode(SpotifyTrack.self, from: fullTrackJSON)
+        assertFullTrackDecoded(track)
+    }
+
     func testDecodingMinimalTrack() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "track456",
             "name": "Minimal Track",
             "uri": "spotify:track:track456"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(SpotifyTrack.self, from: json)
@@ -86,7 +90,7 @@ final class SpotifyTrackTests: XCTestCase {
     }
 
     func testDecodingTrackWithNullOptionals() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "track789",
             "name": "Null Track",
@@ -101,7 +105,7 @@ final class SpotifyTrackTests: XCTestCase {
             "album": null,
             "images": null
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(SpotifyTrack.self, from: json)
@@ -116,7 +120,7 @@ final class SpotifyTrackTests: XCTestCase {
     // MARK: - Equality Tests
 
     func testTrackEquality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "track123",
             "name": "Test Track",
@@ -127,9 +131,9 @@ final class SpotifyTrackTests: XCTestCase {
             "explicit": true,
             "popularity": 85
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "track123",
             "name": "Test Track",
@@ -140,7 +144,7 @@ final class SpotifyTrackTests: XCTestCase {
             "explicit": true,
             "popularity": 85
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track1 = try decoder.decode(SpotifyTrack.self, from: json1)
@@ -150,21 +154,21 @@ final class SpotifyTrackTests: XCTestCase {
     }
 
     func testTrackInequality() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "track123",
             "name": "Test Track",
             "uri": "spotify:track:track123"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "track456",
             "name": "Different Track",
             "uri": "spotify:track:track456"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track1 = try decoder.decode(SpotifyTrack.self, from: json1)
@@ -175,8 +179,8 @@ final class SpotifyTrackTests: XCTestCase {
 
     // MARK: - Nested Album/Artist Decoding Tests
 
-    func testDecodingTrackWithNestedAlbum() throws {
-        let json = """
+    private var nestedAlbumTrackJSON: Data {
+        Data("""
         {
             "id": "track999",
             "name": "Album Track",
@@ -208,11 +212,10 @@ final class SpotifyTrackTests: XCTestCase {
                 "total_tracks": 4
             }
         }
-        """.data(using: .utf8)!
+        """.utf8)
+    }
 
-        let decoder = JSONDecoder()
-        let track = try decoder.decode(SpotifyTrack.self, from: json)
-
+    private func assertNestedAlbumTrackDecoded(_ track: SpotifyTrack) {
         XCTAssertNotNil(track.album)
         XCTAssertEqual(track.album?.id, "album99")
         XCTAssertEqual(track.album?.name, "Nested Album")
@@ -223,8 +226,13 @@ final class SpotifyTrackTests: XCTestCase {
         XCTAssertEqual(track.album?.images?.first?.url, "https://example.com/image.jpg")
     }
 
+    func testDecodingTrackWithNestedAlbum() throws {
+        let track = try JSONDecoder().decode(SpotifyTrack.self, from: nestedAlbumTrackJSON)
+        assertNestedAlbumTrackDecoded(track)
+    }
+
     func testDecodingTrackWithNestedArtists() throws {
-        let json = """
+        let json = Data("""
         {
             "id": "trackArtist",
             "name": "Multi Artist Track",
@@ -250,7 +258,7 @@ final class SpotifyTrackTests: XCTestCase {
                 }
             ]
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track = try decoder.decode(SpotifyTrack.self, from: json)
@@ -267,21 +275,21 @@ final class SpotifyTrackTests: XCTestCase {
     // MARK: - Hashable Tests
 
     func testTrackHashable() throws {
-        let json1 = """
+        let json1 = Data("""
         {
             "id": "hashTrack",
             "name": "Hash Track",
             "uri": "spotify:track:hashTrack"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
-        let json2 = """
+        let json2 = Data("""
         {
             "id": "hashTrack",
             "name": "Hash Track",
             "uri": "spotify:track:hashTrack"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let decoder = JSONDecoder()
         let track1 = try decoder.decode(SpotifyTrack.self, from: json1)

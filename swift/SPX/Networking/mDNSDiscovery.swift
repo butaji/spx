@@ -19,6 +19,13 @@ public struct CastDevice {
     }
 }
 
+/// Parsed device info from mDNS TXT record.
+struct DeviceInfo {
+    let id: String?
+    let name: String?
+    let model: String?
+}
+
 // MARK: - MDNSDiscovery
 
 /// Discovers Cast devices using Bonjour/mDNS.
@@ -82,27 +89,27 @@ public final class MDNSDiscovery: NSObject, @unchecked Sendable {
 
     /// Parses mDNS TXT record and returns device info tuple.
     /// Made internal for testing purposes.
-    func parseTXTRecord(_ txtRecord: [String: Data]) -> (id: String?, name: String?, model: String?) {
-        var id: String?
-        var name: String?
-        var model: String?
+    func parseTXTRecord(_ txtRecord: [String: Data]) -> DeviceInfo {
+        var deviceId: String?
+        var deviceName: String?
+        var deviceModel: String?
 
         for (key, value) in txtRecord {
             let valueString = String(data: value, encoding: .utf8)
 
             switch key.lowercased() {
             case "id":
-                id = valueString
+                deviceId = valueString
             case "fn":
-                name = valueString
+                deviceName = valueString
             case "md":
-                model = valueString
+                deviceModel = valueString
             default:
                 break
             }
         }
 
-        return (id, name, model)
+        return DeviceInfo(id: deviceId, name: deviceName, model: deviceModel)
     }
 }
 
@@ -178,19 +185,15 @@ extension MDNSDiscovery: NetServiceDelegate {
         resolvingServices.removeAll { $0 == sender }
     }
 
-    private func extractDeviceInfo(from sender: NetService) -> (id: String?, name: String?, model: String?) {
-        var deviceId: String?
-        var deviceName: String?
-        var deviceModel: String?
+    private func extractDeviceInfo(from sender: NetService) -> DeviceInfo {
+        var deviceInfo = DeviceInfo(id: nil, name: nil, model: nil)
 
         if let txtRecord = sender.txtRecordData() {
             let parsed = parseTXTRecord(NetService.dictionary(fromTXTRecord: txtRecord))
-            deviceId = parsed.id
-            deviceName = parsed.name
-            deviceModel = parsed.model
+            deviceInfo = DeviceInfo(id: parsed.id, name: parsed.name, model: parsed.model)
         }
 
-        return (id: deviceId, name: deviceName, model: deviceModel)
+        return deviceInfo
     }
 
     private func extractIPAddress(from addresses: [Data]) -> String? {

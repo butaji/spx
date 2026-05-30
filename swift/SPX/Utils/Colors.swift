@@ -17,10 +17,10 @@ extension Color {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: Double
-        r = Double((int >> 16) & 0xFF) / 255
-        g = Double((int >> 8) & 0xFF) / 255
-        b = Double(int & 0xFF) / 255
-        self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
+        let red, green, blue: Double
+        red = Double((int >> 16) & 0xFF) / 255
+        green = Double((int >> 8) & 0xFF) / 255
+        blue = Double(int & 0xFF) / 255
+        self.init(.sRGB, red: red, green: green, blue: blue, opacity: 1)
     }
 }
