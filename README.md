@@ -6,6 +6,8 @@ You're at your desk. It's 2009. Last.fm's desktop scrobbler is running in the ba
 
 **SPX** is what happens when you take that soul and build it with **Swift + SwiftUI** — native macOS performance, real scrobbling, obsessive listening stats. Light on RAM. Heavy on nostalgia.
 
+![SPX Screenshot](assets/screenshot.jpeg)
+
 ---
 
 ## Why SPX?
