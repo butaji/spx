@@ -14,7 +14,7 @@ You're at your desk. It's 2009. Last.fm's desktop scrobbler is running in the ba
 
 | Problem | Solution |
 |---------|----------|
-| Spotify desktop uses 300MB+ RAM | **Swift + native WebView** = ~50MB |
+| Spotify desktop uses 300MB+ RAM | **Native SwiftUI** = ~50MB |
 | No scrobble counts | Real play counts, listening history |
 | Clunky UI | Dark liquid-glass, keyboard-first |
 | Can't develop offline | Built-in **mock mode** |
