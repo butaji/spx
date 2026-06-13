@@ -1,0 +1,7 @@
+{
+  "error": true,
+  "status": 404,
+  "body": {
+    "message": "No content"
+  }
+}

@@ -1,0 +1,3 @@
+# Clippy linter configuration for spx
+too-many-lines-threshold = 500
+cognitive-complexity-threshold = 10

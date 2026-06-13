@@ -1,0 +1,737 @@
+/* ─── Context Card (replaces StatsCard) ─── */
+.context-card {
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.context-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  font-weight: 500;
+}
+.context-value {
+  font-size: 14px;
+  color: var(--fg-secondary);
+}
+.context-value strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+/* ─── Artwork Component ─── */
+.artwork {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.artwork.loaded {
+  opacity: 1;
+}
+
+.artwork-placeholder {
+  color: var(--fg-faint);
+}
+
+/* ─── Remote Device Banner (Improvement #1) ─── */
+.remote-device-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.15), rgba(29, 185, 84, 0.08));
+  border-bottom: 1px solid rgba(29, 185, 84, 0.2);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.remote-device-banner .remote-device-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ─── Device Selector ─── */
+.device-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.device-btn {
+  position: relative;
+}
+
+.device-btn.active-device {
+  color: var(--accent);
+}
+
+.device-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid var(--bg);
+}
+
+.device-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  min-width: 280px;
+  max-width: 340px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 0;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.device-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--edge);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--bg-elevated);
+}
+
+.device-refresh-btn {
+  background: none;
+  border: none;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.device-refresh-btn:hover {
+  color: var(--fg);
+  background: var(--surface-hover);
+}
+
+.device-refresh-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.device-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 0;
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  transition: background 0.15s ease;
+  border-left: 3px solid transparent;
+}
+
+.device-item:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-left-color: var(--accent);
+}
+
+.device-item.active {
+  background: var(--accent-dim);
+  border-left-color: var(--accent);
+}
+
+.device-item.hovered:not(.active) {
+  background: var(--surface-hover);
+}
+
+.device-item.transferring {
+  background: rgba(59, 130, 246, 0.1);
+  border-left-color: #3b82f6;
+}
+
+.device-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.device-type-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--fg-secondary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.device-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.device-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-name {
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.device-type {
+  font-size: 11px;
+  color: var(--fg-faint);
+  text-transform: capitalize;
+}
+
+.device-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.device-active-badge,
+.device-playing-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.device-empty {
+  padding: 24px 20px;
+  text-align: center;
+  color: var(--fg-faint);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.device-empty-icon {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.device-empty-hint {
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.5;
+  max-width: 240px;
+}
+
+.device-scan-btn {
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.device-scan-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: scale(1.02);
+}
+
+.device-scan-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.device-help-link {
+  font-size: 11px;
+  color: var(--fg-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.device-help-link:hover {
+  color: var(--accent);
+}
+
+/* ─── Device Info Banner ─── */
+.device-info-banner {
+  margin: 12px 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--fg-faint);
+  border-radius: 6px;
+  background: var(--bg-hover);
+  font-size: 11px;
+  color: var(--fg-muted);
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* ─── Device Empty Searching State ─── */
+.device-empty-searching {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--fg-secondary);
+  font-size: 13px;
+}
+
+/* ─── Local Device Item ─── */
+.device-item-local {
+  cursor: default;
+}
+
+.device-item-local:hover {
+  background: var(--bg-hover);
+}
+
+.device-badge-local {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-secondary);
+  background: var(--surface);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+/* ─── Device Section Header ─── */
+.device-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 16px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-top: 1px solid var(--edge);
+}
+
+.device-section-header:first-child {
+  border-top: none;
+  padding-top: 8px;
+}
+
+.category-icon {
+  font-size: 12px;
+}
+
+.category-count {
+  font-weight: 400;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
+/* Device tags */
+.device-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.device-tag.spotify-connect {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1DB954;
+}
+
+.device-tag.cast-device {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
+}
+
+.device-tag.restricted {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* ─── Device Action Buttons ─── */
+.device-action-btn {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--edge);
+  color: var(--fg-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.device-action-btn:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+.device-transfer-ok {
+  color: #1DB954;
+}
+.device-transfer-none {
+  color: var(--fg-faint);
+}
+
+/* Device help hints (Improvement #5) */
+.device-help-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  margin-top: 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.3;
+  animation: fadeIn 0.2s ease;
+}
+
+.device-help-hint.hint-info {
+  background: rgba(96, 165, 250, 0.1);
+  color: #60a5fa;
+}
+
+.device-help-hint.hint-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.device-help-hint.hint-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.help-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Loading Spinner ─── */
+.spinner-small {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--fg-faint);
+  border-top-color: var(--fg);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+}
+
+/* ─── Transfer Status (Improvement #3) ─── */
+.transfer-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.transfer-icon {
+  font-size: 12px;
+}
+
+.transfer-text {
+  font-weight: 500;
+}
+
+.transfer-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.transfer-status.transfer-waking {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.transfer-status.transfer-starting {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.transfer-status.transfer-transferring {
+  color: var(--accent);
+  background: rgba(29, 185, 84, 0.1);
+}
+
+/* Device error message */
+.device-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  margin: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 12px;
+  transition: opacity 0.3s ease;
+}
+
+.device-error.fading {
+  opacity: 0;
+}
+
+.error-icon {
+  font-size: 14px;
+}
+
+/* Scanning indicator */
+.device-scanning-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--edge);
+  color: var(--fg-secondary);
+  font-size: 12px;
+}
+
+.scanning-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--edge);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ─── Context Panel (3-column layout) ─── */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.context-panel {
+  width: 280px;
+  min-width: 280px;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--edge);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.context-panel::-webkit-scrollbar { width: 5px; }
+.context-panel::-webkit-scrollbar-track { background: transparent; }
+.context-panel::-webkit-scrollbar-thumb { background: var(--edge-light); border-radius: 3px; }
+
+.context-panel-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--edge);
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+  z-index: 1;
+}
+
+.context-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.context-panel-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.context-panel-close:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+
+.context-panel-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.context-artist-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.context-artist-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.context-artist-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.context-artist-followers {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.context-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+
+.context-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+}
+
+.context-tag {
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.context-similar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.context-similar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.context-similar-item:hover {
+  background: var(--surface-hover);
+}
+
+.context-similar-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.context-similar-name {
+  font-size: 12px;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.context-mini-track {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.context-mini-track:hover {
+  color: var(--accent);
+}
+
+.context-mini-track-name {
+  font-size: 12px;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1100px) {
+  .context-panel {
+    display: none;
+  }
+}

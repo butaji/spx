@@ -1,0 +1,839 @@
+/* ─── Bottom Player ─── */
+.player-bar {
+  height: 68px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--edge);
+  display: grid;
+  grid-template-columns: 220px 1fr 200px;
+  align-items: center;
+  padding: 0 18px;
+  gap: 16px;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+.player-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.player-art {
+  width: 42px; height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--edge);
+}
+.player-art img { width: 100%; height: 100%; object-fit: cover; }
+.player-meta { min-width: 0; max-width: 160px; }
+.player-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-artist {
+  font-size: 11px;
+  color: var(--fg-secondary);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-like-btn {
+  background: none; border: none;
+  color: var(--fg-faint);
+  cursor: pointer;
+  padding: 3px;
+  transition: color 0.15s ease;
+}
+.player-like-btn:hover { color: var(--danger); }
+.player-like-btn svg { width: 15px; height: 15px; }
+.player-like-btn.liked { color: var(--danger); }
+
+.player-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ctrl-btn {
+  background: none; border: none;
+  color: var(--fg-faint);
+  cursor: pointer;
+  padding: 3px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ctrl-btn:hover { color: var(--fg); transform: scale(1.08); }
+.ctrl-btn:active { transform: scale(0.93); }
+.ctrl-btn svg { width: 16px; height: 16px; }
+.ctrl-btn.play svg { width: 22px; height: 22px; color: var(--fg); }
+.ctrl-btn.active { color: var(--accent); }
+.ctrl-btn.active svg { color: var(--accent); }
+
+.scrubber {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.volume-track {
+  width: 80px;
+  height: 4px;
+  background: var(--surface);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+.volume-fill {
+  height: 100%;
+  background: var(--fg-secondary);
+  border-radius: 2px;
+  transition: background 0.15s ease;
+  width: var(--volume-width, 100%);
+}
+.volume-track:hover .volume-fill { background: var(--accent); }
+
+/* Volume tooltip (Improvement #4) */
+.volume-tooltip-container {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  margin-bottom: 8px;
+}
+.volume-tooltip {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--edge);
+  animation: fadeInUp 0.15s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ─── Now Playing Hero (redesigned) ─── */
+.np-hero {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: var(--space-6) 0;
+}
+
+.np-hero-playing {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.np-main-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.np-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  padding-top: 4px;
+}
+
+.np-album {
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+.np-actions-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+.np-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.np-last-played {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 24px;
+}
+
+.np-last-played-artwork {
+  flex-shrink: 0;
+  width: 160px;
+  height: 160px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.np-last-played-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.np-last-played-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.np-last-played-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  font-weight: 500;
+}
+
+.np-last-played-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--fg);
+  line-height: 1.2;
+}
+
+.np-last-played-meta {
+  font-size: 14px;
+  color: var(--fg-secondary);
+}
+
+.np-last-played-album {
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+.np-last-played-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.np-hero-paused .np-artwork-large img {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+  transform: scale(0.95);
+}
+
+.np-centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+/* Artwork — large, centered, shadow */
+.np-artwork-large {
+  width: 280px;
+  height: 280px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-hover);
+  flex-shrink: 0;
+}
+
+.np-artwork-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.np-artwork-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--fg-faint);
+  width: 100%;
+  height: 100%;
+}
+
+/* Badge — tiny pill above title */
+.np-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.np-badge-playing { background: var(--accent-dim); color: var(--accent); }
+.np-badge-paused { background: var(--surface); color: var(--fg-secondary); }
+.np-badge-elsewhere { background: rgba(29, 185, 84, 0.1); color: #1DB954; }
+
+/* Label */
+.np-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.3;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+}
+
+.np-subtitle {
+  font-size: 13px;
+  color: var(--fg-secondary);
+  margin-bottom: 16px;
+}
+
+/* Artist + Album */
+.np-artist {
+  font-size: 13px;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 16px;
+}
+
+.np-artist:hover {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
+/* Progress — thin, centered */
+.np-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 16px;
+}
+
+.np-time {
+  font-size: 10px;
+  color: var(--fg-faint);
+  min-width: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.np-progress-track {
+  flex: 1;
+  height: 3px;
+  background: var(--surface);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+}
+
+.np-progress-fill {
+  height: 100%;
+  background: var(--fg-secondary);
+  border-radius: 2px;
+  transition: width 0.3s linear;
+}
+
+.np-progress-track:hover .np-progress-fill {
+  background: var(--accent);
+}
+
+/* Controls — centered icon row */
+.np-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.np-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.np-action:hover {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+.np-action-primary {
+  background: var(--fg);
+  color: var(--bg);
+  width: 44px;
+  height: 44px;
+}
+
+.np-action-primary:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.np-action-liked,
+.np-action-liked:hover {
+  color: var(--danger);
+}
+
+/* CTA */
+.np-cta {
+  padding: 8px 20px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-full);
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.np-cta:hover {
+  background: var(--accent-subtle);
+}
+
+/* ─── Now Playing — Unified Horizontal Layout (legacy) ─── */
+
+.np-main {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.np-artwork {
+  width: 220px;
+  height: 220px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.np-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.np-artwork-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  cursor: pointer;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.np-artwork:hover .np-artwork-play {
+  opacity: 1;
+}
+
+.np-artwork-play svg {
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+.np-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.np-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
+  margin-bottom: 4px;
+}
+
+.np-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--fg);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.np-meta-artist {
+  font-size: 14px;
+  color: var(--fg-secondary);
+  margin: 0;
+}
+
+.np-meta-album {
+  font-size: 13px;
+  color: var(--fg-muted);
+  margin: 0;
+}
+
+.np-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--surface);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.np-progress-bar:hover .np-progress-fill {
+  background: var(--fg);
+}
+
+.np-icons {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.np-icon {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--fg-secondary);
+  transition: color 0.2s ease, transform 0.15s ease;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.np-icon:hover {
+  color: var(--fg);
+  transform: scale(1.1);
+}
+
+.np-icon.liked {
+  color: var(--danger);
+}
+
+.np-icon.liked:hover {
+  color: var(--danger);
+}
+
+/* Empty state */
+.np-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 32px;
+}
+
+.np-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 4px;
+}
+
+.np-empty-subtitle {
+  font-size: 13px;
+  color: var(--fg-secondary);
+}
+
+/* ─── Now Playing Track Info (redesigned) ─── */
+.np-track-name {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--fg);
+}
+.np-artist-name {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--fg-secondary);
+}
+.np-album-name {
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+
+.np-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.np-action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  color: var(--fg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.np-action-btn:hover {
+  background: var(--surface-hover);
+  color: var(--fg);
+}
+.np-action-btn.liked {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+.np-action-btn.liked svg {
+  fill: var(--accent);
+}
+
+.np-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.np-tag {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--accent-dim);
+}
+
+/* ─── Now Playing Card (dark horizontal layout) ─── */
+.np-card {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 24px;
+  width: 100%;
+}
+
+.np-card-artwork {
+  flex-shrink: 0;
+  width: 180px;
+  height: 180px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  background: var(--bg);
+}
+
+.np-card-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.np-card-artwork-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--fg-faint);
+}
+
+.np-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  min-width: 0;
+}
+
+.np-card-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--fg);
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.np-card-artist {
+  font-size: 14px;
+  color: var(--fg-secondary);
+  margin: 0;
+}
+
+.np-card-album {
+  font-size: 13px;
+  color: var(--fg-muted);
+  margin: 0;
+  margin-bottom: 8px;
+}
+
+.np-card-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.np-card-time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-faint);
+  min-width: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.np-card-progress-track {
+  flex: 1;
+  height: 3px;
+  background: var(--surface);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+}
+
+.np-card-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s linear;
+}
+
+.np-card-progress-track:hover .np-card-progress-fill {
+  background: var(--fg);
+}
+
+.np-card-icons {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.np-card-icon {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--fg-secondary);
+  transition: color 0.2s, transform 0.15s;
+  border-radius: var(--radius-sm);
+}
+
+.np-card-icon:hover {
+  color: var(--fg);
+  transform: scale(1.1);
+}
+
+.np-card-icon.liked {
+  color: var(--danger);
+}
+
+.np-card-icon.liked:hover {
+  color: var(--danger);
+}
+
+/* ─── Listening Info Bubble ─── */
+.np-listening-info {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--edge);
+  font-size: 13px;
+  color: var(--fg-secondary);
+  line-height: 1.5;
+}
+.np-listening-info strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+/* ─── Progress Seek Row ─── */
+.progress-seek-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 340px;
+  margin-top: var(--space-1);
+}
+.progress-track {
+  flex: 1;
+  height: 4px;
+  background: var(--surface);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--fg-secondary);
+  border-radius: 2px;
+  position: absolute;
+  left: 0; top: 0;
+  transition: width 0.1s linear;
+}
+.progress-track:hover .progress-fill { background: var(--accent); }
+.time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-faint);
+  min-width: 30px;
+}
+.time.current { text-align: right; }
+.time.total { text-align: left; }
