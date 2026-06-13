@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getArtist, getArtistTopTracks, getArtistAlbums } from "../lib/spotify";
-import { IconPlay } from "../components/icons";
+import { IconPlay, IconUsers, IconStar, IconDisc } from "../components/icons";
 import { SpotifyArtist, SpotifyTrack } from "../types";
 
 interface Props {
@@ -63,6 +63,7 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
   }, [onPlayUris]);
 
   const popularityPct = artist?.popularity ?? 0;
+  const followerCount = artist?.followers?.total ?? 0;
 
   return (
     <div>
@@ -81,22 +82,35 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
         <div className="detail-hero-info">
           <div className="eyebrow">Artist</div>
           <h1>{artist?.name || name}</h1>
-          <div className="artist-meta">
-            <span className="artist-meta-item">{artist?.followers?.total?.toLocaleString()} followers</span>
-            {artist?.genres && artist.genres.length > 0 && (
-              <>
-                <span className="artist-meta-sep">·</span>
-                <span className="artist-meta-genres">{artist.genres.slice(0, 3).join(", ")}</span>
-              </>
-            )}
-          </div>
-          <div className="artist-popularity">
-            <span className="artist-popularity-label">Popularity</span>
-            <div className="artist-popularity-bar">
-              <div className="artist-popularity-fill" style={{ width: `${popularityPct}%` }} />
+          
+          {/* Artist Stats */}
+          <div className="artist-stats">
+            <div className="artist-stat">
+              <IconUsers size={16} />
+              <span className="stat-value">{followerCount > 0 ? formatNumber(followerCount) : "—"}</span>
+              <span className="stat-label">Followers</span>
             </div>
-            <span className="artist-popularity-value">{popularityPct}%</span>
+            <div className="artist-stat">
+              <IconStar size={16} />
+              <span className="stat-value">{popularityPct}%</span>
+              <span className="stat-label">Popularity</span>
+            </div>
+            <div className="artist-stat">
+              <IconDisc size={16} />
+              <span className="stat-value">{albums.length}</span>
+              <span className="stat-label">Albums</span>
+            </div>
           </div>
+          
+          {/* Genres */}
+          {artist?.genres && artist.genres.length > 0 && (
+            <div className="artist-genres">
+              {artist.genres.slice(0, 5).map((genre, i) => (
+                <span key={i} className="artist-genre-tag">{genre}</span>
+              ))}
+            </div>
+          )}
+          
           <div className="station-actions">
             <button className="play-btn-lg" onClick={playTopTracks} aria-label="Play popular tracks">
               <IconPlay />
@@ -105,11 +119,25 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
         </div>
       </div>
 
+      {/* Popularity Bar */}
+      <div className="artist-popularity-section">
+        <div className="artist-popularity">
+          <span className="artist-popularity-label">Popularity Score</span>
+          <div className="artist-popularity-bar">
+            <div className="artist-popularity-fill" style={{ width: `${popularityPct}%` }} />
+          </div>
+          <span className="artist-popularity-value">{popularityPct}%</span>
+        </div>
+      </div>
+
       {loading ? (
-        <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} aria-live="polite">Loading...</p>
+        <div className="loading-container">
+          <div className="spinner" />
+          <span>Loading artist...</span>
+        </div>
       ) : (
         <div>
-          <h2 style={{ marginBottom: 16 }}>Popular</h2>
+          <h2 className="section-heading">Popular</h2>
           <div className="tracklist">
             {topTracks.map((track, i) => (
               <div
@@ -121,7 +149,9 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
                 onKeyDown={(e) => handleTrackKeyDown(e, track)}
                 aria-label={`${track.name} from ${track.album?.name}`}
               >
-                <div className="track-num">{i + 1}</div>
+                <div className="track-num">
+                  {i + 1}
+                </div>
                 <div className="track-art" style={{
                   background: track.album?.images?.[0]?.url ? `url(${track.album.images[0].url}) center/cover` : undefined
                 }} />
@@ -138,7 +168,7 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
 
           {albums.length > 0 && (
             <>
-              <h2 style={{ marginTop: 32, marginBottom: 16 }}>Discography</h2>
+              <h2 className="section-heading" style={{ marginTop: 32 }}>Discography</h2>
               <div className="lib-grid">
                 {albums.map((album) => (
                   <div
@@ -155,6 +185,9 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
                     }}
                   >
                     <div className="lib-item-img" style={{ background: album.images?.[0]?.url ? `url(${album.images[0].url}) center/cover` : undefined }} />
+                    <div className="lib-item-play-overlay">
+                      <IconPlay size={24} />
+                    </div>
                     <div className="lib-item-title">{album.name}</div>
                     <div className="lib-item-sub">{album.album_type} · {album.release_date?.split("-")[0]}</div>
                   </div>
@@ -166,4 +199,14 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
       )}
     </div>
   );
+}
+
+function formatNumber(num: number): string {
+  if (num >= 1_000_000) {
+    return `${(num / 1_000_000).toFixed(1)}M`;
+  }
+  if (num >= 1_000) {
+    return `${(num / 1_000).toFixed(1)}K`;
+  }
+  return num.toLocaleString();
 }

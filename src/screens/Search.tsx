@@ -4,6 +4,7 @@ import { search } from "../lib/spotify";
 import { View } from "../types";
 import { SpotifyTrack, SpotifyAlbum, SpotifyArtist, SpotifyPlaylist, SpotifySearchResults } from "../types";
 import { formatTime } from "../lib/utils";
+import { IconPlay, IconClock, IconX } from "../components/icons";
 
 type Filter = "all" | "tracks" | "albums" | "artists" | "playlists";
 
@@ -16,11 +17,54 @@ interface Props {
 
 type SearchItem = { type: "track" | "album" | "artist" | "playlist"; data: SpotifyTrack | SpotifyAlbum | SpotifyArtist | SpotifyPlaylist };
 
+const RECENT_SEARCHES_KEY = "spx_recent_searches";
+const MAX_RECENT_SEARCHES = 8;
+
 export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) {
   const [query, setQuery] = useState(initialQuery || "");
   const [results, setResults] = useState<SpotifySearchResults | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [loading, setLoading] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (stored) {
+        setRecentSearches(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Failed to load recent searches:", e);
+    }
+  }, []);
+
+  // Save recent search
+  const saveRecentSearch = useCallback((searchTerm: string) => {
+    const trimmed = searchTerm.trim();
+    if (!trimmed) return;
+    
+    setRecentSearches(prev => {
+      const filtered = prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
+      const updated = [trimmed, ...filtered].slice(0, MAX_RECENT_SEARCHES);
+      try {
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to save recent search:", e);
+      }
+      return updated;
+    });
+  }, []);
+
+  // Clear all recent searches
+  const clearRecentSearches = useCallback(() => {
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem(RECENT_SEARCHES_KEY);
+    } catch (e) {
+      console.error("Failed to clear recent searches:", e);
+    }
+  }, []);
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) return;
@@ -28,11 +72,12 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
     try {
       const data = await search(q);
       setResults(data);
+      saveRecentSearch(q);
     } catch (e) {
       console.error("Failed to search:", e);
     }
     setLoading(false);
-  }, []);
+  }, [saveRecentSearch]);
 
   useEffect(() => {
     if (initialQuery) {
@@ -41,7 +86,11 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
     }
   }, [initialQuery, doSearch]);
 
-  const handleSearch = useCallback(async () => { doSearch(query); }, [query, doSearch]);
+  const handleSearch = useCallback(async () => { 
+    if (query.trim()) {
+      doSearch(query); 
+    }
+  }, [query, doSearch]);
 
   const playTrack = useCallback((t: SpotifyTrack) => { onPlayUris([t.uri]); }, [onPlayUris]);
 
@@ -89,6 +138,12 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
     }
   }, [handleItemClick]);
 
+  // Handle recent search click
+  const handleRecentSearchClick = useCallback((term: string) => {
+    setQuery(term);
+    doSearch(term);
+  }, [doSearch]);
+
   return (
     <div>
       <h1 className="screen-title">Search</h1>
@@ -104,8 +159,17 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
           placeholder="What do you want to listen to?"
           aria-label="Search query"
         />
+        {query && (
+          <button 
+            className="search-clear-btn" 
+            onClick={() => { setQuery(""); setResults(null); }}
+            aria-label="Clear search"
+          >
+            <IconX size={14} />
+          </button>
+        )}
         <button onClick={handleSearch} aria-label="Search" className="search-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
           </svg>
         </button>
@@ -127,10 +191,15 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
         </div>
       )}
 
+      {/* Loading state */}
       {loading ? (
-        <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} aria-live="polite">Searching...</p>
+        <div className="search-loading">
+          <div className="spinner" />
+          <span>Searching...</span>
+        </div>
       ) : results ? (
         <>
+          {/* Show results sections */}
           {filter === "all" ? (
             <>
               {(results.tracks?.items || []).length > 0 && (
@@ -181,6 +250,9 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
                         <div className="lib-item-img" style={{
                           background: album.images?.[0]?.url ? `url(${album.images[0].url}) center/cover` : undefined
                         }} />
+                        <div className="lib-item-play-overlay">
+                          <IconPlay size={24} />
+                        </div>
                         <div className="lib-item-title">{album.name}</div>
                         <div className="lib-item-sub">{album.artists?.map((a) => a.name).join(", ")}</div>
                       </div>
@@ -206,6 +278,9 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
                         <div className="lib-item-img" style={{
                           background: artist.images?.[0]?.url ? `url(${artist.images[0].url}) center/cover` : undefined
                         }} />
+                        <div className="lib-item-play-overlay">
+                          <IconPlay size={24} />
+                        </div>
                         <div className="lib-item-title">{artist.name}</div>
                         <div className="lib-item-sub">Artist</div>
                       </div>
@@ -231,6 +306,9 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
                         <div className="lib-item-img" style={{
                           background: playlist.images?.[0]?.url ? `url(${playlist.images[0].url}) center/cover` : undefined
                         }} />
+                        <div className="lib-item-play-overlay">
+                          <IconPlay size={24} />
+                        </div>
                         <div className="lib-item-title">{playlist.name}</div>
                         <div className="lib-item-sub">Playlist</div>
                       </div>
@@ -240,7 +318,16 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
               )}
 
               {getItems().length === 0 && (
-                <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} role="status">No results</p>
+                <div className="empty-state">
+                  <div className="empty-state-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="48" height="48">
+                      <circle cx="11" cy="11" r="8"/>
+                      <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                  </div>
+                  <h3>No results found</h3>
+                  <p>Check your spelling or try different keywords</p>
+                </div>
               )}
             </>
           ) : (
@@ -273,12 +360,36 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
                 </div>
               ))}
               {getItems().length === 0 && (
-                <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} role="status">No results</p>
+                <div className="empty-state">
+                  <p className="text-sm text-muted">No results</p>
+                </div>
               )}
             </div>
           )}
         </>
-      ) : null}
+      ) : (
+        /* Show recent searches when no results */
+        !loading && recentSearches.length > 0 && (
+          <div className="recent-searches">
+            <div className="recent-searches-header">
+              <span>Recent searches</span>
+              <button className="recent-searches-clear" onClick={clearRecentSearches}>
+                Clear all
+              </button>
+            </div>
+            {recentSearches.map((term, i) => (
+              <button
+                key={`${term}-${i}`}
+                className="recent-search-item"
+                onClick={() => handleRecentSearchClick(term)}
+              >
+                <IconClock size={14} />
+                <span>{term}</span>
+              </button>
+            ))}
+          </div>
+        )
+      )}
     </div>
   );
 }
