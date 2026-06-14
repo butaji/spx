@@ -10,7 +10,10 @@
     "tauri": "tauri",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test:e2e:mock": "VITE_SPX_MOCK=1 node comprehensive-test.mjs",
+    "test:e2e": "node comprehensive-test.mjs"
   },
   "dependencies": {
     "@preact/signals": "^2.9.0",
@@ -23,6 +26,8 @@
   "devDependencies": {
     "@preact/preset-vite": "^2.10.5",
     "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^22.0.0",
+    "happy-dom": "^16.0.0",
     "playwright": "^1.60.0",
     "typescript": "^5.5.0",
     "vite": "^5.4.0",

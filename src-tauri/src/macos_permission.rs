@@ -1,5 +1,7 @@
+#![allow(unexpected_cfgs)]
+
 use std::ffi::CString;
-use objc::runtime::{Object, Sel, Class};
+use objc::runtime::{Object, Class};
 use objc::{msg_send, sel, sel_impl};
 
 /// Trigger macOS local network permission dialog

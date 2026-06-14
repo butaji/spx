@@ -1,7 +1,8 @@
 import { signal, computed } from "@preact/signals";
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, tauriInvoke } from "../lib/spotify";
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
+import { playbackVolume } from "../stores/playback";
 import { debug } from "../lib/utils";
 
 export const availableDevices = signal<SpotifyDevice[]>([]);
@@ -15,6 +16,50 @@ export const selectedDeviceId = signal<string | null>(null);
 
 // Whether we're currently transferring playback to a device
 export const isTransferring = signal(false);
+
+// ─── Mute State ────────────────────────────────────────────────────────────
+
+// Volume before mute (for restore) - module-level for persistence across operations
+let previousVolume = 100;
+
+// Mute state tracking (for UI display)
+export const isMuted = signal(false);
+
+/**
+ * Toggle mute state, preserving previous volume
+ */
+export async function toggleMute(): Promise<void> {
+  const currentVol = playbackVolume.value;
+  
+  if (currentVol > 0 || isMuted.value) {
+    if (isMuted.value) {
+      // Unmute: restore previous volume
+      isMuted.value = false;
+      await setVolume(previousVolume, effectiveDeviceId.value ?? undefined);
+    } else {
+      // Mute: save current volume and set to 0
+      previousVolume = currentVol > 0 ? currentVol : previousVolume;
+      isMuted.value = true;
+      await setVolume(0, effectiveDeviceId.value ?? undefined);
+    }
+  }
+}
+
+/**
+ * Set mute state explicitly
+ */
+export async function setMuteState(muted: boolean): Promise<void> {
+  if (muted === isMuted.value) return;
+  
+  if (muted) {
+    previousVolume = playbackVolume.value > 0 ? playbackVolume.value : previousVolume;
+    isMuted.value = true;
+    await setVolume(0, effectiveDeviceId.value ?? undefined);
+  } else {
+    isMuted.value = false;
+    await setVolume(previousVolume, effectiveDeviceId.value ?? undefined);
+  }
+}
 
 // ─── Computed ────────────────────────────────────────────────────────────────
 
@@ -115,6 +160,8 @@ export function __resetDeviceStore() {
   scanError.value = null;
   isTransferring.value = false;
   selectedDeviceId.value = null;
+  isMuted.value = false;
+  previousVolume = 100;
   lastLocalScanAt = 0;
   activeScanPromise = null;
 }
@@ -127,9 +174,11 @@ let devicePollingInterval: ReturnType<typeof setInterval> | null = null;
  * Includes local mDNS scan on each poll.
  */
 export function startDevicePolling(intervalMs = 10_000) {
-  stopDevicePolling();
+  if (devicePollingInterval) {
+    // Already polling; avoid duplicate intervals.
+    return;
+  }
   devicePollingInterval = setInterval(() => {
-
     refreshDevices({ includeLocal: true }).catch(console.warn);
   }, intervalMs);
   refreshDevices({ includeLocal: true }).catch(console.warn);
@@ -424,6 +473,28 @@ export function clearDeviceSelection() {
   availableDevices.value = [];
   localDevices.value = [];
   stopDevicePolling();
+  // Reset mute state
+  isMuted.value = false;
+  previousVolume = 100;
+}
+
+// ─── Device Switching ────────────────────────────────────────────────────────
+
+/**
+ * Graceful device switching: pauses current playback before transferring
+ * to ensure clean state transition.
+ */
+export async function switchDevice(deviceId: string, deviceIp?: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Pause current playback first (graceful switch per spotify-player pattern)
+    await pause(effectiveDeviceId.value ?? undefined);
+    // Small delay to let the pause propagate
+    await new Promise(resolve => setTimeout(resolve, 100));
+  } catch {
+    // Ignore pause errors - device might not be playing
+  }
+  // Transfer to new device
+  return selectDevice(deviceId, deviceIp);
 }
 
 // ─── Refresh Functions ───────────────────────────────────────────────────────

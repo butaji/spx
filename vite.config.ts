@@ -16,7 +16,7 @@ export default defineConfig(async () => ({
   server: {
     port: parseInt(process.env.VITE_DEV_PORT || "1420"),
     strictPort: true,
-    allowedHosts: true,
+    allowedHosts: host ? [host] : ['localhost', '127.0.0.1'],
     host: host || false,
     hmr: host
       ? {

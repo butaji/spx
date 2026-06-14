@@ -1,6 +1,9 @@
 use crate::mdns::browse_service;
+use crate::spotify;
+use crate::spotify_backend;
 use std::collections::HashSet;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -11,6 +14,7 @@ use std::process::Command;
 #[tauri::command]
 pub fn is_mock_mode() -> bool {
     std::env::var("SPX_MOCK").unwrap_or_default() == "1"
+        || std::env::var("VITE_SPX_MOCK").unwrap_or_default() == "1"
 }
 
 #[tauri::command]
@@ -29,24 +33,26 @@ pub fn get_spotify_client_id() -> Result<String, String> {
     }
     // Try bundled config file (Resources is at Contents/Resources, not MacOS/Resources)
     if let Ok(exe_path) = std::env::current_exe() {
-        let config_path = exe_path
-            .parent().unwrap()  // MacOS/
-            .parent().unwrap()  // Contents/
-            .join("Resources/spx_client_id.txt");
-        if let Ok(id) = std::fs::read_to_string(&config_path) {
-            let id = id.trim().to_string();
-            if !id.is_empty() {
-                debug!("Loaded client ID from bundle config: {:?}", config_path);
-                return Ok(id);
+        // Standard bundled app: Contents/Resources/
+        if let Some(contents_dir) = exe_path.parent().and_then(|p| p.parent()) {
+            let config_path = contents_dir.join("Resources/spx_client_id.txt");
+            if let Ok(id) = std::fs::read_to_string(&config_path) {
+                let id = id.trim().to_string();
+                if !id.is_empty() {
+                    debug!("Loaded client ID from bundle config: {:?}", config_path);
+                    return Ok(id);
+                }
             }
         }
         // Fallback: try MacOS/Resources for dev builds
-        let dev_path = exe_path.parent().unwrap().join("Resources/spx_client_id.txt");
-        if let Ok(id) = std::fs::read_to_string(&dev_path) {
-            let id = id.trim().to_string();
-            if !id.is_empty() {
-                debug!("Loaded client ID from dev config: {:?}", dev_path);
-                return Ok(id);
+        if let Some(mac_dir) = exe_path.parent() {
+            let dev_path = mac_dir.join("Resources/spx_client_id.txt");
+            if let Ok(id) = std::fs::read_to_string(&dev_path) {
+                let id = id.trim().to_string();
+                if !id.is_empty() {
+                    debug!("Loaded client ID from dev config: {:?}", dev_path);
+                    return Ok(id);
+                }
             }
         }
     }
@@ -54,7 +60,7 @@ pub fn get_spotify_client_id() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn start_callback_server() -> Result<Option<(String, String)>, String> {
+pub async fn start_callback_server(expected_state: Option<String>) -> Result<Option<(String, String)>, String> {
     info!("Starting OAuth callback server on 127.0.0.1:1422");
     let listener = TcpListener::bind("127.0.0.1:1422").await
         .map_err(|e| e.to_string())?;
@@ -63,70 +69,113 @@ pub async fn start_callback_server() -> Result<Option<(String, String)>, String>
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(60),
         async {
-            info!("Got callback connection");
-            let (mut socket, _) = listener.accept().await.map_err(|e| e.to_string())?;
-            let mut buf = [0u8; 4096];
-            let n = socket.read(&mut buf).await.map_err(|e| e.to_string())?;
-            let request = String::from_utf8_lossy(&buf[..n]);
-            debug!("Parsed request: {}", request);
+            loop {
+                let (mut socket, _) = listener.accept().await.map_err(|e| e.to_string())?;
+                let mut buf = [0u8; 4096];
+                let n = match socket.read(&mut buf).await {
+                    Ok(n) => n,
+                    Err(e) => {
+                        debug!("Failed to read callback request: {}", e);
+                        continue;
+                    }
+                };
+                if n == 0 {
+                    continue;
+                }
+                let request = String::from_utf8_lossy(&buf[..n]);
+                debug!("Parsed request: {}", request);
 
-            let mut code = None;
-            let mut state = None;
-            for line in request.lines() {
-                if line.starts_with("GET /callback?") {
-                    let query = line.split(' ').nth(1).unwrap_or("")
-                        .trim_start_matches("/callback?");
-                    for param in query.split('&') {
-                        let mut parts = param.splitn(2, '=');
-                        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-                            let decoded = urlencoding::decode(value).unwrap_or_default().to_string();
-                            match key {
-                                "code" => {
-                                    code = Some(decoded.clone());
-                                    debug!("Found auth code in callback");
-                                },
-                                "state" => {
-                                    state = Some(decoded.clone());
-                                    debug!("Found state in callback");
-                                },
-                                _ => {}
+                // Only handle GET /callback?... requests; reject probes/other paths.
+                let callback_line = request.lines().find(|l| l.starts_with("GET /callback?"));
+                let Some(line) = callback_line else {
+                    let body = "<html><body><h1>Not Found</h1></body></html>";
+                    let response = format!(
+                        "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(), body
+                    );
+                    let _ = socket.write_all(response.as_bytes()).await;
+                    let _ = socket.flush().await;
+                    continue;
+                };
+
+                let query = line.split(' ').nth(1).unwrap_or("").trim_start_matches("/callback?");
+                let mut code = None;
+                let mut state = None;
+                let mut error = None;
+                for param in query.split('&') {
+                    let mut parts = param.splitn(2, '=');
+                    if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
+                        let decoded = urlencoding::decode(value).unwrap_or_default().to_string();
+                        match key {
+                            "code" => {
+                                code = Some(decoded);
+                                debug!("Found auth code in callback");
                             }
+                            "state" => {
+                                state = Some(decoded);
+                                debug!("Found state in callback");
+                            }
+                            "error" => {
+                                error = Some(decoded);
+                                debug!("Found error in callback");
+                            }
+                            _ => {}
                         }
                     }
-                    break;
                 }
+
+                if let Some(err) = error {
+                    let body = format!("<html><body><h1>❌ Auth Failed</h1><p>{}</p></body></html>", err);
+                    let response = format!(
+                        "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(), body
+                    );
+                    let _ = socket.write_all(response.as_bytes()).await;
+                    let _ = socket.flush().await;
+                    return Err(format!("Spotify auth error: {}", err));
+                }
+
+                // Validate state if caller provided one.
+                if let Some(expected) = expected_state {
+                    if state.as_ref() != Some(&expected) {
+                        let body = "<html><body><h1>❌ Auth Failed</h1><p>Invalid state parameter.</p></body></html>";
+                        let response = format!(
+                            "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                            body.len(), body
+                        );
+                        let _ = socket.write_all(response.as_bytes()).await;
+                        let _ = socket.flush().await;
+                        return Err("OAuth state mismatch".to_string());
+                    }
+                }
+
+                let body = if code.is_some() {
+                    "<html><body style='font-family:sans-serif;text-align:center;padding:40px'><h1>✅ Auth Successful!</h1><p>You can close this window and return to SPX.</p></body></html>"
+                } else {
+                    "<html><body><h1>❌ Auth Failed</h1><p>No authorization code received.</p></body></html>"
+                };
+
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    body.len(),
+                    body
+                );
+                let _ = socket.write_all(response.as_bytes()).await;
+                let _ = socket.flush().await;
+
+                return Ok::<_, String>((code, state));
             }
-
-            if code.is_none() {
-                debug!("No auth code in callback request");
-            }
-
-            let body = if code.is_some() {
-                "<html><body style='font-family:sans-serif;text-align:center;padding:40px'><h1>✅ Auth Successful!</h1><p>You can close this window and return to SPX.</p></body></html>"
-            } else {
-                "<html><body><h1>❌ Auth Failed</h1><p>No authorization code received.</p></body></html>"
-            };
-
-            let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            socket.write_all(response.as_bytes()).await.ok();
-            socket.flush().await.ok();
-
-            Ok::<_, String>((code, state))
         }
     ).await;
 
     match result {
-        Ok(Ok((Some(code), Some(state)))) => Ok(Some((code, state))),
-        Ok(Ok(_)) => Ok(None),
+        Ok(Ok((Some(code), state))) => Ok(Some((code, state.unwrap_or_default()))),
+        Ok(Ok((None, _))) => Ok(None),
         Ok(Err(e)) => Err(e),
         Err(_) => {
             info!("Callback server timed out");
             Err("Callback server timeout".to_string())
-        },
+        }
     }
 }
 
@@ -408,4 +457,53 @@ pub fn request_macos_local_network_permission() -> String {
     {
         "Not on macOS".to_string()
     }
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct SpotifyTokenInfo {
+    pub access_token: String,
+    pub expires_in: i64,
+    pub expires_at: Option<i64>,
+}
+
+fn token_info(token: rspotify::Token) -> SpotifyTokenInfo {
+    SpotifyTokenInfo {
+        access_token: token.access_token,
+        expires_in: token.expires_in.num_seconds(),
+        expires_at: token.expires_at.map(|dt| dt.timestamp_millis()),
+    }
+}
+
+#[tauri::command]
+pub async fn authenticate_librespot() -> Result<SpotifyTokenInfo, String> {
+    let client = Arc::new(
+        spotify::new_spotify_client(true)
+            .await
+            .map_err(|e| e.to_string())?,
+    );
+    spotify_backend::install_client(client).await;
+    let token = spotify_backend::current_token()
+        .await?
+        .ok_or_else(|| "No token after librespot authentication".to_string())?;
+    Ok(token_info(token))
+}
+
+#[tauri::command]
+pub async fn restore_librespot_session() -> Result<SpotifyTokenInfo, String> {
+    let client = Arc::new(
+        spotify::new_spotify_client(false)
+            .await
+            .map_err(|e| e.to_string())?,
+    );
+    spotify_backend::install_client(client).await;
+    let token = spotify_backend::current_token()
+        .await?
+        .ok_or_else(|| "No token after restoring librespot session".to_string())?;
+    Ok(token_info(token))
+}
+
+#[tauri::command]
+pub async fn clear_librespot_session() -> Result<(), String> {
+    spotify_backend::clear_client().await;
+    Ok(())
 }

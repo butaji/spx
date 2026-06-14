@@ -5,8 +5,12 @@
  * Usage: deno run --allow-net --allow-env record-api.ts
  */
 
-const TOKEN = Deno.env.get("SPOTIFY_TOKEN") || 
-  "BQDyl95jKkO_tZ1X23-RSqWlRXd2KGnQ_EX2goRJhiT3Y0ZFKpXT1piuW5nE62PFnPOTVdsQ0PXGjHzaWeYvoJb274-L6Ee6Avj4pqWn5Oeocr6izWBUlIsIlKS8TsJ8ad-dwqp9BVrtsOOhbul_V_lLQlwbMQZup0X-Lb8w2hNiZpKFDmNCnwt_LxmZhRd0hvWwAJi6C-QVFXgFjguWYRCtxJRbbi-DW5utH_kzz3P8Z_164MfhaWIgYO_GQCXf7uZBy9tDpkWDXdq0US2cmD0";
+const TOKEN = Deno.env.get("SPOTIFY_TOKEN");
+if (!TOKEN) {
+  console.error("ERROR: SPOTIFY_TOKEN environment variable is required.");
+  console.error("Get a token at https://developer.spotify.com/console/get-current-user-playlists/");
+  Deno.exit(1);
+}
 
 const BASE_URL = "https://api.spotify.com";
 

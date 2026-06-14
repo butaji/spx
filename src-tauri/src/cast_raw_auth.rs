@@ -6,8 +6,12 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::net::TcpStream;
 use rustls::StreamOwned;
-use tracing::{info, error, debug};
+use tracing::{info, debug};
 
+// NOTE: This verifier intentionally disables TLS certificate validation and is
+// used ONLY for connecting to local Google Cast devices on the LAN. Cast
+// devices present self-signed certificates that cannot be validated through
+// normal PKI. It must never be used for remote/public hosts.
 #[derive(Debug)]
 struct NoCertificateVerification;
 
@@ -129,33 +133,30 @@ pub fn authenticate_cast_device_raw(
     let mut transport_id = String::new();
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(10) {
-        match mm.receive() {
-            Ok(msg) => {
-                if let CastMessagePayload::String(payload) = &msg.payload {
-                    debug!("Received: {}", payload);
-                    if payload.contains("RECEIVER_STATUS") {
-                        if let Ok(status) = serde_json::from_str::<serde_json::Value>(payload) {
-                            if let Some(apps) = status.get("status").and_then(|s| s.get("applications")) {
-                                if let Some(app_array) = apps.as_array() {
-                                    for app in app_array {
-                                        if app.get("appId").and_then(|a| a.as_str()) == Some("CC32E753") {
-                                            transport_id = app.get("transportId")
-                                                .and_then(|t| t.as_str())
-                                                .unwrap_or("")
-                                                .to_string();
-                                            info!("Found Spotify app, transportId={}", transport_id);
-                                        }
+        if let Ok(msg) = mm.receive() {
+            if let CastMessagePayload::String(payload) = &msg.payload {
+                debug!("Received: {}", payload);
+                if payload.contains("RECEIVER_STATUS") {
+                    if let Ok(status) = serde_json::from_str::<serde_json::Value>(payload) {
+                        if let Some(apps) = status.get("status").and_then(|s| s.get("applications")) {
+                            if let Some(app_array) = apps.as_array() {
+                                for app in app_array {
+                                    if app.get("appId").and_then(|a| a.as_str()) == Some("CC32E753") {
+                                        transport_id = app.get("transportId")
+                                            .and_then(|t| t.as_str())
+                                            .unwrap_or("")
+                                            .to_string();
+                                        info!("Found Spotify app, transportId={}", transport_id);
                                     }
                                 }
                             }
                         }
-                        if !transport_id.is_empty() {
-                            break;
-                        }
+                    }
+                    if !transport_id.is_empty() {
+                        break;
                     }
                 }
             }
-            Err(_) => {}
         }
     }
 
@@ -205,21 +206,18 @@ pub fn authenticate_cast_device_raw(
 
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(10) {
-        match mm.receive() {
-            Ok(msg) => {
-                if let CastMessagePayload::String(payload) = &msg.payload {
-                    if msg.namespace.contains("spotify") {
-                        debug!("Spotify message: {}", payload);
-                        if payload.contains("getInfoResponse") || payload.contains("status") {
-                            info!("Got response: {}", payload);
-                            // Send addUser
-                            return send_add_user(&mm, sender_id, &transport_id, token
-                            );
-                        }
+        if let Ok(msg) = mm.receive() {
+            if let CastMessagePayload::String(payload) = &msg.payload {
+                if msg.namespace.contains("spotify") {
+                    debug!("Spotify message: {}", payload);
+                    if payload.contains("getInfoResponse") || payload.contains("status") {
+                        info!("Got response: {}", payload);
+                        // Send addUser
+                        return send_add_user(&mm, sender_id, &transport_id, token
+                        );
                     }
                 }
             }
-            Err(_) => {}
         }
     }
 
@@ -241,27 +239,24 @@ pub fn authenticate_cast_device_raw(
 
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(10) {
-        match mm.receive() {
-            Ok(msg) => {
-                if let CastMessagePayload::String(payload) = &msg.payload {
-                    if msg.namespace.contains("spotify") {
-                        debug!("Spotify message: {}", payload);
-                        if payload.contains("getInfoResponse") || payload.contains("status") {
-                            info!("Got response: {}", payload);
-                            return send_add_user(&mm, sender_id, &transport_id, token
-                            );
-                        }
+        if let Ok(msg) = mm.receive() {
+            if let CastMessagePayload::String(payload) = &msg.payload {
+                if msg.namespace.contains("spotify") {
+                    debug!("Spotify message: {}", payload);
+                    if payload.contains("getInfoResponse") || payload.contains("status") {
+                        info!("Got response: {}", payload);
+                        return send_add_user(&mm, sender_id, &transport_id, token
+                        );
                     }
                 }
             }
-            Err(_) => {}
         }
     }
 
     // Approach 3: Send addUser directly
     info!("Approach 3: addUser directly");
-    return send_add_user(&mm, sender_id, &transport_id, token
-    );
+    send_add_user(&mm, sender_id, &transport_id, token
+    )
 }
 
 fn send_add_user(
@@ -272,7 +267,7 @@ fn send_add_user(
 ) -> Result<String, String> {
     info!("Sending addUser with token");
     send_json(
-        &mm, 
+        mm, 
         "urn:x-cast:com.spotify.chromecast.secure.v1", 
         sender_id, 
         transport_id,
@@ -289,21 +284,18 @@ fn send_add_user(
     info!("Waiting for auth confirmation...");
     let start = Instant::now();
     while start.elapsed() < Duration::from_secs(15) {
-        match mm.receive() {
-            Ok(msg) => {
-                if let CastMessagePayload::String(payload) = &msg.payload {
-                    if msg.namespace.contains("spotify") {
-                        info!("Auth response: {}", payload);
-                        if payload.contains("ok") || payload.contains("success") || payload.contains("status") {
-                            return Ok("Device authenticated successfully".to_string());
-                        }
-                        if payload.contains("error") {
-                            return Err(format!("Auth error: {}", payload));
-                        }
+        if let Ok(msg) = mm.receive() {
+            if let CastMessagePayload::String(payload) = &msg.payload {
+                if msg.namespace.contains("spotify") {
+                    info!("Auth response: {}", payload);
+                    if payload.contains("ok") || payload.contains("success") || payload.contains("status") {
+                        return Ok("Device authenticated successfully".to_string());
+                    }
+                    if payload.contains("error") {
+                        return Err(format!("Auth error: {}", payload));
                     }
                 }
             }
-            Err(_) => {}
         }
     }
 

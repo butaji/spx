@@ -24,8 +24,13 @@ export function setupHotkeys() {
   }
 
   keydownHandler = (e: KeyboardEvent) => {
-    // Skip if user is typing in an input
-    if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+    // Skip if user is typing in an input/editable area
+    const target = e.target as HTMLElement;
+    if (!target) return;
+    const tag = target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if ((target as HTMLElement).isContentEditable) return;
+    if (target.getAttribute?.('role') === 'textbox') return;
 
     const pressed = hotkeys.find(hk => {
       if (hk.key !== e.key && hk.key !== e.code) return false;

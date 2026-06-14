@@ -7,12 +7,24 @@ import {
   setVolume,
 } from "./spotify";
 
+// Get the current device ID for player commands
+async function getCurrentDeviceId(): Promise<string | undefined> {
+  try {
+    const { effectiveDeviceId } = await import("../stores/devices");
+    return effectiveDeviceId.value ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function controllerPlay(): Promise<void> {
-  await play();
+  const deviceId = await getCurrentDeviceId();
+  await play(deviceId);
 }
 
 export async function controllerPause(): Promise<void> {
-  await pause();
+  const deviceId = await getCurrentDeviceId();
+  await pause(deviceId);
 }
 
 export async function controllerNext(): Promise<void> {
@@ -24,9 +36,11 @@ export async function controllerPrevious(): Promise<void> {
 }
 
 export async function controllerSeek(positionMs: number): Promise<void> {
-  await seek(positionMs);
+  const deviceId = await getCurrentDeviceId();
+  await seek(positionMs, deviceId);
 }
 
 export async function controllerSetVolume(volumePercent: number): Promise<void> {
-  await setVolume(volumePercent);
+  const deviceId = await getCurrentDeviceId();
+  await setVolume(volumePercent, deviceId);
 }

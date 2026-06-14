@@ -9,20 +9,46 @@
 .idea/
 .vscode/
 
-# Xcode
+# Node / Vite / frontend
+node_modules/
+dist/
+*.local
+
+# Tauri generated
+src-tauri/gen/
+src-tauri/target/
+
+# Rust / Cargo build artifacts (workspace root, if any)
+/target/
+**/*.rs.bk
+
+# Spotify Player submodule (being removed from project)
+spotify-player/
+
+# Experimental token provider (not part of the main build)
+token-provider/
+
+# Screenshots / images generated during local dev/test runs
+screenshot*.png
+screenshot*.jpeg
+screenshot*.jpg
+spx-*.png
+spx-*.jpeg
+spx-*.jpg
+test-screenshot.png
+test-screenshot.jpeg
+test-screenshot.jpg
+
+# Swift-era artifacts (kept patterns for any stragglers)
 *.xcodeproj/
 *.xcworkspace/
 DerivedData/
 *.xcuserstate
 *.xcuserdata/
-
-# Swift Package Manager
 .swiftpm/
 **/.build/
-
-# CocoaPods (if ever used)
 Pods/
-
-# Carthage
 Carthage/Build/
+
+# Secrets / app-specific config files
 spx_client_id.txt

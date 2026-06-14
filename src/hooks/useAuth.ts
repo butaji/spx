@@ -1,7 +1,6 @@
 import { useCallback, useEffect } from "preact/compat";
 import {
   startAuthFlow,
-  handleCallbackUrl,
   restoreSession,
   checkMockMode,
   getAccessToken,
@@ -84,46 +83,6 @@ export function useAuth() {
     init();
     return () => stopDevicePolling();
   }, []);
-
-  // Listen for deep link callbacks
-  useEffect(() => {
-    let ignore = false;
-
-    async function handleDeepLink(url: string) {
-      if (ignore) return;
-      try {
-        await handleCallbackUrl(url);
-        isAuthSignal.value = true;
-        loadRecentActivity();
-        refreshPlayback();
-        refreshSpotifyDevices();
-        startDevicePolling();
-      } catch (e) {
-        console.error("Deep link auth error:", e);
-        showError(e instanceof Error ? e.message : String(e));
-      }
-    }
-
-    async function setupDeepLinks() {
-      // Using localhost callback server, no deep links needed
-    }
-
-    setupDeepLinks();
-
-    const checkUrl = async () => {
-      try {
-        const url = window.location.href;
-        if (url.includes("com.spx.app://callback") && url.includes("code=")) {
-          handleDeepLink(url);
-        }
-      } catch (e) {
-        // Not in Tauri
-      }
-    };
-    checkUrl();
-
-    return () => { ignore = true; };
-  }, [showError]);
 
   const handleStartAuth = useCallback(async () => {
     if (isAuthLoading.value || isAuthSignal.value) return;

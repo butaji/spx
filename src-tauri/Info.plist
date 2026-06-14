@@ -4,6 +4,10 @@
 <dict>
     <key>NSLocalNetworkUsageDescription</key>
     <string>SPX needs to discover and connect to Spotify Cast devices on your local network.</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSAppearance</key>
+    <string>NSAppearanceNameDarkAqua</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_googlecast._tcp</string>

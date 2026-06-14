@@ -5,8 +5,14 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "shell:allow-open",
-    "shell:allow-execute",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        { "scheme": "https", "domain": "accounts.spotify.com" },
+        { "scheme": "https", "domain": "open.spotify.com" },
+        { "scheme": "https", "domain": "developer.spotify.com" }
+      ]
+    },
     "core:window:allow-start-dragging",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
@@ -21,6 +27,7 @@
     "store:allow-keys",
     "store:allow-values",
     "store:allow-length",
-    "store:allow-entries"
+    "store:allow-entries",
+    "global-shortcut:default"
   ]
 }

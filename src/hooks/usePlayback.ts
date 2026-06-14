@@ -67,6 +67,20 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
     return cleanup;
   }, []);
 
+  // Cleanup debounced timers on unmount
+  useEffect(() => {
+    return () => {
+      if (shuffleTimeoutRef.current) {
+        clearTimeout(shuffleTimeoutRef.current);
+        shuffleTimeoutRef.current = null;
+      }
+      if (repeatTimeoutRef.current) {
+        clearTimeout(repeatTimeoutRef.current);
+        repeatTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // Refresh liked status when track changes
   useEffect(() => {
     const id = playbackTrack.value?.id;
@@ -179,9 +193,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
 
         if (!deviceId) {
           console.warn('[Play/Pause] Cannot play - no device available');
-          if (track) {
-            isPlaying.value = playing;
-          }
+          isPlaying.value = playing;
           showError("No Spotify devices found. Open Spotify on your phone or computer.");
           return;
         }
@@ -197,9 +209,8 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       }, 500);
     } catch (error) {
       console.error('[Play/Pause] ERROR:', error);
-      if (track) {
-        isPlaying.value = playing;
-      }
+      // Revert optimistic update on any error.
+      isPlaying.value = playing;
     } finally {
       debug('[Play/Pause] Setting loading to false');
       setIsPlayActionLoading(false);

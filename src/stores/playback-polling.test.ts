@@ -38,8 +38,8 @@ describe('playback polling', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(getPlaybackState).toHaveBeenCalled();
 
-    // Second call after 1s
-    await vi.advanceTimersByTimeAsync(1000);
+    // Second call after the 5s polling interval
+    await vi.advanceTimersByTimeAsync(5000);
     expect(getPlaybackState).toHaveBeenCalledTimes(2);
 
     cleanup();
