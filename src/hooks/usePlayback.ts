@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from "preact/compat";
-import { message } from "@tauri-apps/plugin-dialog";
 import { debug } from "../lib/utils";
 import {
   setShuffle as apiSetShuffle, setRepeat as apiSetRepeat,
@@ -55,6 +54,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
   const showError = useCallback(async (msg: string) => {
     console.error(msg);
     try {
+      const { message } = await import('@tauri-apps/plugin-dialog');
       await message(msg, { title: 'SPX Error', kind: 'error' });
     } catch (e) {
       appError.value = msg;
@@ -186,8 +186,8 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
           return;
         }
 
-        debug('[Play/Pause] Calling playTrack(', deviceId, ')...');
-        await playTrack(deviceId);
+        debug('[Play/Pause] Calling playTrack()...');
+        await playTrack();
         debug('[Play/Pause] playTrack() succeeded');
       }
 

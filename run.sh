@@ -39,20 +39,6 @@ fi
 
 swift build
 
-# Check for --mock flag
-MOCK_MODE=false
-for arg in "$@"; do
-    if [[ "$arg" == "--mock" || "$arg" == "-m" ]]; then
-        MOCK_MODE=true
-        break
-    fi
-done
-
 echo ""
-if [[ "$MOCK_MODE" == true ]]; then
-    echo "Running SPX in mock mode..."
-    SPX_MOCK=1 exec "${SWIFT_DIR}/.build/debug/SPX"
-else
-    echo "Running SPX..."
-    exec "${SWIFT_DIR}/.build/debug/SPX" "$@"
-fi
+echo "Running SPX..."
+exec "${SWIFT_DIR}/.build/debug/SPX" "$@"

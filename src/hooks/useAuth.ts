@@ -1,5 +1,4 @@
 import { useCallback, useEffect } from "preact/compat";
-import { message } from "@tauri-apps/plugin-dialog";
 import {
   startAuthFlow,
   handleCallbackUrl,
@@ -8,7 +7,6 @@ import {
   getAccessToken,
   clearToken,
 } from "../lib/spotify";
-import { initPlayer, onPlaybackEvent } from "../lib/playback";
 import {
   authState as isAuthSignal,
   isMockMode,
@@ -31,6 +29,7 @@ export function useAuth() {
   const showError = useCallback(async (msg: string) => {
     console.error(msg);
     try {
+      const { message } = await import('@tauri-apps/plugin-dialog');
       await message(msg, { title: 'SPX Error', kind: 'error' });
     } catch (e) {
       appError.value = msg;
@@ -65,11 +64,6 @@ export function useAuth() {
               isRestoring.value = false;
               return;
             }
-            try {
-              await initPlayer(token);
-            } catch (e) {
-              console.error("Failed to init Web Playback SDK:", e);
-            }
           }
           // Start these independently — don't block auth init on device scanning
           loadRecentActivity();
@@ -100,14 +94,6 @@ export function useAuth() {
       try {
         await handleCallbackUrl(url);
         isAuthSignal.value = true;
-        try {
-          const token = getAccessToken();
-          if (token) {
-            await initPlayer(token);
-          }
-        } catch (e) {
-          console.error("Failed to init Web Playback SDK:", e);
-        }
         loadRecentActivity();
         refreshPlayback();
         refreshSpotifyDevices();
@@ -138,16 +124,6 @@ export function useAuth() {
 
     return () => { ignore = true; };
   }, [showError]);
-
-  // Listen for Web Playback SDK ready event
-  useEffect(() => {
-    const unsub = onPlaybackEvent((event) => {
-      if (event.type === 'ready') {
-        refreshPlayback();
-      }
-    });
-    return unsub;
-  }, []);
 
   const handleStartAuth = useCallback(async () => {
     if (isAuthLoading.value || isAuthSignal.value) return;

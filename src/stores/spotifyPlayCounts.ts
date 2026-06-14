@@ -50,7 +50,7 @@ async function fetchAndCountFromAPI(): Promise<SpotifyPlayCounts> {
 
 async function loadCachedCounts(): Promise<SpotifyPlayCounts | null> {
   try {
-    const cached = await getCached<SpotifyPlayCounts>(RECENT_COUNTS_KEY);
+    const cached = await getCached(RECENT_COUNTS_KEY);
     return cached ?? null;
   } catch {
     return null;

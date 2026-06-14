@@ -1,10 +1,10 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import preact from "@preact/preset-vite";
 
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig(async () => ({
-  plugins: [react()],
+  plugins: [preact()],
   resolve: {
     alias: {
       'react': 'preact/compat',
@@ -14,9 +14,9 @@ export default defineConfig(async () => ({
   },
   clearScreen: false,
   server: {
-    port: 1420,
+    port: parseInt(process.env.VITE_DEV_PORT || "1420"),
     strictPort: true,
-    allowedHosts: process.env.VITE_ALLOWED_HOST ? [process.env.VITE_ALLOWED_HOST] : [],
+    allowedHosts: true,
     host: host || false,
     hmr: host
       ? {

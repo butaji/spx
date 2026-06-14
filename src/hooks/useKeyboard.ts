@@ -1,5 +1,4 @@
 import { useEffect, useCallback } from "preact/compat";
-import { listen } from "@tauri-apps/api/event";
 import { registerHotkey, setupHotkeys, clearHotkeys, teardownHotkeys } from "../lib/hotkeys";
 
 interface KeyboardHandlers {
@@ -100,7 +99,9 @@ export function useKeyboard(handlers: KeyboardHandlers) {
     };
 
     Object.entries(menuHandlers).forEach(([event, handler]) => {
-      listen(event, handler).then(unsub => unsubs.push(unsub));
+      import('@tauri-apps/api/event').then(({ listen }) => {
+        listen(event, handler).then(unsub => unsubs.push(unsub)).catch(() => {});
+      }).catch(() => {});
     });
 
     return () => {

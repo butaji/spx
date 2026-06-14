@@ -1,6 +1,5 @@
 import { signal, computed } from "@preact/signals";
-import { invoke } from "@tauri-apps/api/core";
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken } from "../lib/spotify";
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, tauriInvoke } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
 import { debug } from "../lib/utils";
@@ -101,6 +100,7 @@ export const effectiveDeviceId = computed(() => {
 // ─── Concurrency Guards ──────────────────────────────────────────────────────
 
 let activeScanPromise: Promise<void> | null = null;
+let activeScanOptions: RefreshDevicesOptions | null = null;
 let lastLocalScanAt = 0;
 const LOCAL_SCAN_COOLDOWN_MS = 15_000;
 
@@ -150,7 +150,7 @@ export function stopDevicePolling() {
 async function wakeDevice(ip: string): Promise<string> {
   try {
     const result = await Promise.race([
-      invoke<string>("wake_cast_device", { ip }),
+      tauriInvoke<string>("wake_cast_device", { ip }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Cast device wake timed out after 15 seconds")), 15000)
       )
@@ -177,7 +177,7 @@ async function authenticateCastDevice(ip: string, deviceName: string): Promise<s
     console.log(`[authenticateCastDevice] Trying raw auth for ${deviceName} at ${ip}`);
     try {
       const result = await Promise.race([
-        invoke<string>("authenticate_cast_device_raw_command", { 
+        tauriInvoke<string>("authenticate_cast_device_raw_command", { 
           ip, 
           accessToken: token
         }),
@@ -193,7 +193,7 @@ async function authenticateCastDevice(ip: string, deviceName: string): Promise<s
     
     // Fallback to old method
     const result = await Promise.race([
-      invoke<string>("authenticate_cast_device_command", { 
+      tauriInvoke<string>("authenticate_cast_device_command", { 
         ip, 
         accessToken: token,
         deviceName
@@ -227,29 +227,29 @@ async function waitForDevice(
     const data = await getAvailableDevices();
     console.log(`[waitForDevice] Poll ${i + 1}/15: API returned ${data.devices?.length ?? 0} devices`);
     if (data.devices?.length) {
-      console.log(`[waitForDevice] Device names: ${data.devices.map(d => `"${d.name}" (id=${d.id?.slice(0, 8)}...)`).join(', ')}`);
+      console.log(`[waitForDevice] Device names: ${data.devices.map((d: any) => `"${d.name}" (id=${d.id?.slice(0, 8)}...)`).join(', ')}`);
     }
 
     // Try multiple matching strategies
     const targetName = deviceName.toLowerCase();
 
     // 1. Exact match
-    let match = data.devices?.find(d => d.name?.toLowerCase() === targetName);
+    let match = data.devices?.find((d: any) => d.name?.toLowerCase() === targetName);
 
     // 2. Substring match (device name contains target)
     if (!match) {
-      match = data.devices?.find(d => d.name?.toLowerCase().includes(targetName));
+      match = data.devices?.find((d: any) => d.name?.toLowerCase().includes(targetName));
     }
 
     // 3. Substring match (target contains device name)
     if (!match) {
-      match = data.devices?.find(d => targetName.includes(d.name?.toLowerCase() ?? ""));
+      match = data.devices?.find((d: any) => targetName.includes(d.name?.toLowerCase() ?? ""));
     }
 
     // 4. Word-by-word match (for "Living Room speaker" vs "Living Room")
     if (!match && targetName.includes(" ")) {
       const words = targetName.split(" ").filter(w => w.length > 2);
-      match = data.devices?.find(d => {
+      match = data.devices?.find((d: any) => {
         const deviceWords = d.name?.toLowerCase().split(" ") ?? [];
         return words.some(w => deviceWords.includes(w));
       });
@@ -445,13 +445,17 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
   const { force = false, includeLocal = false } = options;
 
   if (activeScanPromise) {
-    return activeScanPromise;
+    const currentOptions = activeScanOptions;
+    if (currentOptions && currentOptions.includeLocal === includeLocal && currentOptions.force === force) {
+      return activeScanPromise;
+    }
   }
 
   // Only scan if includeLocal=true AND (cooldown passed OR never scanned)
   const shouldScanLocal = includeLocal && (force || lastLocalScanAt === 0 || (lastLocalScanAt > 0 && Date.now() - lastLocalScanAt >= LOCAL_SCAN_COOLDOWN_MS));
 
 
+    activeScanOptions = options;
     activeScanPromise = (async () => {
     isScanning.value = true;
     scanError.value = null;
@@ -521,6 +525,7 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
     } finally {
       isScanning.value = false;
       activeScanPromise = null;
+      activeScanOptions = null;
     }
   })();
 

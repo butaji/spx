@@ -33,7 +33,7 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
 
     // Check cache first - render immediately if available
     if (fromCache) {
-      const cached = await getCached<LibraryItem[]>(key);
+      const cached = await getCached(key);
       if (cached && cached.length > 0) {
         setItems(cached);
         setInitialLoading(false);
@@ -57,10 +57,10 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
         freshItems = d.items || [];
       } else if (tab === "tracks") {
         const d = await getSavedTracks();
-        freshItems = (d.items || []).map((i) => i.track).filter(Boolean) as SpotifyTrack[];
+        freshItems = (d.items || []).map((i: any) => i.track).filter(Boolean) as SpotifyTrack[];
       } else if (tab === "albums") {
         const d = await getSavedAlbums();
-        freshItems = (d.items || []).map((i) => i.album).filter(Boolean) as SpotifyAlbum[];
+        freshItems = (d.items || []).map((i: any) => i.album).filter(Boolean) as SpotifyAlbum[];
       } else if (tab === "top") {
         const d = await getTopTracks(50, 'short_term');
         freshItems = d;

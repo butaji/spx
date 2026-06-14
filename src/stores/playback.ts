@@ -58,16 +58,16 @@ export function startPlaybackPolling(): () => void {
   refreshPlayback();
   playbackPollInterval = setInterval(() => {
     refreshPlayback().catch(() => {});
-  }, 1000);
+  }, 5000);
 
   return () => {
     stopPlaybackPolling();
   };
 }
 
-export async function playTrack(deviceId?: string): Promise<void> {
+export async function playTrack(): Promise<void> {
   try {
-    await controllerPlay(deviceId);
+    await controllerPlay();
     await refreshPlayback();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

@@ -11,7 +11,7 @@ import Queue from "./screens/Queue";
 import PlaylistDetail from "./screens/PlaylistDetail";
 import AlbumDetail from "./screens/AlbumDetail";
 import ArtistDetail from "./screens/ArtistDetail";
-import { getAccessToken } from "./lib/spotify";
+import { getAccessToken, getAuthUrl, handleCallbackFromUrl } from "./lib/spotify";
 import {
   playbackTrack,
   playbackVolume,
@@ -22,6 +22,7 @@ import {
   isPlaying,
   likedTrack,
   isMockMode,
+  authState,
   authError,
   userProfile,
   appError,
@@ -169,6 +170,24 @@ function App() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  // Handle OAuth callback: if URL has ?code=, exchange it
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("code") || params.has("error")) {
+      handleCallbackFromUrl().then(ok => {
+        if (ok) {
+          authState.value = true;
+          import("./stores/content").then(m => m.loadRecentActivity());
+          import("./stores/playback").then(m => m.refreshPlayback());
+          import("./stores/devices").then(m => m.refreshSpotifyDevices());
+        }
+      }).catch(e => {
+        console.error("Auth callback failed:", e);
+        authError.value = e.message || "Auth failed";
+      });
+    }
+  }, []);
+
   // Media Session API for native macOS media keys
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
@@ -225,6 +244,7 @@ function App() {
   }
 
   if ((!isAuthed || authErr) && !mockMode) {
+    const isBrowser = typeof window === "undefined" || (window as any).__TAURI_INTERNALS__?.__is_spx_shim__;
     return (
       <div className="app-window">
         <div className="auth-screen">
@@ -241,20 +261,24 @@ function App() {
               <p>Control your Spotify playback from a beautiful desktop app</p>
             </div>
 
-            <button
-              className="btn-primary auth-btn"
-              onClick={handleStartAuth}
-              disabled={isAuthLoad}
-            >
-              {isAuthLoad ? (
-                <>
-                  <span className="spinner-small" />
-                  Connecting...
-                </>
-              ) : (
-                'Connect with Spotify'
-              )}
-            </button>
+            {isBrowser ? (
+              <BrowserConnect />
+            ) : (
+              <button
+                className="btn-primary auth-btn"
+                onClick={handleStartAuth}
+                disabled={isAuthLoad}
+              >
+                {isAuthLoad ? (
+                  <>
+                    <span className="spinner-small" />
+                    Connecting...
+                  </>
+                ) : (
+                  'Connect with Spotify'
+                )}
+              </button>
+            )}
 
             {authErr && (
               <p className="auth-error">{authError.value}</p>
@@ -340,6 +364,29 @@ function App() {
       />
 
       {hotkeyHelpOpen && <HotkeyHelp onClose={() => setHotkeyHelpOpen(false)} />}
+    </div>
+  );
+}
+
+function BrowserConnect() {
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConnect = useCallback(async () => {
+    try {
+      setError(null);
+      const authUrl = await getAuthUrl();
+      window.location.href = authUrl;
+    } catch (e: any) {
+      setError(e.message || "Failed to start auth");
+    }
+  }, []);
+
+  return (
+    <div>
+      <button className="btn-primary auth-btn" onClick={handleConnect}>
+        Connect with Spotify
+      </button>
+      {error && <p className="auth-error" style={{ marginTop: 8 }}>{error}</p>}
     </div>
   );
 }

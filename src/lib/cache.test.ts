@@ -27,7 +27,7 @@ describe('cache', () => {
 
   it('stores and retrieves data', async () => {
     await setCache('test-key', { hello: 'world' }, 60000);
-    const result = await getCached<{ hello: string }>('test-key');
+    const result = await getCached('test-key');
     expect(result).toEqual({ hello: 'world' });
   });
 

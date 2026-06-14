@@ -20,11 +20,37 @@ pub fn get_spotify_client_id() -> Result<String, String> {
         debug!("Mock mode: returning mock client ID");
         return Ok("mock_client_id".to_string());
     }
-    let id = std::env::var("SPOTIFY_CLIENT_ID")
-        .or_else(|_| std::env::var("VITE_SPOTIFY_CLIENT_ID"))
-        .map_err(|_| "SPOTIFY_CLIENT_ID or VITE_SPOTIFY_CLIENT_ID must be set".to_string())?;
-    debug!("Resolved client ID: {}", id);
-    Ok(id)
+    // Try env vars first
+    if let Ok(id) = std::env::var("SPOTIFY_CLIENT_ID") {
+        return Ok(id);
+    }
+    if let Ok(id) = std::env::var("VITE_SPOTIFY_CLIENT_ID") {
+        return Ok(id);
+    }
+    // Try bundled config file (Resources is at Contents/Resources, not MacOS/Resources)
+    if let Ok(exe_path) = std::env::current_exe() {
+        let config_path = exe_path
+            .parent().unwrap()  // MacOS/
+            .parent().unwrap()  // Contents/
+            .join("Resources/spx_client_id.txt");
+        if let Ok(id) = std::fs::read_to_string(&config_path) {
+            let id = id.trim().to_string();
+            if !id.is_empty() {
+                debug!("Loaded client ID from bundle config: {:?}", config_path);
+                return Ok(id);
+            }
+        }
+        // Fallback: try MacOS/Resources for dev builds
+        let dev_path = exe_path.parent().unwrap().join("Resources/spx_client_id.txt");
+        if let Ok(id) = std::fs::read_to_string(&dev_path) {
+            let id = id.trim().to_string();
+            if !id.is_empty() {
+                debug!("Loaded client ID from dev config: {:?}", dev_path);
+                return Ok(id);
+            }
+        }
+    }
+    Err("SPOTIFY_CLIENT_ID must be set".to_string())
 }
 
 #[tauri::command]

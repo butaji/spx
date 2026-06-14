@@ -77,7 +77,7 @@ const CACHE_TTL = {
 const RECENT_CACHE_KEY = "recent_containers_v4";
 
 export async function loadUserPlaylists(): Promise<void> {
-  const cached = await getCached<SpotifyPlaylist[]>("user_playlists");
+  const cached = await getCached("user_playlists");
   if (cached && cached.length > 0) {
     userPlaylists.value = cached;
     if (await isCacheFresh("user_playlists")) return;
@@ -119,7 +119,7 @@ export async function loadArtist(artistId: string): Promise<void> {
 }
 
 export async function loadRecentContainers(): Promise<void> {
-  const cached = await getCached<RecentContainer[]>(RECENT_CACHE_KEY);
+  const cached = await getCached(RECENT_CACHE_KEY);
   if (cached && cached.length > 0) {
     recentContainers.value = cached;
     if (await isCacheFresh(RECENT_CACHE_KEY)) {

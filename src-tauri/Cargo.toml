@@ -12,16 +12,12 @@ name = "spx_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "mdns-test"
-path = "src/bin/mdns-test.rs"
+name = "spx"
+path = "src/main.rs"
 
 [[bin]]
-name = "mercury-discovery-test"
-path = "src/bin/mercury-discovery-test.rs"
-
-[[bin]]
-name = "cast-auth-test"
-path = "src/bin/cast-auth-test.rs"
+name = "ws-server"
+path = "src/bin/ws-server.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -33,7 +29,9 @@ tauri-plugin-shell = "2"
 tauri-plugin-store = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["net", "io-util", "time", "process"] }
+tokio = { version = "1", features = ["net", "io-util", "time", "process", "sync", "rt-multi-thread"] }
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 urlencoding = "2"
@@ -41,17 +39,16 @@ rust_cast = "0.21"
 rustls = { version = "0.23", features = ["aws-lc-rs", "std"] }
 reqwest = { version = "0.12", features = ["rustls-tls", "json"] }
 md5 = "0.7"
-librespot-core = "0.4"
-librespot-connect = "0.4"
-librespot-protocol = "0.4"
-librespot-discovery = "0.4"
-futures-util = "0.3"
-tokio-util = "0.7"
-tokio-stream = "0.1"
-protobuf = "2.28"
+rspotify = "0.15"
+chrono = "0.4"
+once_cell = "1"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
+# Workaround for macOS 26 (Tahoe): Objective-C method return-type encodings
+# changed from signed to unsigned integers, which objc2 validates strictly.
+# Enable relax-sign-encoding so tao's app delegate callbacks do not panic.
+objc2 = { version = "0.6", features = ["relax-sign-encoding"] }
 
 [profile.release]
 strip = true

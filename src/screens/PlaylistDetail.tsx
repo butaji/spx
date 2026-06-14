@@ -21,7 +21,7 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
     setLoading(true);
     try {
       const data = await getPlaylistTracks(id);
-      setTracks((data.items || []).map((i) => i.track).filter(Boolean) as SpotifyTrack[]);
+      setTracks((data.items || []).map((i: any) => i.track).filter(Boolean) as SpotifyTrack[]);
     } catch (e) {
       console.error("Failed to load playlist tracks:", e);
     }

@@ -23,7 +23,7 @@ const CACHE_TTL = {
 };
 
 export async function loadUserProfile(): Promise<void> {
-  const cached = await getCached<{ name: string; image?: string }>("user_profile");
+  const cached = await getCached("user_profile");
   if (cached) {
     userProfile.value = cached;
     if (await isCacheFresh("user_profile")) return;
@@ -59,7 +59,7 @@ export async function loadTopTracks(): Promise<void> {
 
 export async function loadFollowedArtists(): Promise<void> {
   try {
-    const artists = await getFollowedArtists(20);
+    const artists = await getFollowedArtists();
     followedArtists.value = artists;
   } catch (err) {
     console.warn("[Store] Failed to load followed artists:", err);
@@ -68,7 +68,7 @@ export async function loadFollowedArtists(): Promise<void> {
 
 export async function loadSavedAlbums(): Promise<void> {
   try {
-    const data = await getSavedAlbums(20);
+    const data = await getSavedAlbums();
     const albums =
       (data as { items?: Array<{ album?: SpotifyAlbum | null }> }).items
         ?.map((item) => item.album)
@@ -80,7 +80,7 @@ export async function loadSavedAlbums(): Promise<void> {
 }
 
 export async function loadFollowedArtistsFromCache(): Promise<void> {
-  const cached = await getCached<SpotifyArtist[]>("followed_artists");
+  const cached = await getCached("followed_artists");
   if (cached && cached.length > 0) {
     followedArtists.value = cached;
     if (await isCacheFresh("followed_artists")) return;
@@ -90,7 +90,7 @@ export async function loadFollowedArtistsFromCache(): Promise<void> {
 }
 
 export async function loadSavedAlbumsFromCache(): Promise<void> {
-  const cached = await getCached<SpotifyAlbum[]>("saved_albums");
+  const cached = await getCached("saved_albums");
   if (cached && cached.length > 0) {
     savedAlbums.value = cached;
     if (await isCacheFresh("saved_albums")) return;
