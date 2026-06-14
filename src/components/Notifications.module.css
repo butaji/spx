@@ -1,0 +1,373 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Notification Styles
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+  width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+.container > * {
+  pointer-events: auto;
+}
+
+/* ─── Critical Errors (top) ─────────────────────────────────────────────── */
+
+.criticalSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ─── Dismissible Notifications ─────────────────────────────────────────── */
+
+.dismissibleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ─── Individual Notification ─────────────────────────────────────────── */
+
+.notification {
+  background: var(--color-bg-elevated, #1a1a1a);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(20px);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ─── Notification Types ────────────────────────────────────────────────── */
+
+/* Error */
+.notification.error {
+  background: linear-gradient(135deg, 
+    rgba(239, 68, 68, 0.15) 0%,
+    rgba(239, 68, 68, 0.05) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.notification.error .iconWrapper {
+  color: #ef4444;
+}
+
+/* Warning */
+.notification.warning {
+  background: linear-gradient(135deg, 
+    rgba(245, 158, 11, 0.15) 0%,
+    rgba(245, 158, 11, 0.05) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.notification.warning .iconWrapper {
+  color: #f59e0b;
+}
+
+/* Info */
+.notification.info {
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.15) 0%,
+    rgba(59, 130, 246, 0.05) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.notification.info .iconWrapper {
+  color: #3b82f6;
+}
+
+/* Success */
+.notification.success {
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.15) 0%,
+    rgba(34, 197, 94, 0.05) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.notification.success .iconWrapper {
+  color: #22c55e;
+}
+
+/* ─── Header ──────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.iconWrapper {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconWrapper svg {
+  width: 100%;
+  height: 100%;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary, #fff);
+  line-height: 1.4;
+}
+
+.message {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-text-secondary, #a1a1a1);
+  line-height: 1.5;
+}
+
+.closeButton {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--color-text-tertiary, #666);
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary, #fff);
+}
+
+/* ─── Solutions ───────────────────────────────────────────────────────── */
+
+.solutionsWrapper {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.expandButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  margin: -6px -10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-text-secondary, #a1a1a1);
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.expandButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-primary, #fff);
+}
+
+.expandButton svg {
+  transition: transform 0.2s ease;
+}
+
+.solutions {
+  margin-top: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.solutionsTitle {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #a1a1a1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.solutionList {
+  margin: 0;
+  padding: 0 0 0 20px;
+  font-size: 13px;
+  color: var(--color-text-primary, #fff);
+  line-height: 1.6;
+}
+
+.solutionList li {
+  margin-bottom: 4px;
+}
+
+.solutionList li:last-child {
+  margin-bottom: 0;
+}
+
+/* ─── Actions ─────────────────────────────────────────────────────────── */
+
+.actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  gap: 8px;
+}
+
+.actionButton {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.actionButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.notification.error .actionButton {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.notification.error .actionButton:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ─── Clear All ───────────────────────────────────────────────────────── */
+
+.clearAllButton {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--color-text-tertiary, #666);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  align-self: center;
+}
+
+.clearAllButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-secondary, #a1a1a1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Status Indicator
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.statusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.statusIndicator[style*="color: var(--color-success)"] .statusDot {
+  animation: none;
+}
+
+.statusIndicator[style*="color: var(--color-error)"] .statusDot {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.statusText {
+  color: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Responsive
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .container {
+    top: 8px;
+    right: 8px;
+    left: 8px;
+    max-width: none;
+    width: auto;
+  }
+  
+  .notification {
+    padding: 12px;
+  }
+  
+  .title {
+    font-size: 13px;
+  }
+  
+  .message {
+    font-size: 12px;
+  }
+}

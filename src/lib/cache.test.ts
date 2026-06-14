@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Store reference for direct manipulation
 let mockStore: Map<string, any>;
@@ -19,7 +19,6 @@ vi.mock('@tauri-apps/plugin-store', () => {
 
 // Need to reset the module to get fresh _store reference
 let cache: typeof import('./cache');
-let clearModuleCache: () => void;
 
 beforeEach(async () => {
   // Reset module state between tests

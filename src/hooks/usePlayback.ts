@@ -19,7 +19,6 @@ import {
   playbackRepeat,
   isPlaying,
   likedTrack,
-  appError,
   refreshPlayback,
   refreshLikedStatus,
   playTrack,
@@ -28,6 +27,7 @@ import {
 } from "../stores/spotify";
 import { availableDevices, refreshSpotifyDevices } from "../stores/devices";
 import { recordPlay } from "../stores/playCounts";
+import { handleError, showError } from "../lib/errors";
 
 interface UsePlaybackOptions {
   ensureActiveDevice: () => Promise<string | null>;
@@ -49,17 +49,6 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
   const playCountTimerRef = useRef<number | null>(null);
   const currentTrackIdRef = useRef<string | null>(null);
   const wasPlayingRef = useRef(false);
-
-  // Error helper using dialog
-  const showError = useCallback(async (msg: string) => {
-    console.error(msg);
-    try {
-      const { message } = await import('@tauri-apps/plugin-dialog');
-      await message(msg, { title: 'SPX Error', kind: 'error' });
-    } catch (e) {
-      appError.value = msg;
-    }
-  }, []);
 
   // Start playback polling
   useEffect(() => {
@@ -194,7 +183,17 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
         if (!deviceId) {
           console.warn('[Play/Pause] Cannot play - no device available');
           isPlaying.value = playing;
-          showError("No Spotify devices found. Open Spotify on your phone or computer.");
+          showError(
+            "No Spotify devices found. Open Spotify on your phone or computer.",
+            "No Devices Found",
+            {
+              solution: [
+                "Open Spotify on your phone, computer, or smart speaker",
+                "Make sure your device is on the same Wi-Fi network",
+                "Wait a few seconds for devices to appear"
+              ]
+            }
+          );
           return;
         }
 
@@ -211,41 +210,62 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       console.error('[Play/Pause] ERROR:', error);
       // Revert optimistic update on any error.
       isPlaying.value = playing;
+      handleError(error, "Play/Pause");
     } finally {
       debug('[Play/Pause] Setting loading to false');
       setIsPlayActionLoading(false);
     }
-  }, [ensureActiveDevice, showError]);
+  }, [ensureActiveDevice]);
 
   const handleNext = useCallback(async () => {
     try {
       const hasDevice = await ensureActiveDevice();
       if (!hasDevice) {
-        showError("No active device. Please open Spotify on a device first.");
+        showError(
+          "No active device. Please open Spotify on a device first.",
+          "No Active Device",
+          {
+            solution: [
+              "Open Spotify on your phone, computer, or smart speaker",
+              "Start playing a song",
+              "SPX will detect it automatically"
+            ]
+          }
+        );
         return;
       }
       await controllerNext();
       refreshPlayback();
     } catch (e) {
       console.error("Failed to skip next:", e);
-      showError(e instanceof Error ? e.message : String(e));
+      handleError(e, "Skip Next");
     }
-  }, [ensureActiveDevice, showError]);
+  }, [ensureActiveDevice]);
 
   const handlePrev = useCallback(async () => {
     try {
       const hasDevice = await ensureActiveDevice();
       if (!hasDevice) {
-        showError("No active device. Please open Spotify on a device first.");
+        showError(
+          "No active device. Please open Spotify on a device first.",
+          "No Active Device",
+          {
+            solution: [
+              "Open Spotify on your phone, computer, or smart speaker",
+              "Start playing a song",
+              "SPX will detect it automatically"
+            ]
+          }
+        );
         return;
       }
       await controllerPrevious();
       refreshPlayback();
     } catch (e) {
       console.error("Failed to skip previous:", e);
-      showError(e instanceof Error ? e.message : String(e));
+      handleError(e, "Previous Track");
     }
-  }, [ensureActiveDevice, showError]);
+  }, [ensureActiveDevice]);
 
   const handleSeekPosition = useCallback(async (pos: number) => {
     try {
@@ -253,9 +273,9 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       refreshPlayback();
     } catch (e) {
       console.error("Failed to seek:", e);
-      showError(e instanceof Error ? e.message : String(e));
+      handleError(e, "Seek");
     }
-  }, [showError]);
+  }, []);
 
   const handleShuffle = useCallback(async () => {
     // Cancel any pending API call
@@ -280,10 +300,10 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
         playbackShuffle.value = originalValue;
         shufflePendingRef.current = false;
         console.error("Failed to set shuffle:", e);
-        showError(e instanceof Error ? e.message : String(e));
+        handleError(e, "Shuffle");
       }
     }, 300);
-  }, [showError]);
+  }, []);
 
   const handleMuteToggle = useCallback(async () => {
     const v = playbackVolume.value > 0 ? 0 : 74;
@@ -319,40 +339,60 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
         playbackRepeat.value = originalValue;
         repeatPendingRef.current = false;
         console.error("Failed to set repeat:", e);
-        showError(e instanceof Error ? e.message : String(e));
+        handleError(e, "Repeat");
       }
     }, 300);
-  }, [showError]);
+  }, []);
 
   const playContextFn = useCallback(async (uri: string, offsetUri?: string) => {
     try {
       const deviceId = await ensureActiveDevice();
       if (!deviceId) {
-        showError("No active device. Please open Spotify on a device first.");
+        showError(
+          "No active device. Please open Spotify on a device first.",
+          "No Active Device",
+          {
+            solution: [
+              "Open Spotify on your phone, computer, or smart speaker",
+              "Start playing a song",
+              "SPX will detect it automatically"
+            ]
+          }
+        );
         return;
       }
       await playContext(uri, offsetUri, deviceId);
       refreshPlayback();
     } catch (e) {
       console.error("Failed to play context:", e);
-      showError(e instanceof Error ? e.message : String(e));
+      handleError(e, "Play Context");
     }
-  }, [ensureActiveDevice, showError]);
+  }, [ensureActiveDevice]);
 
   const playUrisFn = useCallback(async (uris: string[], offset?: number) => {
     try {
       const deviceId = await ensureActiveDevice();
       if (!deviceId) {
-        showError("No active device. Please open Spotify on a device first.");
+        showError(
+          "No active device. Please open Spotify on a device first.",
+          "No Active Device",
+          {
+            solution: [
+              "Open Spotify on your phone, computer, or smart speaker",
+              "Start playing a song",
+              "SPX will detect it automatically"
+            ]
+          }
+        );
         return;
       }
       await playUris(uris, offset, deviceId);
       refreshPlayback();
     } catch (e) {
       console.error("Failed to play URIs:", e);
-      showError(e instanceof Error ? e.message : String(e));
+      handleError(e, "Play Tracks");
     }
-  }, [ensureActiveDevice, showError]);
+  }, [ensureActiveDevice]);
 
   const adjustVolume = useCallback(async (delta: number) => {
     const v = Math.max(0, Math.min(100, playbackVolume.value + delta));
@@ -377,9 +417,9 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       }
     } catch (e) {
       console.error("Failed to toggle like:", e);
-      showError("Failed to update liked status");
+      handleError(e, "Like Song");
     }
-  }, [showError]);
+  }, []);
 
   const handleVolumeChange = useCallback(async (vol: number) => {
     try {

@@ -1,0 +1,295 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   System Status Styles
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.container {
+  position: relative;
+  font-size: 12px;
+}
+
+/* ─── Toggle Button ─────────────────────────────────────────────────────── */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--color-bg-elevated, #2a2a2a);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--color-text-secondary, #a1a1a1);
+}
+
+.toggle:hover {
+  background: var(--color-bg-hover, #333);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.toggle.good {
+  color: var(--color-success, #22c55e);
+}
+
+.toggle.warning {
+  color: var(--color-warning, #f59e0b);
+}
+
+.toggle.error {
+  color: var(--color-error, #ef4444);
+}
+
+.toggle.neutral {
+  color: var(--color-text-tertiary, #666);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.statusText {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.chevron {
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+  opacity: 0.6;
+}
+
+.chevron.expanded {
+  transform: rotate(180deg);
+}
+
+/* ─── Panel ─────────────────────────────────────────────────────────────── */
+
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: var(--color-bg-elevated, #1a1a1a);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: slideDown 0.2s ease;
+  z-index: 100;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #fff);
+}
+
+.refreshButton {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--color-text-secondary, #a1a1a1);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.refreshButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary, #fff);
+}
+
+.refreshButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Status Badges ─────────────────────────────────────────────────────── */
+
+.badges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.badge.good {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.badge.warning {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.badge.error {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.badge.neutral {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.badgeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.badge.good .badgeIcon {
+  color: var(--color-success, #22c55e);
+}
+
+.badge.warning .badgeIcon {
+  color: var(--color-warning, #f59e0b);
+}
+
+.badge.error .badgeIcon {
+  color: var(--color-error, #ef4444);
+}
+
+.badgeLabel {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary, #fff);
+}
+
+.badgeDetail {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #666);
+}
+
+/* ─── Diagnostics ───────────────────────────────────────────────────────── */
+
+.diagnostics {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.diagnosticsTitle {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-tertiary, #666);
+}
+
+.diagnosticItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+}
+
+.diagnosticDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.diagnosticItem.pass .diagnosticDot {
+  background: var(--color-success, #22c55e);
+}
+
+.diagnosticItem.fail .diagnosticDot {
+  background: var(--color-error, #ef4444);
+}
+
+.diagnosticName {
+  font-weight: 500;
+  color: var(--color-text-primary, #fff);
+}
+
+.diagnosticMessage {
+  color: var(--color-text-tertiary, #666);
+  margin-left: auto;
+  text-align: right;
+}
+
+/* ─── Help Section ──────────────────────────────────────────────────────── */
+
+.helpSection {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.helpText {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-text-tertiary, #666);
+  line-height: 1.5;
+}
+
+/* ─── Animations ────────────────────────────────────────────────────────── */
+
+.pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .panel {
+    position: fixed;
+    top: auto;
+    bottom: 80px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+  }
+}

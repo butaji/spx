@@ -1,10 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1DB954;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1ed760;stop-opacity:1" />
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1DB954"/>
+      <stop offset="100%" stop-color="#1ed760"/>
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="8" fill="url(#grad)"/>
-  <text x="16" y="22" font-family="SF Pro Display,-apple-system,BlinkMacSystemFont,sans-serif" font-size="16" font-weight="700" fill="#0a0a0a" text-anchor="middle">SPX</text>
+  
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="url(#bgGrad)"/>
+  
+  <!-- Skull head -->
+  <path d="M64 20c-22 0-38 12-38 28 0 12 8 22 20 26v18c0 2 2 4 4 4h28c2 0 4-2 4-4V74c12-4 20-14 20-26 0-16-16-28-38-28z" fill="#0a0a0a"/>
+  
+  <!-- Eye sockets -->
+  <ellipse cx="48" cy="58" rx="10" ry="12" fill="url(#bgGrad)"/>
+  <ellipse cx="80" cy="58" rx="10" ry="12" fill="url(#bgGrad)"/>
+  
+  <!-- Nose -->
+  <path d="M64 68l-5 8h10z" fill="url(#bgGrad)"/>
+  
+  <!-- Teeth lines -->
+  <line x1="52" y1="78" x2="52" y2="88" stroke="url(#bgGrad)" stroke-width="3" stroke-linecap="round"/>
+  <line x1="64" y1="78" x2="64" y2="88" stroke="url(#bgGrad)" stroke-width="3" stroke-linecap="round"/>
+  <line x1="76" y1="78" x2="76" y2="88" stroke="url(#bgGrad)" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- PX text below skull -->
+  <text x="64" y="112" font-family="SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif" font-size="14" font-weight="700" fill="#0a0a0a" text-anchor="middle">PX</text>
 </svg>

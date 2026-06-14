@@ -4,6 +4,8 @@ import { HotkeyHelp } from "./components/HotkeyHelp";
 import { Sidebar } from "./components/Sidebar";
 import { PlayerBar } from "./components/PlayerBar";
 import ContextPanel from "./components/ContextPanel";
+import { Notifications } from "./components/Notifications";
+import { SystemStatus } from "./components/SystemStatus";
 import Home from "./screens/Home";
 import Search from "./screens/Search";
 import Library from "./screens/Library";
@@ -204,7 +206,7 @@ function App() {
         <div className="auth-screen">
           <div className="auth-content">
             <div className="auth-logo-wrap">
-              <Logo size={140} />
+              <Logo size={140} variant="large" />
             </div>
             <h1 className="auth-title">SPX</h1>
             <p className="auth-subtitle">
@@ -230,7 +232,7 @@ function App() {
         <div className="auth-screen">
           <div className="auth-content">
             <div className="auth-logo-wrap">
-              <Logo size={140} />
+              <Logo size={140} variant="large" />
             </div>
             <h1 className="auth-title">SPX</h1>
             <p className="auth-subtitle">
@@ -344,6 +346,10 @@ function App() {
       />
 
       {hotkeyHelpOpen && <HotkeyHelp onClose={() => setHotkeyHelpOpen(false)} />}
+      
+      {/* Error notifications and system status */}
+      <Notifications />
+      <SystemStatus />
     </div>
   );
 }

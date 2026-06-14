@@ -1,15 +1,18 @@
 interface LogoProps {
   size?: number;
   className?: string;
+  variant?: "default" | "large";
 }
 
-export default function Logo({ size = 48, className }: LogoProps) {
+export default function Logo({ size = 48, className, variant = "default" }: LogoProps) {
+  const src = variant === "large" ? "/logo-large.svg" : "/logo.svg";
+  
   return (
     <img
-      src="/logo.svg"
+      src={src}
       width={size}
       height={size}
-      className={className}
+      class={className}
       alt="SPX"
       draggable={false}
     />

@@ -23,10 +23,21 @@
 
 - **Playback:** Full control, Spotify Connect, queue management
 - **Library:** Search, browse, home recommendations
-- **Stats:** Scrobble counts, listening history
+- **Stats:** Play counts, listening history
 - **UI:** Liquid-glass dark theme, native macOS titlebar, keyboard shortcuts
 - **Dev:** Mock mode, hot reload, zero Spotify account needed
 - **Local devices:** mDNS discovery and Google Cast wake-up
+- **macOS Integration:** Global media keys, Now Playing on lock screen
+- **Error Handling:** Comprehensive error messages with solutions
+
+---
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Now Playing](screenshot-now-playing.png) | ![Search](screenshot-search.png) |
+| ![Library](screenshot-library.png) | ![Queue](screenshot-queue.png) |
 
 ---
 
@@ -43,11 +54,17 @@
 ## Quick Start
 
 ```bash
+# Install dependencies
 npm install
+
+# Set your Spotify Client ID
+export SPOTIFY_CLIENT_ID=your_client_id_here
+
+# Run the app
 npm run tauri dev
 ```
 
-### Mock mode (no Spotify account)
+### Mock Mode (no Spotify account)
 
 ```bash
 ./dev.sh network:mock
@@ -55,11 +72,34 @@ npm run tauri dev
 VITE_SPX_MOCK=1 npm run dev
 ```
 
-### Production build
+### Production Build
 
 ```bash
 npm run tauri build
 ./launch_spx.sh
+```
+
+---
+
+## Spotify OAuth Setup
+
+SPX uses **librespot OAuth** (the same proven flow as `spotify-player`) to authenticate and cache credentials locally.
+
+1. Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+2. Add `http://127.0.0.1:1422/callback` to your app's Redirect URIs
+3. Copy `.env.example` to `.env` and fill in your credentials:
+
+```bash
+cp .env.example .env
+# Edit .env with your SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET
+```
+
+Or set environment variables:
+
+```bash
+export SPOTIFY_CLIENT_ID=your_client_id
+export SPOTIFY_CLIENT_SECRET=your_client_secret
+npm run tauri dev
 ```
 
 ---
@@ -74,10 +114,11 @@ npm run tauri build
 | Backend | Rust + Tokio + WebSocket |
 | Spotify API | librespot OAuth + rspotify Web API |
 | Local devices | mDNS + Google Cast V2 |
+| Testing | Vitest + Playwright |
 
 ---
 
-## Project structure
+## Project Structure
 
 ```
 .
@@ -86,36 +127,18 @@ npm run tauri build
 │   ├── screens/          # Page-level screens
 │   ├── stores/           # Preact Signals state
 │   ├── hooks/            # Shared hooks
-│   ├── lib/              # API client, cache, hotkeys, etc.
-│   └── tests/            # Deno-based integration helpers
+│   ├── lib/              # API client, cache, errors, etc.
+│   └── styles/           # CSS styles
 ├── src-tauri/            # Rust Tauri backend
 │   ├── src/              # Rust source
 │   ├── capabilities/     # Tauri permissions
 │   ├── icons/            # App icons
 │   └── Cargo.toml
+├── scripts/              # Build scripts
 ├── dev.sh                # Development script
 ├── launch_spx.sh         # Launch bundled app
 └── package.json
 ```
-
----
-
-## Spotify OAuth setup
-
-SPX uses **librespot OAuth** (the same proven flow as `spotify-player`) to authenticate and cache credentials locally. On first launch it opens the browser; after that, sessions are restored from the local cache.
-
-1. Create an app at https://developer.spotify.com/dashboard
-2. Add `http://127.0.0.1:1422/callback` to the app's Redirect URIs
-3. Set your client ID before running:
-
-```bash
-export SPOTIFY_CLIENT_ID=your_client_id
-npm run tauri dev
-```
-
-The client ID can also be supplied via:
-- `SPOTIFY_CLIENT_ID` / `VITE_SPOTIFY_CLIENT_ID` environment variables
-- `src-tauri/spx_client_id.txt` bundled as a resource
 
 ---
 
@@ -143,7 +166,20 @@ Shortcuts are disabled while typing in inputs.
 
 ---
 
-## Development scripts
+## Error Handling
+
+SPX provides comprehensive error handling with user-friendly messages and step-by-step solutions:
+
+- **Authentication errors:** Token expired, OAuth failed, Premium required
+- **Network errors:** Connection lost, timeout, rate limited
+- **Device errors:** No devices found, Spotify closed, different WiFi
+- **Playback errors:** Region blocked, explicit content, ads playing
+
+Errors appear as toast notifications with expandable solution steps.
+
+---
+
+## Development Scripts
 
 | Command | Description |
 |---------|-------------|
@@ -162,43 +198,39 @@ Shortcuts are disabled while typing in inputs.
 ## Testing
 
 ```bash
-npm test              # unit tests
+# Unit tests
+npm test
+
+# TypeScript type check
 npm run test:typecheck
-```
 
-End-to-end smoke tests use Playwright and expect a running dev server:
-
-```bash
-# Terminal 1: start mock dev server
+# End-to-end smoke tests (requires running dev server)
 ./dev.sh network:mock
-
-# Terminal 2: run e2e smoke test
 npm run test:e2e:mock
 ```
 
-The `src/tests/` directory contains Deno-based helper scripts for recording Spotify API fixtures; they are not run by Vitest.
-
 ---
 
-## macOS permissions
+## macOS Permissions
 
 The app requests the following entitlements:
 
 - Outbound network connections (Spotify API)
 - Inbound network connections (OAuth callback server)
 - Bonjour/mDNS and local network multicast (Cast device discovery)
-- File access for cached token storage
-
-For Cast discovery in a sandboxed App Store build, you may need the `com.apple.developer.networking.multicast` entitlement and a provisioning profile.
+- Global media keys
+- Now Playing info center
 
 ---
 
 ## Contributing
 
-Mock mode works without Spotify credentials. Good first issues welcome.
+Mock mode works without Spotify credentials. Issues and PRs welcome.
+
+**Made for music obsessives. Scrobble on.** 💀
 
 ---
 
-MIT
+## License
 
-**Made for music obsessives. Scrobble on.** 💀
+MIT

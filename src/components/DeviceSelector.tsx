@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "preact/compat";
 import { activeDevice, isScanning, isTransferring, allDevices, selectDevice, selectedDeviceId } from "../stores/devices";
 import type { SpotifyDevice } from "../types";
+import type { IconName } from "./icons";
+import { IconMap } from "./icons";
 
 interface Props {
   onRefreshLocal: () => void;
@@ -11,15 +13,15 @@ type TransferStage = "waking" | "starting" | "transferring" | null;
 // Device type categories for grouping
 interface DeviceCategory {
   name: string;
-  icon: string;
+  icon: IconName;
 }
 
 const DEVICE_CATEGORIES: Record<string, DeviceCategory> = {
-  "this-computer": { name: "This computer", icon: "💻" },
-  "google-cast": { name: "Google Cast", icon: "📺" },
-  "cast-audio": { name: "Speakers", icon: "🔊" },
-  "smart-speaker": { name: "Smart Speakers", icon: "🖥️" },
-  "other": { name: "Other devices", icon: "📱" },
+  "this-computer": { name: "This computer", icon: "monitor" },
+  "google-cast": { name: "Google Cast", icon: "monitor" },
+  "cast-audio": { name: "Speakers", icon: "volume" },
+  "smart-speaker": { name: "Smart Speakers", icon: "speaker" },
+  "other": { name: "Other devices", icon: "mobile" },
 };
 
 // Helper to categorize a device
@@ -103,7 +105,7 @@ function getDeviceIcon(type: string, className: string = "device-type-icon") {
 
 // Device help info based on device state
 interface DeviceHelpInfo {
-  icon: string;
+  icon: IconName;
   text: string;
   type: "info" | "warning" | "error";
 }
@@ -112,7 +114,7 @@ function getDeviceHelpInfo(device: SpotifyDevice & { isLocal?: boolean; deviceIp
   // Cast device that needs wake up
   if (device.isLocal && device.needsWakeUp) {
     return {
-      icon: "💡",
+      icon: "bolt",
       text: "Make sure your device is powered on",
       type: "info"
     };
@@ -121,7 +123,7 @@ function getDeviceHelpInfo(device: SpotifyDevice & { isLocal?: boolean; deviceIp
   // Restricted device
   if (device.is_restricted) {
     return {
-      icon: "🔒",
+      icon: "lock",
       text: "Requires Spotify Premium",
       type: "error"
     };
@@ -130,7 +132,7 @@ function getDeviceHelpInfo(device: SpotifyDevice & { isLocal?: boolean; deviceIp
   // Local device without Spotify Connect
   if (device.isLocal && !device.canTransfer && !device.needsWakeUp) {
     return {
-      icon: "📱",
+      icon: "mobile",
       text: "Open Spotify on this device first",
       type: "info"
     };
@@ -144,16 +146,17 @@ function TransferStatus({ stage }: { stage: TransferStage }) {
   if (!stage) return null;
   
   const config = {
-    waking: { text: "Waking device...", className: "transfer-waking", icon: "⚡" },
-    starting: { text: "Starting Spotify...", className: "transfer-starting", icon: "🚀" },
-    transferring: { text: "Transferring...", className: "transfer-transferring", icon: "📡" },
+    waking: { text: "Waking device...", className: "transfer-waking", icon: "bolt" as IconName },
+    starting: { text: "Starting Spotify...", className: "transfer-starting", icon: "bolt" as IconName },
+    transferring: { text: "Transferring...", className: "transfer-transferring", icon: "wifi" as IconName },
   };
   
   const { text, className, icon } = config[stage];
+  const IconComp = IconMap[icon];
   
   return (
     <span className={`transfer-status ${className}`}>
-      <span className="transfer-icon">{icon}</span>
+      <span className="transfer-icon">{IconComp && <IconComp size={16} />}</span>
       <span className="transfer-text">{text}</span>
       <span className="transfer-spinner" />
     </span>
@@ -331,10 +334,13 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
 
           {/* IMPROVEMENT #2: Grouped device list */}
           <div className="device-list">
-            {orderedCategories.map((category) => (
+            {orderedCategories.map((category) => {
+              const catIcon = DEVICE_CATEGORIES[category]?.icon;
+              const IconComponent = catIcon ? IconMap[catIcon] : null;
+              return (
               <div key={category} className="device-category">
                 <div className="device-section-header">
-                  <span className="category-icon">{DEVICE_CATEGORIES[category]?.icon}</span>
+                  <span className="category-icon">{IconComponent && <IconComponent size={16} />}</span>
                   <span>{DEVICE_CATEGORIES[category]?.name}</span>
                   <span className="category-count">({groupedDevices[category].length})</span>
                 </div>
@@ -394,7 +400,9 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
                         {/* IMPROVEMENT #5: Device-specific help hints */}
                         {helpInfo && hoveredDevice === deviceKey && !isTransferringTo && (
                           <div className={`device-help-hint hint-${helpInfo.type}`}>
-                            <span className="help-icon">{helpInfo.icon}</span>
+                            <span className="help-icon">
+                              {(() => { const Icon = IconMap[helpInfo.icon]; return Icon ? <Icon size={14} /> : null; })()}
+                            </span>
                             <span>{helpInfo.text}</span>
                           </div>
                         )}
@@ -411,7 +419,8 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
                   );
                 })}
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Scanning indicator */}
