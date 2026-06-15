@@ -1613,8 +1613,8 @@ import {
  * Show error notification from category
  */
 export function showError(
-  message: string,
   title: string,
+  message: string,
   options?: {
     solution?: string[];
     action?: { label: string; onClick: () => void };
@@ -1680,19 +1680,27 @@ export function handleError(error: unknown, context?: string): string {
     rawError: appError.rawError,
   });
   
+  // Add to error history
+  try {
+    const { errorHistory } = require("../stores/notifications");
+    errorHistory.value = [appError, ...errorHistory.value.slice(0, 99)];
+  } catch {
+    // Ignore if notifications not available
+  }
+  
   if (def.severity === ErrorSeverity.CRITICAL || def.severity === ErrorSeverity.ERROR) {
-    return showError(def.message, def.title, {
+    return showError(def.title, def.message, {
       solution: def.solution,
     });
   } else if (def.severity === ErrorSeverity.WARNING) {
-    return showWarning(def.message, def.title, {
+    return showWarning(def.title, def.message, {
       solution: def.solution,
       autoDismiss: def.autoDismiss,
       dismissTimeout: def.dismissTimeout,
     });
   } else if (def.severity === ErrorSeverity.INFO) {
     if (def.autoDismiss) {
-      showInfo(def.message, def.title, {
+      showInfo(def.title, def.message, {
         autoDismiss: true,
         dismissTimeout: def.dismissTimeout,
       });

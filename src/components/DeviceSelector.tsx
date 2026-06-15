@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "preact/compat";
-import { activeDevice, isScanning, isTransferring, allDevices, selectDevice, selectedDeviceId } from "../stores/devices";
+import { activeDevice, isScanning, isTransferring, allDevices, selectDevice, selectedDeviceId, scanError } from "../stores/devices";
 import type { SpotifyDevice } from "../types";
 import type { IconName } from "./icons";
 import { IconMap } from "./icons";
@@ -177,6 +177,10 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
   const transferring = isTransferring.value;
   const transferringToId = selectedDeviceId.value;
   const unifiedDevices = allDevices.value;
+  const deviceScanError = scanError.value;
+
+  // Show scan error from store
+  const displayError = error || deviceScanError;
 
   // Group devices by category
   const groupedDevices = unifiedDevices.reduce((acc, device) => {
@@ -297,10 +301,10 @@ export default function DeviceSelector({ onRefreshLocal }: Props) {
           </div>
 
           {/* Error message */}
-          {error && (
+          {displayError && (
             <div className={`device-error ${errorFade ? 'fading' : ''}`}>
               <span className="error-icon">⚠️</span>
-              <span>{error}</span>
+              <span>{displayError}</span>
             </div>
           )}
 
