@@ -10,7 +10,6 @@ import { Artwork } from "../components/Artwork";
 type Tab = "playlists" | "tracks" | "albums" | "top";
 
 interface Props {
-  onPlayContext: (uri: string, offsetUri?: string) => void;
   onPlayUris: (uris: string[], offset?: number) => void;
   onNavigate: (v: View) => void;
 }
@@ -21,7 +20,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 const cacheKey = (tab: Tab) => `library:${tab}`;
 
-export default function Library({ onPlayContext, onNavigate }: Props) {
+export default function Library({ onPlayUris, onNavigate }: Props) {
   const [tab, setTab] = useState<Tab>("playlists");
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -117,8 +116,8 @@ export default function Library({ onPlayContext, onNavigate }: Props) {
   }, [handleItemClick]);
 
   const handleTrackClick = useCallback((item: SpotifyTrack) => {
-    if (item.uri) onPlayContext(item.uri);
-  }, [onPlayContext]);
+    if (item.uri) onPlayUris([item.uri]);
+  }, [onPlayUris]);
 
   const handleTrackKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>, item: SpotifyTrack) => {
     if (e.key === "Enter" || e.key === " ") {

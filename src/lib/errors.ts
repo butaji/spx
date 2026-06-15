@@ -253,7 +253,6 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
     message: "Spotify Premium is required to control playback. Free accounts can browse but not control.",
     solution: [
       "Upgrade to Spotify Premium at spotify.com",
-      "Or continue using Spotify's official app",
       "SPX requires Premium for playback control"
     ],
     severity: ErrorSeverity.ERROR,
@@ -266,12 +265,12 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   
   [ErrorCategory.AUTH_SPOTIFY_APP_CLOSED]: {
     code: ErrorCategory.AUTH_SPOTIFY_APP_CLOSED,
-    title: "Spotify App Closed",
-    message: "The Spotify desktop app was closed. SPX needs it to be running for local playback.",
+    title: "SPX Player Not Ready",
+    message: "SPX's built-in player isn't ready yet. It may still be connecting.",
     solution: [
-      "Open the Spotify desktop app",
-      "Or use a different device as the active player",
-      "SPX can still browse and queue songs"
+      "Wait a moment for the SPX Player to connect",
+      "Select the SPX Player from the device menu",
+      "Or use a different device as the active player"
     ],
     severity: ErrorSeverity.WARNING,
     autoDismiss: true,
@@ -509,11 +508,11 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.DEVICE_NO_DEVICES]: {
     code: ErrorCategory.DEVICE_NO_DEVICES,
     title: "No Devices Found",
-    message: "SPX couldn't find any Spotify devices. At least one device must have Spotify open.",
+    message: "SPX couldn't find any playback devices. You can always play through the built-in SPX Player on this Mac.",
     solution: [
-      "Open Spotify on your phone, computer, or smart speaker",
-      "Make sure your device is on the same Wi-Fi network",
-      "Wait a few seconds for devices to appear"
+      "Select SPX Player from the device menu to play on this Mac",
+      "If you want another speaker, make sure it's on the same Wi-Fi network",
+      "Use the refresh button in the device menu to scan again"
     ],
     severity: ErrorSeverity.INFO,
     autoDismiss: false,
@@ -526,11 +525,11 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.DEVICE_NO_ACTIVE]: {
     code: ErrorCategory.DEVICE_NO_ACTIVE,
     title: "No Active Device",
-    message: "There's no Spotify device currently playing. Start playback on any device first.",
+    message: "There's no active playback device. Select SPX Player or another device and start playing.",
     solution: [
-      "Open Spotify and start playing a song",
-      "Or select a device from the device picker",
-      "SPX will detect active playback automatically"
+      "Select SPX Player from the device menu to play on this Mac",
+      "Or choose another available device",
+      "SPX will activate the selected device automatically"
     ],
     severity: ErrorSeverity.INFO,
     autoDismiss: false,
@@ -542,12 +541,12 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   
   [ErrorCategory.DEVICE_SPOTIFY_CLOSED]: {
     code: ErrorCategory.DEVICE_SPOTIFY_CLOSED,
-    title: "Spotify App Not Running",
-    message: "The Spotify desktop app was closed or quit. Open it to continue playback control.",
+    title: "Playback Device Not Active",
+    message: "The active playback device is no longer responding. Switch to the SPX Player or another device.",
     solution: [
-      "Open the Spotify desktop app",
-      "Make sure Spotify is logged in",
-      "Start playing a song to activate it"
+      "Select SPX Player from the device menu to play on this Mac",
+      "Or choose another available device",
+      "Make sure the chosen device is on the same network"
     ],
     severity: ErrorSeverity.WARNING,
     autoDismiss: false,
@@ -577,11 +576,11 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.DEVICE_NOT_SUPPORTED]: {
     code: ErrorCategory.DEVICE_NOT_SUPPORTED,
     title: "Device Not Supported",
-    message: "This type of Spotify device isn't supported for remote control.",
+    message: "This type of device isn't supported for remote control from SPX.",
     solution: [
-      "Try a different device (phone, computer)",
+      "Try a different device",
       "Some smart speakers have limited API support",
-      "Use the Spotify app directly on the device"
+      "Select SPX Player to play on this Mac"
     ],
     severity: ErrorSeverity.WARNING,
     autoDismiss: true,
@@ -594,11 +593,11 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.DEVICE_PREMIUM_MISMATCH]: {
     code: ErrorCategory.DEVICE_PREMIUM_MISMATCH,
     title: "Account Type Mismatch",
-    message: "Your Spotify device is logged into a different account type (Free vs Premium).",
+    message: "This device is logged into a different Spotify account type (Free vs Premium).",
     solution: [
       "Make sure both use the same Spotify account",
       "Premium account needed for remote control",
-      "Check account in Spotify app settings"
+      "Select SPX Player to play on this Mac"
     ],
     severity: ErrorSeverity.ERROR,
     autoDismiss: false,
@@ -662,10 +661,10 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.DEVICE_LOCAL_SCAN_FAILED]: {
     code: ErrorCategory.DEVICE_LOCAL_SCAN_FAILED,
     title: "Device Scan Failed",
-    message: "SPX couldn't scan for local network devices. Local playback may not work.",
+    message: "SPX couldn't scan for local network devices. You can still use the SPX Player on this Mac.",
     solution: [
+      "Select SPX Player from the device menu to play on this Mac",
       "Grant Local Network access in System Preferences",
-      "Check that Spotify is running",
       "Try refreshing the device list"
     ],
     severity: ErrorSeverity.WARNING,
@@ -681,10 +680,11 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.PLAYBACK_NO_TRACK]: {
     code: ErrorCategory.PLAYBACK_NO_TRACK,
     title: "Nothing Playing",
-    message: "There's no track currently playing. Start playing something on Spotify first.",
+    message: "There's no track currently playing. Select a device and start playback in SPX.",
     solution: [
-      "Open Spotify and start playing a song",
-      "Or select a song in SPX and click play"
+      "Select SPX Player or another device from the device menu",
+      "Select a song in SPX and click play",
+      "SPX will activate the device automatically"
     ],
     severity: ErrorSeverity.INFO,
     autoDismiss: true,
@@ -697,10 +697,10 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.PLAYBACK_FAILED]: {
     code: ErrorCategory.PLAYBACK_FAILED,
     title: "Playback Error",
-    message: "SPX couldn't control playback. This can happen if Spotify's state changed unexpectedly.",
+    message: "SPX couldn't control playback. The active device may have changed or disconnected.",
     solution: [
-      "Check if Spotify is still playing",
-      "Try pressing play on your Spotify app",
+      "Select SPX Player or another device from the device menu",
+      "Try pressing play again",
       "Refresh SPX's playback state"
     ],
     severity: ErrorSeverity.WARNING,
@@ -734,7 +734,6 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
     message: "Playback control requires Spotify Premium. Free accounts can only shuffle play.",
     solution: [
       "Upgrade to Spotify Premium",
-      "Or use Spotify's ad-supported free tier",
       "Browse and queue work without Premium"
     ],
     severity: ErrorSeverity.ERROR,
@@ -781,10 +780,10 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.PLAYBACK_LOCAL_ONLY]: {
     code: ErrorCategory.PLAYBACK_LOCAL_ONLY,
     title: "Local File",
-    message: "This is a local file on your device and cannot be controlled remotely.",
+    message: "This is a local file and can't be played through SPX.",
     solution: [
-      "Upload the file to Spotify Cloud",
-      "Or use the Spotify app directly on this device"
+      "Play this file from the device that has it stored",
+      "Or choose a track that's available on Spotify"
     ],
     severity: ErrorSeverity.INFO,
     autoDismiss: true,
@@ -849,11 +848,11 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
   [ErrorCategory.CONTENT_NOT_FOUND]: {
     code: ErrorCategory.CONTENT_NOT_FOUND,
     title: "Content Not Found",
-    message: "This track, playlist, or album couldn't be found. It may have been deleted.",
+    message: "This track, playlist, or album couldn't be found. It may have been removed.",
     solution: [
       "Try searching for it again",
-      "The content may have been removed",
-      "Check your playlists in Spotify"
+      "The content may have been removed or made private",
+      "Check your Spotify library if it was saved"
     ],
     severity: ErrorSeverity.INFO,
     autoDismiss: true,
@@ -885,7 +884,7 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
     title: "Explicit Content",
     message: "This content contains explicit language and is filtered.",
     solution: [
-      "Disable content filters in Spotify settings",
+      "Disable explicit content filtering in your Spotify account settings",
       "Or find an alternative version"
     ],
     severity: ErrorSeverity.DEBUG,
@@ -901,7 +900,7 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
     title: "Content Restricted",
     message: "This content has age or access restrictions.",
     solution: [
-      "Check your account restrictions in Spotify",
+      "Check your account restrictions in your Spotify account settings",
       "Some content requires explicit permission"
     ],
     severity: ErrorSeverity.WARNING,
@@ -1126,7 +1125,7 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
     solution: [
       "Try refreshing the library",
       "Check your internet connection",
-      "Your saved songs are still safe in Spotify"
+      "Your saved songs are still safe in your Spotify account"
     ],
     severity: ErrorSeverity.WARNING,
     autoDismiss: true,
@@ -1141,7 +1140,7 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
     title: "Couldn't Update Liked Song",
     message: "SPX couldn't update the liked status of this song.",
     solution: [
-      "Try liking the song again in Spotify",
+      "Try liking the song again",
       "Check your internet connection",
       "Make sure you're signed in"
     ],
@@ -1175,7 +1174,7 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
     title: "Couldn't Follow/Unfollow",
     message: "SPX couldn't update your follow status for this artist or playlist.",
     solution: [
-      "Try the action again in Spotify",
+      "Try the action again",
       "Check your internet connection",
       "Make sure you're signed in"
     ],
@@ -1229,7 +1228,7 @@ export const ERROR_DEFINITIONS: Record<ErrorCategory, ErrorDefinition> = {
     message: "SPX couldn't complete your request. The command was not successful.",
     solution: [
       "Try the action again",
-      "Check if Spotify is still running",
+      "Select SPX Player or another device from the device menu",
       "Refresh SPX's state"
     ],
     severity: ErrorSeverity.WARNING,

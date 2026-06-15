@@ -37,6 +37,8 @@ let playbackBuffer: PlaybackBuffer = {
 
 // RAF-based progress updater for smooth UI without API calls
 let rafId: number | null = null;
+let lastSignalUpdate = 0;
+const PROGRESS_SIGNAL_THROTTLE_MS = 250;
 
 function updateProgressFromBuffer() {
   if (playbackBuffer.isPlaying && playbackBuffer.duration > 0) {
@@ -47,7 +49,12 @@ function updateProgressFromBuffer() {
       playbackBuffer.duration
     );
     playbackBuffer.lastUpdateTime = now;
-    playbackProgress.value = playbackBuffer.progress;
+
+    // Throttle signal updates to avoid re-rendering the whole UI at 60fps.
+    if (now - lastSignalUpdate >= PROGRESS_SIGNAL_THROTTLE_MS) {
+      playbackProgress.value = playbackBuffer.progress;
+      lastSignalUpdate = now;
+    }
   }
   rafId = requestAnimationFrame(updateProgressFromBuffer);
 }
@@ -55,6 +62,7 @@ function updateProgressFromBuffer() {
 function startProgressRAF() {
   if (rafId === null) {
     playbackBuffer.lastUpdateTime = Date.now();
+    lastSignalUpdate = 0;
     rafId = requestAnimationFrame(updateProgressFromBuffer);
   }
 }

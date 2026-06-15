@@ -18,6 +18,7 @@ const MOCK_TAGS = ["electro swing", "trip hop", "nu jazz", "chillout", "electron
 interface Props {
   track: any | null;
   onPlayContext: (uri: string, offsetUri?: string) => void;
+  onPlayUris: (uris: string[], offset?: number) => void;
   onNavigate: (v: View) => void;
   onSeek: (ms: number) => void;
   liked: boolean;
@@ -27,6 +28,7 @@ interface Props {
 export default function Home({
   track,
   onPlayContext: _unused,
+  onPlayUris,
   onNavigate,
   liked,
   onToggleLike,
@@ -120,6 +122,7 @@ export default function Home({
         artist={artistDetail}
         topTracks={artistTopTracks}
         tags={tags}
+        onPlayUris={onPlayUris}
       />
 
       {feedError && (

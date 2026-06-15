@@ -32,7 +32,7 @@ This document analyzes potential user pain points and how SPX addresses them.
 
 | Pain Point | How SPX Solves It |
 |------------|-------------------|
-| "Play button does nothing" | Shows toast: "Open Spotify first" |
+| "Play button does nothing" | Auto-activates SPX Player or shows device error |
 | "Skip not working" | Auto-activates device or shows error |
 | "Volume not changing" | Clear mute indicator, real-time feedback |
 | "Can't seek" | Click-to-seek progress bar |
@@ -44,9 +44,9 @@ This document analyzes potential user pain points and how SPX addresses them.
 | Pain Point | How SPX Solves It |
 |------------|-------------------|
 | "Which device is playing?" | Active device highlighted |
-| "Why no devices found?" | Shows: "Open Spotify on any device" |
+| "Why no devices found?" | Built-in SPX Player is always available on this Mac |
 | "Device on different WiFi?" | Shows warning about network mismatch |
-| "How to switch?" | One-click device transfer |
+| "How do I switch?" | One-click device transfer |
 
 ---
 
@@ -98,12 +98,12 @@ This document analyzes potential user pain points and how SPX addresses them.
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| No devices | Spotify closed | "Open Spotify app" |
-| Token expired | Session timeout | "Sign in again" |
-| Network timeout | Slow connection | "Try again" |
-| Rate limited | Too many requests | "Wait 30 seconds" |
-| Region blocked | Content unavailable | "Try different track" |
-| Premium required | Free account | "Upgrade to Premium" |
+| No devices | No playback target available | Select SPX Player or another device |
+| Token expired | Session timeout | Sign in again |
+| Network timeout | Slow connection | Try again |
+| Rate limited | Too many requests | Wait 30 seconds |
+| Region blocked | Content unavailable | Try different track |
+| Premium required | Free account | Upgrade to Premium |
 
 ---
 
@@ -151,7 +151,7 @@ Click status to see:
 - WebSocket communication
 - Device discovery
 
-### E2E Tests (Playwright)
+### E2E Tests (Playwright + mock mode)
 - User flows work
 - UI is accessible
 - Errors are clear

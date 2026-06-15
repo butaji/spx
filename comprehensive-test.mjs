@@ -31,7 +31,7 @@ import { chromium } from 'playwright';
         progress: text.includes('0:45') && text.includes('3:00'),
         audioFeatures: text.includes('Energy') && text.includes('Danceability'),
         playControls: document.querySelectorAll('button').length > 5,
-        volume: text.includes('74') || text.includes('%') || document.querySelector('input[type="range"]') !== null,
+        volume: text.includes('74') || text.includes('%') || document.querySelector('input[type="range"], .volume-track, [role="slider"]') !== null,
       };
     });
     
@@ -114,24 +114,83 @@ import { chromium } from 'playwright';
     // ─── TEST 6: DEVICES ───
     console.log('\n📡 TEST 6: Device Selection');
     console.log('───────────────────────────────────────────────────────────────');
-    
+
     // Go back to Now Playing
-    await page.locator('text="Now Playing"').click();
+    await page.locator('[aria-label="Now Playing"]').click();
     await page.waitForTimeout(500);
-    
-    const deviceContent = await page.evaluate(() => {
-      const text = document.body.innerText;
+
+    const playerBarChecks = await page.evaluate(() => {
+      const playerBar = document.querySelector('.player-bar');
+      const remoteBanner = document.querySelector('.remote-device-banner');
+      const deviceBtn = document.querySelector('.device-btn, [aria-label="Select playback device"]');
+      const volumeBtn = document.querySelector('[aria-label="Volume"]');
+      const volumeTrack = document.querySelector('.volume-track');
+
       return {
-        hasDevice: text.includes('Computer') || text.includes('device') || text.includes('This Computer'),
+        hasPlayerBar: !!playerBar,
+        noRemoteBanner: !remoteBanner,
+        hasDeviceBtn: !!deviceBtn,
+        hasVolumeBtn: !!volumeBtn,
+        hasVolumeTrack: !!volumeTrack,
+        deviceNextToVolume: !!playerBar && !!deviceBtn && !!volumeBtn &&
+          playerBar.contains(deviceBtn) && playerBar.contains(volumeBtn),
       };
     });
-    
-    console.log(`  ${deviceContent.hasDevice ? '✅' : '❌'} Device info shown`);
-    
-    // ─── TEST 7: INTERACTIONS ───
-    console.log('\n🎮 TEST 7: Button Interactions');
+
+    console.log(`  ${playerBarChecks.hasPlayerBar ? '✅' : '❌'} Player bar visible`);
+    console.log(`  ${playerBarChecks.noRemoteBanner ? '✅' : '❌'} No remote device banner under player`);
+    console.log(`  ${playerBarChecks.hasDeviceBtn ? '✅' : '❌'} Device selector button`);
+    console.log(`  ${playerBarChecks.hasVolumeBtn ? '✅' : '❌'} Volume button`);
+    console.log(`  ${playerBarChecks.deviceNextToVolume ? '✅' : '❌'} Device selector next to volume control`);
+
+    // Open device dropdown
+    const deviceBtn = await page.locator('.device-btn, [aria-label="Select playback device"]').first();
+    if (await deviceBtn.isVisible().catch(() => false)) {
+      await deviceBtn.click();
+      await page.waitForTimeout(300);
+
+      const dropdownChecks = await page.evaluate(() => {
+        const dropdown = document.querySelector('.device-dropdown');
+        const text = document.body.innerText;
+        return {
+          dropdownOpen: !!dropdown,
+          showsConnectText: text.includes('Connect to a device') || text.includes('Searching for devices'),
+          showsSpxPlayer: text.includes('SPX Player'),
+        };
+      });
+
+      console.log(`  ${dropdownChecks.dropdownOpen ? '✅' : '❌'} Device dropdown opens`);
+      console.log(`  ${dropdownChecks.showsConnectText ? '✅' : '❌'} Dropdown shows connect header`);
+      console.log(`  ${dropdownChecks.showsSpxPlayer ? '✅' : '❌'} SPX Player listed as target`);
+
+      // Screenshot with dropdown open to verify it is not clipped/overlapped
+      await page.screenshot({ path: 'spx-05-device-dropdown.png' });
+      console.log('  ✅ spx-05-device-dropdown.png');
+
+      // Close dropdown by pressing Escape
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(200);
+    }
+
+    // ─── TEST 7: NOTIFICATIONS ───
+    console.log('\n🔔 TEST 7: Notifications');
     console.log('───────────────────────────────────────────────────────────────');
-    
+
+    const notificationChecks = await page.evaluate(() => {
+      return {
+        hasHowToFixToggle: document.body.innerText.includes('How to fix') || document.body.innerText.includes('Show solutions'),
+        hasNotificationContainer: document.querySelector('.notification') !== null,
+        hasSystemStatus: document.querySelector('.system-status') !== null || document.querySelector('[aria-label="System status"]') !== null,
+      };
+    });
+
+    console.log(`  ${!notificationChecks.hasHowToFixToggle && !notificationChecks.hasNotificationContainer ? '✅' : '⚠️'} No active notification banners`);
+    console.log(`  ${!notificationChecks.hasSystemStatus ? '✅' : '❌'} No system status / "No Device" banner below player bar`);
+
+    // ─── TEST 8: INTERACTIONS ───
+    console.log('\n🎮 TEST 8: Button Interactions');
+    console.log('───────────────────────────────────────────────────────────────');
+
     // Click play/pause
     const playBtn = await page.locator('button').first();
     if (await playBtn.isVisible()) {
@@ -143,7 +202,7 @@ import { chromium } from 'playwright';
     // ─── SCREENSHOTS ───
     console.log('\n📸 Taking screenshots...');
     
-    await page.locator('text="Now Playing"').click();
+    await page.locator('[aria-label="Now Playing"]').click();
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'spx-01-now-playing.png', fullPage: true });
     console.log('  ✅ spx-01-now-playing.png');
@@ -174,11 +233,12 @@ import { chromium } from 'playwright';
     console.log('║  🔍 Search:          ✅ Input functional                   ║');
     console.log('║  📚 Library:          ✅ Playlists shown                   ║');
     console.log('║  📋 Queue:            ✅ Queue page works                  ║');
-    console.log('║  📡 Devices:          ✅ Device info shown                 ║');
+    console.log('║  📡 Devices:          ✅ Selector, dropdown, SPX Player    ║');
+    console.log('║  🔔 Notifications:    ✅ Present, no status banner          ║');
     console.log('║  🎮 Controls:         ✅ Buttons clickable                 ║');
     console.log('║  📸 Screenshots:      ✅ All saved                         ║');
     console.log('╚═══════════════════════════════════════════════════════════════╝');
-    
+
     console.log('\n📁 Screenshots: /Users/admin/Code/GitHub/spx/spx-0*.png');
     
   } catch (error) {

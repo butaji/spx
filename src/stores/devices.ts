@@ -74,6 +74,20 @@ export const allDevices = computed(() => {
   const merged: Array<SpotifyDevice & { isLocal?: boolean; localNote?: string; canTransfer?: boolean; needsWakeUp?: boolean; deviceIp?: string }> =
     spotify.map(d => ({ ...d, isLocal: false, canTransfer: true }));
 
+  // Inject the in-app SPX Player as a guaranteed device if it has a device ID
+  // but Spotify's API hasn't returned it yet (e.g. right after connect).
+  if (currentDeviceId && !merged.some(d => d.id === currentDeviceId)) {
+    merged.unshift({
+      id: currentDeviceId,
+      name: "SPX Player",
+      type: "computer",
+      is_active: false,
+      is_restricted: false,
+      isLocal: false,
+      canTransfer: true,
+    });
+  }
+
   // Add local devices that aren't already in the Spotify list
   for (const ld of local) {
     if (ld.canTransfer && ld.id) {
@@ -110,7 +124,7 @@ export const allDevices = computed(() => {
         is_active: false,
         is_restricted: false, // Cast devices CAN be used after wake-up
         isLocal: true,
-        localNote: "Open Spotify on this speaker first",
+        localNote: "Wake this speaker to control it from SPX",
         canTransfer: true,
         needsWakeUp: true,
         deviceIp: ld.ip,
@@ -310,7 +324,7 @@ async function waitForDevice(
     }
   }
   console.log(`[waitForDevice] TIMEOUT: "${deviceName}" never appeared in Spotify API`);
-  throw new Error("This speaker isn't visible to the Spotify Web API. Please start playing music on it from the official Spotify app first, then it will appear here.");
+  throw new Error("This speaker isn't visible to the Spotify Web API yet. Select the SPX Player or another available device, then try again.");
 }
 
 /**
@@ -368,7 +382,7 @@ async function resolveDevice(
         }
       })(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Device didn't appear in Spotify. Try starting playback on it from the official Spotify app first.")), 60_000)
+        setTimeout(() => reject(new Error("Device didn't appear in Spotify. Select the SPX Player or another available device.")), 60_000)
       )
     ]);
   }
@@ -421,7 +435,7 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
         selectedDeviceId.value = match.id;
       } else {
         console.log(`[selectDevice] Device ${resolvedId} not found in API after refresh`);
-        return { success: false, error: "Device went offline. Please open Spotify on it again." };
+        return { success: false, error: "Device went offline. Select SPX Player or another available device." };
       }
     }
 
@@ -440,7 +454,7 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
       return { success: false, error: statusMessage };
     }
     if (msg.includes("isn't visible") || msg.includes("Spotify is not running")) {
-      return { success: false, error: "This speaker needs to be activated from the official Spotify app first. Start playing music on it, then it will appear here." };
+      return { success: false, error: "This speaker needs to be activated. Select the SPX Player to play here, or start playback on the speaker from SPX." };
     }
     if (msg.includes("403") || msg.includes("Premium")) {
       return { success: false, error: "Spotify Premium required to control playback remotely." };
@@ -581,7 +595,7 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
             return { ...device, id: spotifyMatch.id, is_active: spotifyMatch.is_active, canTransfer: true, friendly_name: displayName };
           } else {
             console.log(`[refreshDevices] NO MATCH for local "${displayName}" — will show as Cast-only device`);
-            return { ...device, canTransfer: false, friendly_name: displayName, note: "Open Spotify on this device" };
+            return { ...device, canTransfer: false, friendly_name: displayName, note: "Start playback in SPX to activate this speaker" };
           }
         });
         localDevices.value = matched;

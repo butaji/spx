@@ -259,3 +259,21 @@ pub async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, Stri
 
     Ok(devices)
 }
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+
+    /// Verifies the mDNS scanner can find Cast devices on the local network.
+    /// This test is ignored by default because it requires real network hardware.
+    #[tokio::test]
+    #[ignore]
+    async fn test_real_cast_discovery() {
+        let devices = browse_service("_googlecast._tcp").await.expect("browse should not fail");
+        println!("Found {} Cast device(s):", devices.len());
+        for d in &devices {
+            println!("  {} at {}:{}", d.name, d.ip, d.port);
+        }
+        assert!(!devices.is_empty(), "expected at least one Cast device on this network");
+    }
+}

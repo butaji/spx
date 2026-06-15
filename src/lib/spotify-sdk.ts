@@ -78,6 +78,14 @@ function loadToken(): StoredToken | null {
   }
 }
 
+export function getAccessToken(): string | null {
+  const token = loadToken();
+  if (!token || Date.now() >= token.expiresAt - 60000) {
+    return null;
+  }
+  return token.accessToken;
+}
+
 function clearStoredToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
@@ -355,10 +363,12 @@ export async function transferPlayback(deviceId: string, play = true) {
 
 // ─── Context Playback ────────────────────────────────────────────────────────
 
-export async function playContext(contextUri: string, offset?: number, deviceId?: string) {
+export async function playContext(contextUri: string, offset?: number | string, deviceId?: string) {
   return apiCall(() => spotifyApi.play({
     context_uri: contextUri,
-    offset: offset !== undefined ? { position: offset } : undefined,
+    offset: offset !== undefined
+      ? (typeof offset === 'string' ? { uri: offset } : { position: offset })
+      : undefined,
     device_id: deviceId,
   }), 'playContext');
 }

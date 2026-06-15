@@ -72,7 +72,7 @@ export interface LocalDevice {
   id?: string;              // Spotify device ID if available
   is_active?: boolean;      // Whether this device is currently active
   canTransfer?: boolean;    // True if also a Spotify Connect device
-  note?: string;            // e.g. "Open Spotify on this device" for Cast-only devices
+  note?: string;            // e.g. "Wake this device to control it from SPX" for Cast-only devices
   service_type?: string;    // Which mDNS service discovered it (e.g. "_googlecast._tcp.local.")
   friendly_name?: string;   // Human-readable name from TXT records
 }

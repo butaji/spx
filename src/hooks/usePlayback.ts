@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "preact/compat";
 import { debug } from "../lib/utils";
 import {
   setShuffle as apiSetShuffle, setRepeat as apiSetRepeat,
-  playContext, playUris, transferPlayback,
+  playContext, playUris,
   saveTracks,
   removeSavedTracks,
 } from "../lib/spotify";
@@ -25,7 +25,7 @@ import {
   pauseTrack,
   startPlaybackPolling,
 } from "../stores/spotify";
-import { availableDevices, refreshSpotifyDevices } from "../stores/devices";
+
 import { recordPlay } from "../stores/playCounts";
 import { handleError, showError } from "../lib/errors";
 
@@ -150,48 +150,29 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       } else {
         debug('[Play/Pause] Need to play, checking devices...');
 
-        await refreshSpotifyDevices();
-        debug('[Play/Pause] Devices:', availableDevices.value.length, 'found');
-        debug('[Play/Pause] Devices list:', availableDevices.value.map(d => ({ name: d.name, id: d.id, is_active: d.is_active })));
-
-        const activeDevice = availableDevices.value.find(d => d.is_active);
-        debug('[Play/Pause] Active device:', activeDevice);
-
-        let deviceId: string | null = null;
-
-        if (activeDevice?.id) {
-          deviceId = activeDevice.id;
-          debug('[Play/Pause] Using active device:', deviceId);
-        } else {
-          debug('[Play/Pause] No active device, trying first available...');
-          const firstDevice = availableDevices.value[0];
-          if (firstDevice?.id) {
-            debug('[Play/Pause] Transferring to:', firstDevice.id);
-            try {
-              await transferPlayback(firstDevice.id, false);
-              await new Promise(r => setTimeout(r, 500));
-              deviceId = firstDevice.id;
-              debug('[Play/Pause] Transfer succeeded');
-            } catch (e) {
-              console.warn('[Play/Pause] Transfer failed:', e);
-            }
-          } else {
-            console.warn('[Play/Pause] NO DEVICES FOUND');
-          }
-        }
+        const deviceId = await ensureActiveDevice();
+        debug('[Play/Pause] ensureActiveDevice returned:', deviceId);
 
         if (!deviceId) {
           console.warn('[Play/Pause] Cannot play - no device available');
           isPlaying.value = playing;
           showError(
-            "No Spotify devices found. Open Spotify on your phone or computer.",
-            "No Devices Found",
+            "No Playback Device",
+            "SPX couldn't find a device to play on. SPX can always play through its built-in SPX Player on this Mac.",
             {
               solution: [
-                "Open Spotify on your phone, computer, or smart speaker",
-                "Make sure your device is on the same Wi-Fi network",
-                "Wait a few seconds for devices to appear"
-              ]
+                "Wait a moment for the SPX Player to connect",
+                "Check that macOS Local Network permission is allowed for SPX",
+                "Select a speaker from the device menu"
+              ],
+              action: {
+                label: "Scan network",
+                onClick: () => {
+                  import("../stores/devices").then(({ refreshLocalDevices }) =>
+                    refreshLocalDevices(true).catch(console.error)
+                  );
+                }
+              }
             }
           );
           return;
@@ -222,13 +203,13 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       const hasDevice = await ensureActiveDevice();
       if (!hasDevice) {
         showError(
-          "No active device. Please open Spotify on a device first.",
           "No Active Device",
+          "SPX can play through the built-in SPX Player on this Mac. If you want to use another speaker, select it from the device menu.",
           {
             solution: [
-              "Open Spotify on your phone, computer, or smart speaker",
-              "Start playing a song",
-              "SPX will detect it automatically"
+              "Wait for the SPX Player to connect",
+              "Select a speaker from the device menu",
+              "Check that macOS Local Network permission is allowed for SPX"
             ]
           }
         );
@@ -247,13 +228,13 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       const hasDevice = await ensureActiveDevice();
       if (!hasDevice) {
         showError(
-          "No active device. Please open Spotify on a device first.",
           "No Active Device",
+          "SPX can play through the built-in SPX Player on this Mac. If you want to use another speaker, select it from the device menu.",
           {
             solution: [
-              "Open Spotify on your phone, computer, or smart speaker",
-              "Start playing a song",
-              "SPX will detect it automatically"
+              "Wait for the SPX Player to connect",
+              "Select a speaker from the device menu",
+              "Check that macOS Local Network permission is allowed for SPX"
             ]
           }
         );
@@ -349,13 +330,13 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       const deviceId = await ensureActiveDevice();
       if (!deviceId) {
         showError(
-          "No active device. Please open Spotify on a device first.",
           "No Active Device",
+          "SPX can play through the built-in SPX Player on this Mac. If you want to use another speaker, select it from the device menu.",
           {
             solution: [
-              "Open Spotify on your phone, computer, or smart speaker",
-              "Start playing a song",
-              "SPX will detect it automatically"
+              "Wait for the SPX Player to connect",
+              "Select a speaker from the device menu",
+              "Check that macOS Local Network permission is allowed for SPX"
             ]
           }
         );
@@ -374,13 +355,13 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       const deviceId = await ensureActiveDevice();
       if (!deviceId) {
         showError(
-          "No active device. Please open Spotify on a device first.",
           "No Active Device",
+          "SPX can play through the built-in SPX Player on this Mac. If you want to use another speaker, select it from the device menu.",
           {
             solution: [
-              "Open Spotify on your phone, computer, or smart speaker",
-              "Start playing a song",
-              "SPX will detect it automatically"
+              "Wait for the SPX Player to connect",
+              "Select a speaker from the device menu",
+              "Check that macOS Local Network permission is allowed for SPX"
             ]
           }
         );

@@ -41,25 +41,6 @@
   color: var(--fg-faint);
 }
 
-/* ─── Remote Device Banner (Improvement #1) ─── */
-.remote-device-banner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, rgba(29, 185, 84, 0.15), rgba(29, 185, 84, 0.08));
-  border-bottom: 1px solid rgba(29, 185, 84, 0.2);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.remote-device-banner .remote-device-icon {
-  width: 16px;
-  height: 16px;
-}
-
 /* ─── Device Selector ─── */
 .device-selector {
   position: relative;
@@ -87,9 +68,6 @@
 }
 
 .device-dropdown {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
   min-width: 280px;
   max-width: 340px;
   background: var(--bg-elevated);
@@ -97,7 +75,6 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   padding: 0;
-  z-index: 100;
   overflow: hidden;
 }
 
@@ -421,7 +398,7 @@
 
 /* Device help hints (Improvement #5) */
 .device-help-hint {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
@@ -429,7 +406,11 @@
   border-radius: 4px;
   font-size: 11px;
   line-height: 1.3;
-  animation: fadeIn 0.2s ease;
+}
+
+.device-item:hover .device-help-hint {
+  display: flex;
+  animation: fadeIn 0.15s ease;
 }
 
 .device-help-hint.hint-info {

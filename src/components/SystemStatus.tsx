@@ -156,7 +156,7 @@ export function SystemStatus() {
   // Get device detail
   const getDeviceDetail = () => {
     if (device === "available") return playback === "playing" ? "Controlling playback" : "Device connected";
-    if (device === "none") return "Open Spotify app";
+    if (device === "none") return "Select SPX Player";
     if (device === "error") return "Check devices";
     return "Checking...";
   };

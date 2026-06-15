@@ -15,8 +15,12 @@ vi.mock('../lib/spotify', () => ({
   pause: vi.fn(),
 }));
 
+const mockCurrentDeviceId = vi.hoisted(() => ({ value: 'web-sdk-device-id' }));
+
 vi.mock('../lib/playback', () => ({
-  currentDeviceId: 'web-sdk-device-id',
+  get currentDeviceId() {
+    return mockCurrentDeviceId.value;
+  },
   playbackVolume: { value: 50 },
 }));
 
@@ -79,6 +83,9 @@ beforeEach(() => {
 
   // Reset all module-level state (signals + private variables)
   __resetDeviceStore();
+
+  // Default to a connected in-app player; individual describes can override.
+  mockCurrentDeviceId.value = 'web-sdk-device-id';
 });
 
 afterEach(() => {
@@ -122,6 +129,10 @@ describe('refreshDevices — Spotify failure tolerance', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Device deduplication', () => {
+  beforeEach(() => {
+    // Avoid injecting the synthetic SPX Player into these list-length assertions.
+    mockCurrentDeviceId.value = null;
+  });
 
   it('merges Spotify and local devices with the same name (no duplicate)', async () => {
     // Arrange — Spotify returns a device
@@ -187,6 +198,10 @@ describe('Device deduplication', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Cast-only devices', () => {
+  beforeEach(() => {
+    // Avoid injecting the synthetic SPX Player into these list-length assertions.
+    mockCurrentDeviceId.value = null;
+  });
 
   it('shows Cast devices from local scan when Spotify returns nothing', async () => {
     // Arrange

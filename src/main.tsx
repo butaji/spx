@@ -22,6 +22,13 @@ import { render } from "preact";
 import App from "./App";
 import "./styles/index.css";
 import { getAccessToken, tauriInvoke } from "./lib/spotify";
+import { isMockMode } from "./stores/auth";
+import { enableMockMode } from "./lib/mock";
+
+if (import.meta.env.VITE_SPX_MOCK === "1") {
+  isMockMode.value = true;
+  enableMockMode();
+}
 
 (window as any).requestMacOSNetworkPermission = async () => {
   console.log('[Permission] Requesting macOS local network access...');

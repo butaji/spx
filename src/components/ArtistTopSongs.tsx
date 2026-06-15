@@ -1,6 +1,5 @@
 import { useState } from "preact/compat";
 import { formatTime, formatFollowers } from "../lib/utils";
-import { playUris } from "../lib/spotify";
 import { IconFlame, IconPlay } from "./icons";
 import type { SpotifyArtist } from "../types";
 import { Artwork } from "./Artwork";
@@ -20,12 +19,14 @@ interface ArtistTopSongsProps {
   artist: SpotifyArtist | null;
   topTracks: Track[];
   tags: string[];
+  onPlayUris: (uris: string[], offset?: number) => void;
 }
 
 export default function ArtistTopSongs({
   artist,
   topTracks,
   tags,
+  onPlayUris,
 }: ArtistTopSongsProps) {
   if (!topTracks.length) return null;
 
@@ -46,7 +47,7 @@ export default function ArtistTopSongs({
 
       <div className="artist-tracks">
         {topTracks.map((track, i) => (
-          <SongRow key={track.id} track={track} index={i} />
+          <SongRow key={track.id} track={track} index={i} onPlayUris={onPlayUris} />
         ))}
       </div>
     </div>
@@ -104,14 +105,14 @@ function PopularityBadge({ value }: { value: number }) {
   );
 }
 
-function SongRow({ track, index }: { track: Track; index: number }) {
+function SongRow({ track, index, onPlayUris }: { track: Track; index: number; onPlayUris: (uris: string[], offset?: number) => void }) {
   const handleClick = () => {
-    if (track.uri) playUris([track.uri]);
+    if (track.uri) onPlayUris([track.uri]);
   };
 
   const handlePlay = (e: Event) => {
     e.stopPropagation();
-    if (track.uri) playUris([track.uri]);
+    if (track.uri) onPlayUris([track.uri]);
   };
 
   return (

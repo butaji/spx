@@ -18,6 +18,7 @@
 
 ### Device Management
 - [ ] Spotify Connect devices detected
+- [ ] Built-in SPX Player always available on this Mac
 - [ ] Device transfer/selection works
 - [ ] Local network device scanning (mDNS/Cast)
 - [ ] Active device indicator
@@ -97,8 +98,9 @@
 - [ ] Now Playing updates work
 
 ### Tests
-- [ ] 216 TypeScript tests pass
+- [ ] 387 TypeScript tests pass
 - [ ] 78 Rust tests pass
+- [ ] Mock E2E tests pass
 - [ ] No test flakiness
 
 ## 5. Configuration
@@ -167,7 +169,8 @@
 - [ ] Code signed (if possible)
 - [ ] Notarized (if possible)
 - [ ] DMG bundle created
-- [ ] App icon set
+- [ ] App icon set (SVG owl on black background)
+- [ ] In-app logos use same owl icon
 - [ ] Version bumped
 
 ### GitHub Release
@@ -212,3 +215,11 @@ cargo clippy
 ## Status: Ready for Beta ✅
 
 All core features implemented, error handling complete, tests passing.
+
+## Recent Changes
+
+- Built-in SPX Player via Spotify Web Playback SDK guarantees a playback device on this Mac.
+- Device selector is now the only device UI in the player bar.
+- Error and notification copy no longer references opening the Spotify app.
+- Custom owl icon used for app icon and all in-app logos.
+- Mock E2E tests cover player bar, navigation, and device selector flows.

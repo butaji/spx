@@ -5,13 +5,8 @@
  * Features automatic dismissal, expandable solutions, and action buttons.
  */
 
-import { useState, useEffect } from "preact/hooks";
-import { 
-  notifications, 
-  dismissNotification, 
-  dismissAll,
-  type Notification 
-} from "../stores/notifications";
+import { useState } from "preact/hooks";
+import { notifications, dismissNotification, dismissAll, type Notification } from "../stores/notifications";
 import { IconMap } from "./icons";
 import styles from "./Notifications.module.css";
 
@@ -67,16 +62,8 @@ interface NotificationItemProps {
 }
 
 function NotificationItem({ notification }: NotificationItemProps) {
-  const [expanded, setExpanded] = useState(notification.requiresAction);
-  
-  // Auto-collapse non-actionable notifications after a moment
-  useEffect(() => {
-    if (!notification.requiresAction) {
-      const timer = setTimeout(() => setExpanded(false), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [notification.requiresAction]);
-  
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <div 
       class={`${styles.notification} ${styles[notification.type]}`}
@@ -102,20 +89,19 @@ function NotificationItem({ notification }: NotificationItemProps) {
         </button>
       </div>
       
-      {/* Solutions section - shown when expanded */}
+      {/* Solutions section - collapsed by default */}
       {notification.solution && notification.solution.length > 0 && (
         <div class={styles.solutionsWrapper}>
-          <button 
+          <button
             class={styles.expandButton}
             onClick={() => setExpanded(!expanded)}
           >
             <span>{expanded ? icons.chevronUp : icons.chevronDown}</span>
-            <span>{expanded ? "Hide" : "Show"} solutions</span>
+            <span>{expanded ? "Hide" : "How to fix"}</span>
           </button>
-          
+
           {expanded && (
             <div class={styles.solutions}>
-              <p class={styles.solutionsTitle}>How to fix:</p>
               <ol class={styles.solutionList}>
                 {notification.solution.map((step, i) => (
                   <li key={i}>{step}</li>
@@ -125,7 +111,7 @@ function NotificationItem({ notification }: NotificationItemProps) {
           )}
         </div>
       )}
-      
+
       {/* Action button */}
       {notification.action && (
         <div class={styles.actions}>

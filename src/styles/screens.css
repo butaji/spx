@@ -1566,7 +1566,8 @@ div:hover > .song-play-btn {
   animation: logoPulse 2.5s ease-in-out infinite;
 }
 
-.loading-logo svg {
+.loading-logo svg,
+.loading-logo img {
   width: 100%;
   height: 100%;
 }

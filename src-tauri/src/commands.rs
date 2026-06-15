@@ -387,7 +387,7 @@ async fn wake_cast_v2(ip: &str) -> Result<String, String> {
         });
 
         if spotify_running {
-            return Ok("Spotify is already running on this device".to_string());
+            return Ok("Speaker is ready".to_string());
         }
 
         // Step 3: Try to launch Spotify (may fail with NOT_FOUND on some devices)
@@ -398,11 +398,11 @@ async fn wake_cast_v2(ip: &str) -> Result<String, String> {
             .map_err(|_| "Invalid app ID".to_string())?;
 
         match cast_device.receiver.launch_app(&spotify_app) {
-            Ok(app) => Ok(format!("Spotify app launched via Cast V2: {:?}", app)),
+            Ok(_) => Ok("Speaker activated".to_string()),
             Err(e) => {
                 let msg = format!("{}", e);
                 if msg.contains("NOT_FOUND") {
-                    Err("Spotify is not running on this device. Please open the Spotify app on your Cast device and try again.".to_string())
+                    Err("This speaker needs to be activated. Select SPX Player to play here, or wake the speaker from SPX and try again.".to_string())
                 } else {
                     Err(format!("Cast V2 launch failed: {}", e))
                 }
@@ -551,5 +551,47 @@ pub fn request_macos_local_network_permission() -> String {
     #[cfg(not(target_os = "macos"))]
     {
         "Not on macOS".to_string()
+    }
+}
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+
+    /// Real network test: discover Cast devices and verify TCP reachability.
+    /// Ignored by default because it requires local network hardware.
+    #[tokio::test]
+    #[ignore]
+    async fn test_real_device_discovery_and_reachability() {
+        let devices = scan_spotify_devices().await.expect("scan should succeed");
+        println!("Discovered {} device(s):", devices.len());
+        for d in &devices {
+            println!("  {} at {}:{}", d.name, d.ip, d.port);
+        }
+        assert!(!devices.is_empty(), "expected at least one device on the network");
+
+        // Verify TCP port 8009 is reachable on the first Cast device
+        let first = devices.iter().find(|d| d.port == 8009).unwrap_or(&devices[0]);
+        let addr = format!("{}:8009", first.ip);
+        println!("Checking TCP reachability for {}...", addr);
+        match timeout(Duration::from_secs(3), TcpStream::connect(&addr)).await {
+            Ok(Ok(_)) => println!("  ✅ TCP connect succeeded"),
+            Ok(Err(e)) => panic!("TCP connect failed for {}: {}", addr, e),
+            Err(_) => panic!("TCP connect timed out for {}", addr),
+        }
+    }
+
+    /// Real network test: attempt to wake the first Cast device.
+    /// Ignored by default; may launch the Spotify receiver on the speaker.
+    #[tokio::test]
+    #[ignore]
+    async fn test_real_cast_wake() {
+        let devices = scan_spotify_devices().await.expect("scan should succeed");
+        let first = devices.iter().find(|d| d.port == 8009).expect("expected a Cast device on port 8009");
+        println!("Attempting to wake {} at {}...", first.name, first.ip);
+        match wake_cast_device(first.ip.clone()).await {
+            Ok(msg) => println!("  ✅ Wake succeeded: {}", msg),
+            Err(e) => println!("  ⚠️ Wake returned: {} (device may already be ready)", e),
+        }
     }
 }

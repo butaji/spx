@@ -1,5 +1,5 @@
 import type { CSSProperties } from "preact/compat";
-import { useState, useEffect, useCallback } from "preact/compat";
+import { useState, useEffect, useCallback, memo } from "preact/compat";
 import type { TrackInfo } from "../types";
 import DeviceSelector from "./DeviceSelector";
 import {
@@ -13,7 +13,6 @@ import {
   IconRepeat,
 } from "./icons";
 import { formatTime } from "../lib/utils";
-import { activeDevice } from "../stores/devices";
 
 interface PlayerBarProps {
   track: TrackInfo | null;
@@ -37,59 +36,7 @@ interface PlayerBarProps {
   onMuteToggle: () => void;
 }
 
-// Helper to get device icon SVG
-function DeviceIconSmall({ type, className }: { type: string; className?: string }) {
-  const iconClass = className || "remote-device-icon";
-  switch (type?.toLowerCase()) {
-    case "computer":
-      return (
-        <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" />
-          <line x1="8" y1="21" x2="16" y2="21" />
-          <line x1="12" y1="17" x2="12" y2="21" />
-        </svg>
-      );
-    case "smartphone":
-      return (
-        <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="5" y="2" width="14" height="20" rx="2" />
-          <line x1="12" y1="18" x2="12.01" y2="18" />
-        </svg>
-      );
-    case "speaker":
-    case "cast_audio":
-      return (
-        <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-        </svg>
-      );
-    case "tv":
-    case "cast_video":
-      return (
-        <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" />
-          <line x1="8" y1="21" x2="16" y2="21" />
-          <line x1="12" y1="17" x2="12" y2="21" />
-        </svg>
-      );
-    case "avr":
-      return (
-        <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-        </svg>
-      );
-    default:
-      return (
-        <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-3.39 0l-1.32-.377a2.25 2.25 0 01-1.632-2.163v-3.75z" />
-          <path d="M19.5 10.5c0 .466-.164.9-.442 1.237l-1.32 1.598a2.25 2.25 0 01-3.336 0l-1.32-1.598A1.875 1.875 0 0112.75 10.5h6.75z" />
-        </svg>
-      );
-  }
-}
-
-export function PlayerBar({
+function PlayerBarComponent({
   track,
   isPlaying,
   likedTrack,
@@ -115,10 +62,6 @@ export function PlayerBar({
   const [dragProgress, setDragProgress] = useState<number | null>(null);
   const [dragVolume, setDragVolume] = useState<number | null>(null);
   const [showVolumeTooltip, setShowVolumeTooltip] = useState(false);
-
-  // Get remote device info
-  const remoteDevice = activeDevice.value;
-  const isPlayingRemotely = remoteDevice && remoteDevice.id !== 'spx-player';
 
   const getPctFromMouse = useCallback((e: MouseEvent, el: HTMLDivElement) => {
     const rect = el.getBoundingClientRect();
@@ -196,15 +139,7 @@ export function PlayerBar({
   const displayVolume = isDraggingVolume && dragVolume !== null ? dragVolume : volume;
 
   return (
-    <div className="player-bar">
-      {/* Remote Device Banner - IMPROVEMENT #1: Show when playing remotely */}
-      {isPlayingRemotely && remoteDevice && (
-        <div className="remote-device-banner">
-          <DeviceIconSmall type={remoteDevice.type || ""} className="remote-device-icon" />
-          <span>Playing on {remoteDevice.name}</span>
-        </div>
-      )}
-
+    <div className="player-bar" style={{ contain: "layout style paint" }}>
       <div className="player-track">
         <div className="player-art">
           {track?.imageUrl ? <img src={track.imageUrl} alt="" /> : null}
@@ -306,3 +241,6 @@ export function PlayerBar({
     </div>
   );
 }
+
+export const PlayerBar = memo(PlayerBarComponent);
+export default PlayerBar;

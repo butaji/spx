@@ -1,11 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from "preact/compat";
+import { useState, useCallback, useRef, useEffect, useMemo } from "preact/compat";
 import Logo from "./components/Logo";
 import { HotkeyHelp } from "./components/HotkeyHelp";
 import { Sidebar } from "./components/Sidebar";
 import { PlayerBar } from "./components/PlayerBar";
 import ContextPanel from "./components/ContextPanel";
 import { Notifications } from "./components/Notifications";
-import { SystemStatus } from "./components/SystemStatus";
 import Home from "./screens/Home";
 import Search from "./screens/Search";
 import Library from "./screens/Library";
@@ -109,7 +108,12 @@ function App() {
   } = usePlayback({ ensureActiveDevice });
 
   // Derived state from signals
-  const track = getDerivedTrack();
+  // Memoize by track identity so PlayerBar doesn't re-render on every progress tick.
+  const track = useMemo(() => getDerivedTrack(), [
+    playbackTrack.value?.id,
+    isPlaying.value,
+    lastPlayedTrack.value?.id,
+  ]);
   const volume = playbackVolume.value;
   const shuffle = playbackShuffle.value;
   const repeat = playbackRepeat.value;
@@ -355,10 +359,9 @@ function App() {
       />
 
       {hotkeyHelpOpen && <HotkeyHelp onClose={() => setHotkeyHelpOpen(false)} />}
-      
-      {/* Error notifications and system status */}
+
+      {/* Error notifications */}
       <Notifications />
-      <SystemStatus />
     </div>
   );
 }

@@ -12,9 +12,13 @@ import {
   authError,
   isAuthLoading,
   isRestoring,
+  isMockMode,
   appError,
   loadRecentActivity,
+  loadUserProfile,
+  loadUserPlaylists,
   refreshPlayback,
+  startPlaybackPolling,
 } from "../stores/spotify";
 import { 
   refreshSpotifyDevices, 
@@ -32,6 +36,7 @@ import {
   showInfo,
 } from "../stores/notifications";
 import { ErrorCategory } from "../lib/errors";
+import { initPlayer, disconnectPlayer } from "../lib/playback";
 
 // ─── OAuth Callback Handler ──────────────────────────────────────────────────
 
@@ -75,10 +80,37 @@ export function useAuth() {
     let unlisten: (() => void) | null = null;
     
     async function init() {
+      // ─── Mock mode: skip Spotify auth entirely ───────────────────────────────
+      if (isMockMode.value) {
+        console.log("[Auth] Mock mode enabled — skipping Spotify auth");
+        isRestoring.value = true;
+        setAuthStatus("authenticated");
+        setConnectionStatus("connected");
+        authError.value = null;
+        isAuthSignal.value = true;
+
+        try {
+          await Promise.all([
+            loadUserProfile(),
+            refreshPlayback(),
+            refreshSpotifyDevices().catch((e) => console.error("[Auth] Mock device refresh failed:", e)),
+            loadUserPlaylists(),
+          ]);
+          loadRecentActivity().catch((e) => console.warn("[Auth] Mock recent activity failed:", e));
+          startPlaybackPolling();
+          startDevicePolling();
+        } catch (e: any) {
+          console.error("[Auth] Mock mode init failed:", e);
+        } finally {
+          isRestoring.value = false;
+        }
+        return;
+      }
+
       isRestoring.value = true;
       setAuthStatus("unauthenticated");
       setConnectionStatus("connecting");
-      
+
       // Safety timeout - never show restoring for more than 10 seconds
       const safetyTimeout = setTimeout(() => {
         console.warn("[Auth] Safety timeout reached — forcing isRestoring = false");
@@ -103,7 +135,11 @@ export function useAuth() {
               authError.value = null;
               
               showSuccess("Signed In", "Successfully connected to Spotify!");
-              
+
+              // Initialize the in-app Spotify Web Playback SDK player so SPX
+              // can be its own playback target without another Spotify app.
+              initPlayer().catch(e => console.error("[Auth] Player init failed:", e));
+
               loadRecentActivity();
               refreshPlayback();
               refreshSpotifyDevices().catch(e => {
@@ -137,7 +173,11 @@ export function useAuth() {
             authError.value = null;
             
             showSuccess("Signed In", "Successfully connected to Spotify!");
-            
+
+            // Initialize the in-app Spotify Web Playback SDK player so SPX
+            // can be its own playback target without another Spotify app.
+            initPlayer().catch(e => console.error("[Auth] Player init failed:", e));
+
             loadRecentActivity();
             refreshPlayback();
             refreshSpotifyDevices().catch(e => {
@@ -145,7 +185,7 @@ export function useAuth() {
             });
             setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
             startDevicePolling();
-            
+
             clearTimeout(safetyTimeout);
             isRestoring.value = false;
             return;
@@ -183,7 +223,11 @@ export function useAuth() {
           
           console.log("[Auth] Session restored successfully");
           showSuccess("Connected", "Successfully connected to Spotify");
-          
+
+          // Initialize the in-app Spotify Web Playback SDK player so SPX
+          // can be its own playback target without another Spotify app.
+          initPlayer().catch(e => console.error("[Auth] Player init failed:", e));
+
           loadRecentActivity();
           refreshPlayback();
           refreshSpotifyDevices().catch(e => {
@@ -191,7 +235,7 @@ export function useAuth() {
           });
           setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
           startDevicePolling();
-          
+
           clearTimeout(safetyTimeout);
           isRestoring.value = false;
           return;
@@ -270,6 +314,7 @@ export function useAuth() {
 
   const handleSignOut = useCallback(async () => {
     try {
+      await disconnectPlayer();
       sdkLogout();
       isAuthSignal.value = false;
       setAuthStatus("unauthenticated");
