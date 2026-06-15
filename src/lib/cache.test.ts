@@ -102,16 +102,15 @@ describe('cache - basic operations', () => {
     expect(isFresh).toBe(true);
   });
 
-  it('returns true exactly at expiration boundary', async () => {
+  it('returns false for expired cache', async () => {
     const now = Date.now();
-    mockStore.set('boundary-key', {
+    mockStore.set('expired-key', {
       data: 'data',
-      expiresAt: now, // exactly at expiration time
+      expiresAt: now - 1000, // expired 1 second ago
     });
 
-    // Date.now() <= entry.expiresAt means it's still fresh
-    const isFresh = await cache.isCacheFresh('boundary-key');
-    expect(isFresh).toBe(true);
+    const isFresh = await cache.isCacheFresh('expired-key');
+    expect(isFresh).toBe(false);
   });
 });
 

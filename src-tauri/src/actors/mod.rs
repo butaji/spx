@@ -36,20 +36,6 @@ mod state;
 #[cfg(test)]
 mod tests;
 
-#[cfg(test)]
-mod spotify_tests;
-
-// Note: spotify_tests.rs has pre-existing compilation issues (temporary borrowing bugs, 
-// Result handling issues). To enable, fix the issues in src-tauri/src/actors/spotify_tests.rs:
-// - Change `actor.state().read().await` to `let state = actor.state(); state.read().await`
-// - Fix Result::unwrap_err() usage (call .as_ref() before .contains())
-// - Fix futures::future::join_all() to properly unwrap JoinError results
-// #[cfg(test)]
-// mod spotify_tests;
-
 pub use handler::{Actor, ActorRef, Handler, Message};
 pub use mailbox::Mailbox;
 pub use state::ActorState;
-
-// Re-export concrete implementations
-pub mod spotify;

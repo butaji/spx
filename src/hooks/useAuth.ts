@@ -1,21 +1,20 @@
-import { useCallback, useEffect } from "preact/compat";
+import { useCallback, useEffect } from "preact/hooks";
+import { listen } from "@tauri-apps/api/event";
 import {
-  startAuthFlow,
-  restoreSession,
-  checkMockMode,
-  getAccessToken,
-  clearToken,
+  startAuthFlow as sdkStartAuth,
+  handleAuthCallback,
+  isAuthenticated,
+  logout as sdkLogout,
+  getCurrentUser,
 } from "../lib/spotify";
 import {
   authState as isAuthSignal,
-  isMockMode,
   authError,
   isAuthLoading,
   isRestoring,
   appError,
   loadRecentActivity,
   refreshPlayback,
-  validateToken,
 } from "../stores/spotify";
 import { 
   refreshSpotifyDevices, 
@@ -34,6 +33,38 @@ import {
 } from "../stores/notifications";
 import { ErrorCategory } from "../lib/errors";
 
+// ─── OAuth Callback Handler ──────────────────────────────────────────────────
+
+function parseAuthCallback(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+  
+  if (error) {
+    if (error === 'access_denied') {
+      showInfo('Sign In Cancelled', 'You cancelled the Spotify sign-in.');
+    } else {
+      showError('Authentication Failed', `Spotify returned an error: ${error}`, {
+        solution: ['Try signing in again'],
+        category: ErrorCategory.AUTH_OAUTH_FAILED,
+      });
+    }
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+    return null;
+  }
+  
+  if (code) {
+    // Clean URL immediately
+    window.history.replaceState({}, '', window.location.pathname);
+    return code;
+  }
+  
+  return null;
+}
+
+// ─── Auth Hook ───────────────────────────────────────────────────────────────
+
 export function useAuth() {
   const isAuthed = isAuthSignal.value;
   const authErr = authError.value;
@@ -41,6 +72,8 @@ export function useAuth() {
 
   // Initialize auth on mount
   useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    
     async function init() {
       isRestoring.value = true;
       setAuthStatus("unauthenticated");
@@ -53,53 +86,104 @@ export function useAuth() {
       }, 10000);
 
       try {
-        // Check if running in mock mode
-        const mock = await checkMockMode();
-        isMockMode.value = mock;
-        
-        if (mock) {
-          console.log("[Auth] Running in mock mode");
-          isAuthSignal.value = true;
-          setAuthStatus("authenticated");
-          setConnectionStatus("connected");
-          loadRecentActivity();
-          refreshPlayback();
-          showInfo("Mock Mode", "Running with mock data - no Spotify connection needed");
-          setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
-          startDevicePolling();
-          clearTimeout(safetyTimeout);
-          isRestoring.value = false;
-          return;
-        }
+        // Listen for OAuth callback from Tauri backend
+        unlisten = await listen<string>("oauth-callback", async (event) => {
+          console.log("[Auth] OAuth callback received:", event.payload);
+          const url = new URL(event.payload);
+          const code = url.searchParams.get("code");
+          const state = url.searchParams.get("state");
+          
+          if (code) {
+            try {
+              await handleAuthCallback(code, state ?? undefined);
+              console.log("[Auth] OAuth callback successful");
+              isAuthSignal.value = true;
+              setAuthStatus("authenticated");
+              setConnectionStatus("connected");
+              authError.value = null;
+              
+              showSuccess("Signed In", "Successfully connected to Spotify!");
+              
+              loadRecentActivity();
+              refreshPlayback();
+              refreshSpotifyDevices().catch(e => {
+                console.error("[Auth] Device refresh failed:", e);
+              });
+              setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
+              startDevicePolling();
+            } catch (e: any) {
+              console.error("[Auth] OAuth callback failed:", e);
+              authError.value = e.message || "Authentication failed";
+              handleAuthError(e);
+              setAuthStatus("unauthenticated");
+              setConnectionStatus("disconnected");
+            }
+          }
+        });
 
-        // Try to restore session
-        const authed = await restoreSession();
+        // Check for OAuth callback code in URL (fallback for dev)
+        const code = parseAuthCallback();
+        if (code) {
+          console.log("[Auth] Processing OAuth callback...");
+          setAuthStatus("unauthenticated");
+          setConnectionStatus("connecting");
+          
+          try {
+            await handleAuthCallback(code);
+            console.log("[Auth] OAuth callback successful");
+            isAuthSignal.value = true;
+            setAuthStatus("authenticated");
+            setConnectionStatus("connected");
+            authError.value = null;
+            
+            showSuccess("Signed In", "Successfully connected to Spotify!");
+            
+            loadRecentActivity();
+            refreshPlayback();
+            refreshSpotifyDevices().catch(e => {
+              console.error("[Auth] Device refresh failed:", e);
+            });
+            setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
+            startDevicePolling();
+            
+            clearTimeout(safetyTimeout);
+            isRestoring.value = false;
+            return;
+          } catch (e: any) {
+            console.error("[Auth] OAuth callback failed:", e);
+            authError.value = e.message || "Authentication failed";
+            handleAuthError(e);
+            setAuthStatus("unauthenticated");
+            setConnectionStatus("disconnected");
+            clearTimeout(safetyTimeout);
+            isRestoring.value = false;
+            return;
+          }
+        }
         
-        if (authed) {
+        // Check if already authenticated
+        if (isAuthenticated()) {
+          console.log("[Auth] Restoring session...");
           setAuthStatus("authenticated");
           setConnectionStatus("connected");
           authError.value = null;
           
-          // Validate the token
-          const token = getAccessToken();
-          if (token) {
-            const valid = await validateToken();
-            if (!valid) {
-              console.warn("[Auth] Token validation failed — clearing session");
-              await clearToken();
-              isAuthSignal.value = false;
-              setAuthStatus("expired");
-              handleAuthError(new Error("Token validation failed"));
-              clearTimeout(safetyTimeout);
-              isRestoring.value = false;
-              return;
-            }
+          // Verify token by getting user
+          try {
+            await getCurrentUser();
+          } catch (e: any) {
+            console.warn("[Auth] Token may be invalid:", e);
+            sdkLogout();
+            setAuthStatus("unauthenticated");
+            setConnectionStatus("disconnected");
+            clearTimeout(safetyTimeout);
+            isRestoring.value = false;
+            return;
           }
           
           console.log("[Auth] Session restored successfully");
           showSuccess("Connected", "Successfully connected to Spotify");
           
-          // Start background operations
           loadRecentActivity();
           refreshPlayback();
           refreshSpotifyDevices().catch(e => {
@@ -107,48 +191,46 @@ export function useAuth() {
           });
           setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
           startDevicePolling();
-        } else {
-          console.log("[Auth] No existing session found");
-          setAuthStatus("unauthenticated");
-          setConnectionStatus("disconnected");
+          
+          clearTimeout(safetyTimeout);
+          isRestoring.value = false;
+          return;
         }
-      } catch (e) {
+        
+        console.log("[Auth] No existing session found");
+        setAuthStatus("unauthenticated");
+        setConnectionStatus("disconnected");
+        
+      } catch (e: any) {
         console.error("[Auth] Init failed:", e);
         setConnectionStatus("disconnected");
         
-        // Provide specific error messages
-        if (e instanceof Error) {
-          if (e.message.includes("network") || e.message.includes("fetch")) {
-            showError(
-              "Connection Failed",
-              "Couldn't connect to Spotify. Check your internet connection.",
-              {
-                solution: [
-                  "Check your Wi-Fi connection",
-                  "Make sure Spotify.com is accessible",
-                  "Try again in a few moments"
-                ],
-                category: ErrorCategory.NETWORK_NO_CONNECTION,
-              }
-            );
-          } else if (e.message.includes("token") || e.message.includes("auth")) {
-            handleAuthError(e);
-          } else {
-            showError(
-              "Authentication Failed",
-              e.message || "Failed to authenticate with Spotify",
-              {
-                solution: [
-                  "Try signing in again",
-                  "Make sure Spotify is accessible",
-                  "Check your credentials"
-                ],
-                category: ErrorCategory.AUTH_OAUTH_FAILED,
-              }
-            );
-          }
+        if (e.message?.includes('network') || e.message?.includes('fetch')) {
+          showError(
+            "Connection Failed",
+            "Couldn't connect to Spotify. Check your internet connection.",
+            {
+              solution: [
+                "Check your Wi-Fi connection",
+                "Make sure Spotify.com is accessible",
+                "Try again in a few moments"
+              ],
+              category: ErrorCategory.NETWORK_NO_CONNECTION,
+            }
+          );
         } else {
-          handleAuthError(e);
+          showError(
+            "Authentication Failed",
+            e.message || "Failed to authenticate with Spotify",
+            {
+              solution: [
+                "Try signing in again",
+                "Make sure Spotify is accessible",
+                "Check your internet connection"
+              ],
+              category: ErrorCategory.AUTH_OAUTH_FAILED,
+            }
+          );
         }
       } finally {
         clearTimeout(safetyTimeout);
@@ -160,6 +242,7 @@ export function useAuth() {
     
     // Cleanup on unmount
     return () => {
+      if (unlisten) unlisten();
       stopDevicePolling();
     };
   }, []);
@@ -174,76 +257,20 @@ export function useAuth() {
     
     try {
       console.log("[Auth] Starting OAuth flow...");
-      await startAuthFlow();
-      
-      isAuthSignal.value = true;
-      setAuthStatus("authenticated");
-      setConnectionStatus("connected");
-      authError.value = null;
-      
-      console.log("[Auth] OAuth flow completed successfully");
-      showSuccess("Signed In", "Successfully connected to Spotify!");
-      
-      // Start operations
-      loadRecentActivity();
-      refreshPlayback();
-      await refreshSpotifyDevices();
-      startDevicePolling();
-      
-      // Set device status - will be updated by devices store
-      setDeviceStatus("checking");
-      
-    } catch (e) {
+      await sdkStartAuth();
+      // This will redirect to Spotify, so we don't reset isAuthLoading
+    } catch (e: any) {
       console.error("[Auth] OAuth flow failed:", e);
       isAuthSignal.value = false;
-      
-      if (e instanceof Error) {
-        const msg = e.message.toLowerCase();
-        
-        if (msg.includes("popup") || msg.includes("blocked")) {
-          showError(
-            "Popup Blocked",
-            "The sign-in popup was blocked by your browser.",
-            {
-              solution: [
-                "Allow popups for this website",
-                "Or click the URL in your address bar to allow",
-                "Then try signing in again"
-              ],
-              category: ErrorCategory.AUTH_OAUTH_FAILED,
-            }
-          );
-        } else if (msg.includes("cancelled") || msg.includes("denied")) {
-          showInfo("Sign In Cancelled", "You cancelled the sign-in process.");
-        } else if (msg.includes("network") || msg.includes("connection")) {
-          showError(
-            "Connection Error",
-            "Couldn't connect to Spotify during sign-in.",
-            {
-              solution: [
-                "Check your internet connection",
-                "Make sure Spotify.com is accessible",
-                "Try again in a few moments"
-              ],
-              category: ErrorCategory.NETWORK_NO_CONNECTION,
-            }
-          );
-        } else {
-          authError.value = e.message;
-          handleAuthError(e);
-        }
-      } else {
-        authError.value = "Authentication failed";
-        handleAuthError(e);
-      }
-    } finally {
+      authError.value = e.message || "Authentication failed";
+      handleAuthError(e);
       isAuthLoading.value = false;
     }
   }, []);
 
   const handleSignOut = useCallback(async () => {
     try {
-      await clearToken();
+      sdkLogout();
       isAuthSignal.value = false;
       setAuthStatus("unauthenticated");
       setConnectionStatus("disconnected");
@@ -264,3 +291,6 @@ export function useAuth() {
     handleSignOut,
   };
 }
+
+// Export for callback handling
+export { parseAuthCallback };

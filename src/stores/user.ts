@@ -30,8 +30,8 @@ export async function loadUserProfile(): Promise<void> {
   }
 
   try {
-    const data = await withRetry(() => getUserProfile());
-    const profile = { name: data.display_name, image: data.images?.[0]?.url };
+    const data = await withRetry(() => getUserProfile()) as any;
+    const profile = { name: data.display_name || 'Spotify User', image: data.images?.[0]?.url };
     userProfile.value = profile;
     setCache("user_profile", profile, CACHE_TTL.profile);
   } catch (e) {
@@ -41,7 +41,7 @@ export async function loadUserProfile(): Promise<void> {
 
 export async function loadTopArtists(): Promise<void> {
   try {
-    const artists = await getTopArtists(10, "medium_term");
+    const artists = await getTopArtists(10, "medium_term") as any[];
     topArtists.value = artists;
   } catch (err) {
     console.warn("[Store] Failed to load top artists:", err);
@@ -50,7 +50,7 @@ export async function loadTopArtists(): Promise<void> {
 
 export async function loadTopTracks(): Promise<void> {
   try {
-    const tracks = await getTopTracks(20, "short_term");
+    const tracks = await getTopTracks(20, "short_term") as any[];
     topTracks.value = tracks;
   } catch (err) {
     console.warn("[Store] Failed to load top tracks:", err);
@@ -59,7 +59,7 @@ export async function loadTopTracks(): Promise<void> {
 
 export async function loadFollowedArtists(): Promise<void> {
   try {
-    const artists = await getFollowedArtists();
+    const artists = await getFollowedArtists() as any[];
     followedArtists.value = artists;
   } catch (err) {
     console.warn("[Store] Failed to load followed artists:", err);
@@ -68,7 +68,7 @@ export async function loadFollowedArtists(): Promise<void> {
 
 export async function loadSavedAlbums(): Promise<void> {
   try {
-    const data = await getSavedAlbums();
+    const data = await getSavedAlbums() as any;
     const albums =
       (data as { items?: Array<{ album?: SpotifyAlbum | null }> }).items
         ?.map((item) => item.album)

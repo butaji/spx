@@ -13,7 +13,7 @@ import { chromium } from 'playwright';
     console.log('║         SPX APP - COMPREHENSIVE UI TEST                      ║');
     console.log('╚═══════════════════════════════════════════════════════════════╝\n');
     
-    await page.goto('http://localhost:1422', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('http://localhost:1420', { waitUntil: 'networkidle', timeout: 30000 });
     await page.waitForTimeout(2000);
     
     console.log('✅ App loaded\n');

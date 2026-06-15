@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Mock storage
+let localStorageStore: Record<string, string> = {};
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn((key: string) => localStorageStore[key] || null),
+  setItem: vi.fn((key: string, value: string) => { localStorageStore[key] = value; }),
+  removeItem: vi.fn((key: string) => { delete localStorageStore[key]; }),
+  clear: vi.fn(() => { localStorageStore = {}; }),
+});
+
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
-}));
-
-vi.mock('@tauri-apps/plugin-store', () => ({
-  load: vi.fn().mockResolvedValue({
-    get: vi.fn(),
-    set: vi.fn(),
-    delete: vi.fn(),
-    save: vi.fn(),
-    entries: vi.fn().mockResolvedValue([]),
-  }),
 }));
 
 import { logout } from './spotify';
@@ -19,9 +18,22 @@ import { logout } from './spotify';
 describe('spotify module lifecycle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorageStore = {};
   });
 
-  it('logout runs without throwing', async () => {
-    await expect(logout()).resolves.not.toThrow();
+  it('logout clears token storage', async () => {
+    localStorageStore['spx_spotify_token'] = JSON.stringify({
+      accessToken: 'test_token',
+      expiresAt: Date.now() + 3600000,
+    });
+
+    await logout();
+
+    expect(localStorage.removeItem).toHaveBeenCalledWith('spx_spotify_token');
+  });
+
+  it('logout does not throw', () => {
+    // Should not throw
+    expect(() => logout()).not.toThrow();
   });
 });

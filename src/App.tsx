@@ -263,7 +263,16 @@ function App() {
             )}
 
             {authErr && (
-              <p className="auth-error">{authError.value}</p>
+              <div className="auth-error-box">
+                <p className="auth-error-title">Authentication Failed</p>
+                <p className="auth-error-message">{authError.value}</p>
+                <ul className="auth-error-solutions">
+                  <li>Make sure you have a Spotify Premium account</li>
+                  <li>Check that Spotify.com is accessible</li>
+                  <li>Try clicking the button again</li>
+                  <li>Allow popups if prompted by your browser</li>
+                </ul>
+              </div>
             )}
 
             <p className="auth-footer">

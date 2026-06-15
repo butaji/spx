@@ -1,9 +1,6 @@
 use crate::mdns::browse_service;
-use crate::spotify;
-use crate::spotify_backend;
 use std::collections::HashSet;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -17,6 +14,81 @@ pub fn is_mock_mode() -> bool {
         || std::env::var("VITE_SPX_MOCK").unwrap_or_default() == "1"
 }
 
+/// Check if Spotify credentials are properly configured.
+/// Returns detailed status for the frontend to display.
+#[tauri::command]
+pub fn check_credentials_status() -> Result<serde_json::Value, String> {
+    debug!("Checking credentials status");
+
+    let client_id_result = std::env::var("SPOTIFY_CLIENT_ID")
+        .or_else(|_| std::env::var("VITE_SPOTIFY_CLIENT_ID"))
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    let client_secret_result = std::env::var("SPOTIFY_CLIENT_SECRET")
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    let (client_id_status, client_id_value) = match client_id_result {
+        Some(id) if id == "your_client_id_here" => (
+            "placeholder",
+            "Contains placeholder value 'your_client_id_here'".to_string(),
+        ),
+        Some(id) => ("ok", id),
+        None => ("missing", "Not set".to_string()),
+    };
+
+    let (client_secret_status, client_secret_value) = match client_secret_result {
+        Some(secret) if secret == "your_client_secret_here" => (
+            "placeholder",
+            "Contains placeholder value 'your_client_secret_here'".to_string(),
+        ),
+        Some(_) => ("ok", "[SET]".to_string()),
+        None => ("missing", "Not set".to_string()),
+    };
+
+    let configured = client_id_status == "ok"
+        && client_secret_status == "ok"
+        && client_id_value != "your_client_id_here";
+
+    Ok(serde_json::json!({
+        "configured": configured,
+        "clientId": {
+            "status": client_id_status,
+            "value": if client_id_status == "ok" { "[CONFIGURED]" } else { &client_id_value }
+        },
+        "clientSecret": {
+            "status": client_secret_status,
+            "value": client_secret_value
+        },
+        "instructions": if !configured {
+            Some({
+                let id_hint = if client_id_status == "missing" {
+                    "SPOTIFY_CLIENT_ID is not set"
+                } else {
+                    "SPOTIFY_CLIENT_ID contains placeholder"
+                };
+                let secret_hint = if client_secret_status == "missing" {
+                    "SPOTIFY_CLIENT_SECRET is not set"
+                } else {
+                    "SPOTIFY_CLIENT_SECRET contains placeholder"
+                };
+                format!(
+                    "{}\n{}\n\nFix: Edit the .env file in the project root:\n\
+                    SPOTIFY_CLIENT_ID=<your_real_client_id>\n\
+                    SPOTIFY_CLIENT_SECRET=<your_real_client_secret>\n\n\
+                    Get credentials from: https://developer.spotify.com/dashboard",
+                    id_hint, secret_hint
+                )
+            })
+        } else {
+            None
+        }
+    }))
+}
+
 #[tauri::command]
 pub fn get_spotify_client_id() -> Result<String, String> {
     debug!("get_spotify_client_id called");
@@ -24,13 +96,28 @@ pub fn get_spotify_client_id() -> Result<String, String> {
         debug!("Mock mode: returning mock client ID");
         return Ok("mock_client_id".to_string());
     }
+
     // Try env vars first
     if let Ok(id) = std::env::var("SPOTIFY_CLIENT_ID") {
-        return Ok(id);
+        let id = id.trim();
+        if !id.is_empty() && id != "your_client_id_here" {
+            return Ok(id.to_string());
+        }
+        if id == "your_client_id_here" {
+            return Err(
+                "SPOTIFY_CLIENT_ID contains placeholder 'your_client_id_here'.\n\n\
+                Get your real Client ID from https://developer.spotify.com/dashboard\n\
+                and update the .env file.".to_string()
+            );
+        }
     }
     if let Ok(id) = std::env::var("VITE_SPOTIFY_CLIENT_ID") {
-        return Ok(id);
+        let id = id.trim();
+        if !id.is_empty() && id != "your_client_id_here" {
+            return Ok(id.to_string());
+        }
     }
+
     // Try bundled config file (Resources is at Contents/Resources, not MacOS/Resources)
     if let Ok(exe_path) = std::env::current_exe() {
         // Standard bundled app: Contents/Resources/
@@ -38,7 +125,7 @@ pub fn get_spotify_client_id() -> Result<String, String> {
             let config_path = contents_dir.join("Resources/spx_client_id.txt");
             if let Ok(id) = std::fs::read_to_string(&config_path) {
                 let id = id.trim().to_string();
-                if !id.is_empty() {
+                if !id.is_empty() && id != "your_client_id_here" {
                     debug!("Loaded client ID from bundle config: {:?}", config_path);
                     return Ok(id);
                 }
@@ -49,14 +136,22 @@ pub fn get_spotify_client_id() -> Result<String, String> {
             let dev_path = mac_dir.join("Resources/spx_client_id.txt");
             if let Ok(id) = std::fs::read_to_string(&dev_path) {
                 let id = id.trim().to_string();
-                if !id.is_empty() {
+                if !id.is_empty() && id != "your_client_id_here" {
                     debug!("Loaded client ID from dev config: {:?}", dev_path);
                     return Ok(id);
                 }
             }
         }
     }
-    Err("SPOTIFY_CLIENT_ID must be set".to_string())
+
+    Err(
+        "Spotify Client ID not configured.\n\n\
+        Go to https://developer.spotify.com/dashboard to get your Client ID,\n\
+        then add it to the .env file:\n\n\
+        SPOTIFY_CLIENT_ID=YOUR_CLIENT_ID\n\
+        SPOTIFY_CLIENT_SECRET=YOUR_CLIENT_SECRET\n\n\
+        Then restart the app.".to_string()
+    )
 }
 
 #[tauri::command]
@@ -125,7 +220,7 @@ pub async fn start_callback_server(expected_state: Option<String>) -> Result<Opt
                 }
 
                 if let Some(err) = error {
-                    let body = format!("<html><body><h1>❌ Auth Failed</h1><p>{}</p></body></html>", err);
+                    let body = format!("<html><body style='font-family:sans-serif;padding:40px'><h1 style='color:#e53935'>Authentication Failed</h1><p style='color:#666'>Error: {}</p><p style='margin-top:20px'>This window will not close automatically.<br>Return to the SPX app to see the error details.</p></body></html>", err);
                     let response = format!(
                         "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
                         body.len(), body
@@ -138,7 +233,7 @@ pub async fn start_callback_server(expected_state: Option<String>) -> Result<Opt
                 // Validate state if caller provided one.
                 if let Some(expected) = expected_state {
                     if state.as_ref() != Some(&expected) {
-                        let body = "<html><body><h1>❌ Auth Failed</h1><p>Invalid state parameter.</p></body></html>";
+                        let body = "<html><body style='font-family:sans-serif;padding:40px'><h1 style='color:#e53935'>Authentication Failed</h1><p style='color:#666'>Invalid state parameter. Please try signing in again.</p><p style='margin-top:20px'>Return to the SPX app to retry.</p></body></html>";
                         let response = format!(
                             "HTTP/1.1 403 Forbidden\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
                             body.len(), body
@@ -150,9 +245,9 @@ pub async fn start_callback_server(expected_state: Option<String>) -> Result<Opt
                 }
 
                 let body = if code.is_some() {
-                    "<html><body style='font-family:sans-serif;text-align:center;padding:40px'><h1>✅ Auth Successful!</h1><p>You can close this window and return to SPX.</p></body></html>"
+                    "<html><body style='font-family:sans-serif;text-align:center;padding:40px'><h1 style='color:#4caf50'>Authentication Successful!</h1><p style='color:#666'>You can close this window and return to SPX.</p><script>setTimeout(function() { window.close(); }, 1500);</script></body></html>"
                 } else {
-                    "<html><body><h1>❌ Auth Failed</h1><p>No authorization code received.</p></body></html>"
+                    "<html><body style='font-family:sans-serif;padding:40px'><h1 style='color:#e53935'>Authentication Failed</h1><p style='color:#666'>No authorization code received.</p><p style='margin-top:20px'>Return to the SPX app and try again.</p></body></html>"
                 };
 
                 let response = format!(
@@ -457,53 +552,4 @@ pub fn request_macos_local_network_permission() -> String {
     {
         "Not on macOS".to_string()
     }
-}
-
-#[derive(serde::Serialize, Clone, Debug)]
-pub struct SpotifyTokenInfo {
-    pub access_token: String,
-    pub expires_in: i64,
-    pub expires_at: Option<i64>,
-}
-
-fn token_info(token: rspotify::Token) -> SpotifyTokenInfo {
-    SpotifyTokenInfo {
-        access_token: token.access_token,
-        expires_in: token.expires_in.num_seconds(),
-        expires_at: token.expires_at.map(|dt| dt.timestamp_millis()),
-    }
-}
-
-#[tauri::command]
-pub async fn authenticate_librespot() -> Result<SpotifyTokenInfo, String> {
-    let client = Arc::new(
-        spotify::new_spotify_client(true)
-            .await
-            .map_err(|e| e.to_string())?,
-    );
-    spotify_backend::install_client(client).await;
-    let token = spotify_backend::current_token()
-        .await?
-        .ok_or_else(|| "No token after librespot authentication".to_string())?;
-    Ok(token_info(token))
-}
-
-#[tauri::command]
-pub async fn restore_librespot_session() -> Result<SpotifyTokenInfo, String> {
-    let client = Arc::new(
-        spotify::new_spotify_client(false)
-            .await
-            .map_err(|e| e.to_string())?,
-    );
-    spotify_backend::install_client(client).await;
-    let token = spotify_backend::current_token()
-        .await?
-        .ok_or_else(|| "No token after restoring librespot session".to_string())?;
-    Ok(token_info(token))
-}
-
-#[tauri::command]
-pub async fn clear_librespot_session() -> Result<(), String> {
-    spotify_backend::clear_client().await;
-    Ok(())
 }

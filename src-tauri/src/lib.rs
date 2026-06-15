@@ -3,11 +3,9 @@
 pub mod actors;
 pub mod commands;
 pub mod mdns;
-pub mod spotify;
+pub mod oauth_callback;
 pub mod spotify_cast;
 pub mod cast_raw_auth;
-pub mod spotify_backend;
-pub mod ws_server;
 pub mod media_keys;
 pub mod now_playing;
 mod menu;
@@ -63,6 +61,9 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
+            // Start OAuth callback server on port 1241
+            oauth_callback::start_oauth_callback_server(app.handle().clone());
+            
             // Build the macOS menu bar.
             #[cfg(target_os = "macos")]
             {
@@ -74,65 +75,18 @@ pub fn run() {
                 tracing::warn!("Failed to register media key shortcuts: {}", e);
             }
 
-            // Start the WebSocket backend inside the GUI process. This avoids
-            // macOS 26 issues where launching a secondary binary from inside an
-            // .app bundle hangs at dyld_start in headless/non-GUI contexts, and
-            // it lets users launch SPX with a single binary.
-            let ws_port = 1424;
-            let addr = std::net::SocketAddr::from(([127, 0, 0, 1], ws_port));
-
-            // Try to bind the port ourselves first to avoid racing with another process.
-            match std::net::TcpListener::bind(addr) {
-                Ok(listener) => {
-                    // We own the port; release it so the async server can bind.
-                    drop(listener);
-                    eprintln!("[SPX] Starting in-process ws-server on port {}", ws_port);
-                    tracing::info!("Starting in-process ws-server on port {}", ws_port);
-                    tauri::async_runtime::spawn(async move {
-                        let result = ws_server::run_server().await;
-                        match result {
-                            Ok(_) => tracing::info!("WS server exited normally"),
-                            Err(e) => {
-                                eprintln!("[SPX] WS server error: {}", e);
-                                tracing::error!("WS server error: {}", e);
-                            }
-                        }
-                    });
-                }
-                Err(bind_err) => {
-                    // Port is taken. Determine whether it is already a SPX backend or something else.
-                    match std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(500)) {
-                        Ok(_) => {
-                            tracing::warn!(
-                                "Port {} is already in use (bind failed: {}). SPX will attempt to use the existing listener, but it may be a stale or foreign service.",
-                                ws_port, bind_err
-                            );
-                        }
-                        Err(conn_err) => {
-                            tracing::error!(
-                                "Port {} cannot be bound ({}) and no existing listener is reachable ({}). The WebSocket backend will not be available.",
-                                ws_port, bind_err, conn_err
-                            );
-                        }
-                    }
-                }
-            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
 
             commands::get_spotify_client_id,
-            commands::start_callback_server,
-            commands::is_mock_mode,
+            commands::check_credentials_status,
             commands::scan_spotify_devices,
             commands::wake_cast_device,
             commands::authenticate_cast_device_command,
             commands::authenticate_cast_device_raw_command,
             commands::diagnose_network,
             commands::request_macos_local_network_permission,
-            commands::authenticate_librespot,
-            commands::restore_librespot_session,
-            commands::clear_librespot_session,
             now_playing::update_now_playing,
             now_playing::clear_now_playing,
         ])

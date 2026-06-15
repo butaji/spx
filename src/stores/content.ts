@@ -346,14 +346,15 @@ export async function buildHomeFeed(): Promise<void> {
   const items: HomeFeedItem[] = [];
 
   try {
-    const tracks = await withRetry(() => getTopTracks(50, "short_term"));
+    const tracks = await withRetry(() => getTopTracks(50, "short_term")) as any[];
     const albumMap = new Map<
       string,
       { name: string; image: string; uri: string; artist: string; count: number }
     >();
 
     for (const track of tracks) {
-      const a = track.album;
+      if (!('album' in track)) continue; // Skip artists
+      const a = (track as any).album;
       if (!a?.id) continue;
       const entry = albumMap.get(a.id);
       if (entry) {
@@ -386,8 +387,8 @@ export async function buildHomeFeed(): Promise<void> {
   }
 
   try {
-    const artists = await getTopArtists(3, "short_term");
-    const radios = artists.map((a: SpotifyArtist) => ({
+    const artists = await getTopArtists(3, "short_term") as any[];
+    const radios = artists.map((a: any) => ({
       id: `radio-${a.id}`,
       name: `${a.name} Radio`,
       image: a.images?.[0]?.url || "",
@@ -466,11 +467,11 @@ export async function loadRecentActivity(): Promise<void> {
 
 export async function loadCategoryPlaylists(): Promise<void> {
   try {
-    const categories = await getBrowseCategories(10);
-    const allPlaylists: typeof categoryPlaylists.value = [];
+    const categories = await getBrowseCategories(10) as any[];
+    const allPlaylists: any[] = [];
     for (const category of categories.slice(0, 3)) {
       try {
-        const playlists = await getCategoryPlaylists(category.id, 5);
+        const playlists = await getCategoryPlaylists(category.id, 5) as any[];
         allPlaylists.push(...playlists.slice(0, 2));
       } catch (err) {
         console.warn("[Store] Failed to load category playlists:", category.id);
@@ -484,7 +485,7 @@ export async function loadCategoryPlaylists(): Promise<void> {
 
 export async function loadNewReleases(): Promise<void> {
   try {
-    const releases = await getNewReleases(10);
+    const releases = await getNewReleases(10) as any[];
     newReleases.value = releases;
   } catch (err) {
     console.warn("[Store] Failed to load new releases:", err);
