@@ -1,4 +1,5 @@
 import type { ComponentChildren } from 'preact';
+import { IconPlay, IconPause } from './icons';
 
 interface TrackRowProps {
   index?: number;
@@ -16,6 +17,42 @@ interface TrackRowProps {
   showAlbum?: boolean;
   showDuration?: boolean;
   extraColumns?: ComponentChildren[];
+  /** Whether this row represents the currently loaded track. */
+  isActive?: boolean;
+  /** Whether playback is currently active (only meaningful when isActive is true). */
+  isPlaying?: boolean;
+  /** Whether a play action for this track is in progress. */
+  isLoading?: boolean;
+}
+
+function TrackStatus({
+  isActive,
+  isPlaying,
+  isLoading,
+}: {
+  isActive?: boolean;
+  isPlaying?: boolean;
+  isLoading?: boolean;
+}) {
+  if (isLoading) {
+    return <span className="track-status-spinner" aria-hidden="true" />;
+  }
+
+  if (isActive && isPlaying) {
+    return (
+      <span className="track-equalizer" aria-label="Playing">
+        <span />
+        <span />
+        <span />
+      </span>
+    );
+  }
+
+  if (isActive && !isPlaying) {
+    return <IconPause size={14} className="track-status-icon track-status-pause" />;
+  }
+
+  return <IconPlay size={14} className="track-status-icon track-status-play" />;
 }
 
 export function TrackRow({
@@ -34,6 +71,9 @@ export function TrackRow({
   showAlbum = true,
   showDuration = true,
   extraColumns = [],
+  isActive = false,
+  isPlaying = false,
+  isLoading = false,
 }: TrackRowProps) {
   const formatDuration = (ms?: number) => {
     if (!ms) return '';
@@ -45,14 +85,20 @@ export function TrackRow({
 
   return (
     <div
-      className="track"
+      className={`track ${isActive ? 'active' : ''} ${isLoading ? 'loading' : ''}`}
       role="button"
       tabIndex={0}
       onClick={onClick}
       onKeyDown={onKeyDown}
       aria-label={ariaLabel || `${name}${artists ? ` by ${artists}` : ''}`}
+      aria-current={isActive ? 'true' : undefined}
     >
-      {showIndex && index !== undefined && <div className="track-num">{index + 1}</div>}
+      {showIndex && index !== undefined && (
+        <div className="track-num">
+          <span className="track-index">{index + 1}</span>
+          <TrackStatus isActive={isActive} isPlaying={isPlaying} isLoading={isLoading} />
+        </div>
+      )}
       {showArt && imageUrl && (
         <div className="track-art" style={{ background: `url(${imageUrl}) center/cover` }} />
       )}

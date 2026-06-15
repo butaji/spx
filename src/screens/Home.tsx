@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/compat";
 import { getArtist, getArtistTopTracks } from "../lib/spotify";
-import { loadRecentActivity, lastPlayedTrack } from "../stores/spotify";
+import { loadRecentActivity, lastPlayedTrack, playbackTrack, isPlaying } from "../stores/spotify";
 import { View } from "../types";
 import type { SpotifyArtist } from "../types";
 
@@ -123,6 +123,8 @@ export default function Home({
         topTracks={artistTopTracks}
         tags={tags}
         onPlayUris={onPlayUris}
+        currentTrackId={playbackTrack.value?.id}
+        isPlaying={isPlaying.value}
       />
 
       {feedError && (

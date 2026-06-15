@@ -3,8 +3,9 @@ import type { KeyboardEvent } from "preact/compat";
 import { search } from "../lib/spotify";
 import { View } from "../types";
 import { SpotifyTrack, SpotifyAlbum, SpotifyArtist, SpotifyPlaylist, SpotifySearchResults } from "../types";
-import { formatTime } from "../lib/utils";
 import { IconPlay, IconClock, IconX } from "../components/icons";
+import { TrackRow } from "../components/TrackRow";
+import { playbackTrack, isPlaying } from "../stores/spotify";
 
 type Filter = "all" | "tracks" | "albums" | "artists" | "playlists";
 
@@ -207,27 +208,19 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
                   <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "var(--fg)" }}>Tracks</h2>
                   <div className="tracklist">
                     {(results.tracks?.items || []).map((track, i) => (
-                      <div
+                      <TrackRow
                         key={track.id}
-                        className="track"
-                        role="button"
-                        tabIndex={0}
+                        index={i}
+                        name={track.name}
+                        artists={track.artists?.map((a) => a.name).join(", ")}
+                        durationMs={track.duration_ms || 0}
+                        imageUrl={track.album?.images?.[0]?.url}
                         onClick={() => playTrack(track)}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playTrack(track); } }}
-                        aria-label={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
-                      >
-                        <div className="track-num">{i + 1}</div>
-                        <div className="track-art" style={{
-                          background: track.album?.images?.[0]?.url ? `url(${track.album.images[0].url}) center/cover` : undefined
-                        }} />
-                        <div className="track-info">
-                          <div className="track-title">{track.name}</div>
-                          <div className="track-album">{track.artists?.map((a) => a.name).join(", ")}</div>
-                        </div>
-                        <div />
-                        <div />
-                        <div className="track-dur">{formatTime(track.duration_ms || 0)}</div>
-                      </div>
+                        isActive={track.id === playbackTrack.value?.id}
+                        isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
+                        ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
+                      />
                     ))}
                   </div>
                 </section>
@@ -332,33 +325,49 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
             </>
           ) : (
             <div className="tracklist">
-              {getItems().map((item, i) => (
-                <div
-                  key={`${item.type}-${("id" in item.data ? item.data.id : i)}-${i}`}
-                  className="track"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleItemClick(item)}
-                  onKeyDown={(e) => handleItemKeyDown(e, item)}
-                  aria-label={`${item.data.name} - ${item.type === "track" ? (item.data as SpotifyTrack).artists?.map((a) => a.name).join(", ") : item.type}`}
-                >
-                  <div className="track-num">{i + 1}</div>
-                  <div className="track-art" style={{
-                    background: ("images" in item.data && item.data.images?.[0]?.url) || ("album" in item.data && (item.data as SpotifyTrack).album?.images?.[0]?.url)
-                      ? `url(${(("images" in item.data && item.data.images?.[0]?.url) ? (item.data as SpotifyTrack | SpotifyArtist).images?.[0]?.url : (item.data as SpotifyTrack).album?.images?.[0]?.url)}) center/cover`
-                      : undefined
-                  }} />
-                  <div className="track-info">
-                    <div className="track-title">{item.data.name}</div>
-                    <div className="track-album">
-                      {item.type === "track" ? (item.data as SpotifyTrack).artists?.map((a) => a.name).join(", ") : item.type.toUpperCase()}
+              {getItems().map((item, i) => {
+                const track = item.type === "track" ? (item.data as SpotifyTrack) : null;
+                const imageUrl = ("images" in item.data && item.data.images?.[0]?.url)
+                  ? (item.data as SpotifyTrack | SpotifyArtist).images?.[0]?.url
+                  : track?.album?.images?.[0]?.url;
+                return track ? (
+                  <TrackRow
+                    key={`track-${track.id}-${i}`}
+                    index={i}
+                    name={track.name}
+                    artists={track.artists?.map((a) => a.name).join(", ")}
+                    durationMs={track.duration_ms || 0}
+                    imageUrl={imageUrl}
+                    onClick={() => handleItemClick(item)}
+                    onKeyDown={(e) => handleItemKeyDown(e, item)}
+                    isActive={track.id === playbackTrack.value?.id}
+                    isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
+                    ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
+                  />
+                ) : (
+                  <div
+                    key={`${item.type}-${("id" in item.data ? item.data.id : i)}-${i}`}
+                    className="track"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleItemClick(item)}
+                    onKeyDown={(e) => handleItemKeyDown(e, item)}
+                    aria-label={`${item.data.name} - ${item.type}`}
+                  >
+                    <div className="track-num"><span className="track-index">{i + 1}</span></div>
+                    <div className="track-art" style={{
+                      background: imageUrl ? `url(${imageUrl}) center/cover` : undefined
+                    }} />
+                    <div className="track-info">
+                      <div className="track-title">{item.data.name}</div>
+                      <div className="track-album">{item.type.toUpperCase()}</div>
                     </div>
+                    <div />
+                    <div />
+                    <div className="track-dur" />
                   </div>
-                  <div />
-                  <div />
-                  <div className="track-dur" />
-                </div>
-              ))}
+                );
+              })}
               {getItems().length === 0 && (
                 <div className="empty-state">
                   <p className="text-sm text-muted">No results</p>

@@ -32,14 +32,15 @@ interface DeviceCategory {
 }
 
 const DEVICE_CATEGORIES: Record<string, DeviceCategory> = {
-  "this-computer": { name: "This computer", icon: IconMonitor },
+  "this-computer": { name: "This Mac", icon: IconMonitor },
+  "spotify-connect": { name: "Spotify Connect", icon: IconMonitor },
   "google-cast": { name: "Google Cast", icon: IconMonitor },
   "cast-audio": { name: "Speakers", icon: IconVolume },
   "smart-speaker": { name: "Smart Speakers", icon: IconSpeaker },
   "other": { name: "Other devices", icon: IconMobile },
 };
 
-const CATEGORY_ORDER = ["this-computer", "google-cast", "cast-audio", "smart-speaker", "other"];
+const CATEGORY_ORDER = ["this-computer", "spotify-connect", "google-cast", "cast-audio", "smart-speaker", "other"];
 
 function categorizeDevice(
   device: SpotifyDevice & { isLocal?: boolean }
@@ -47,8 +48,14 @@ function categorizeDevice(
   const type = device.type?.toLowerCase() || "";
   const name = device.name?.toLowerCase() || "";
 
-  if (device.isLocal === false && device.id !== "spx-player") {
+  // The in-app SPX Player is always the primary "This Mac" target.
+  if (device.id === "spx-player") {
     return "this-computer";
+  }
+
+  // Other Spotify Connect devices on this computer/network.
+  if (device.isLocal === false || type === "computer" || name.includes("this computer")) {
+    return "spotify-connect";
   }
 
   if (
@@ -372,17 +379,21 @@ function DeviceSelector({ onRefreshLocal }: Props) {
                           <TransferStatus stage={transferStage} />
                         ) : (
                           <>
-                            {!(device as any).isLocal && (
+                            {device.id === "spx-player" && (
+                              <span className="device-tag spotify-connect">This Mac</span>
+                            )}
+                            {device.id !== "spx-player" && category === "spotify-connect" && (
                               <span className="device-tag spotify-connect">Spotify Connect</span>
                             )}
-                            {(device as any).isLocal && (device as any).needsWakeUp && (
+                            {(category === "google-cast" || category === "cast-audio") && (
                               <span className="device-tag cast-device">Cast device</span>
                             )}
-                            {(device as any).isLocal &&
-                              (device as any).canTransfer &&
-                              !(device as any).needsWakeUp && (
-                                <span className="device-tag spotify-connect">Spotify Connect</span>
-                              )}
+                            {category === "smart-speaker" && (
+                              <span className="device-tag cast-device">Smart Speaker</span>
+                            )}
+                            {category === "other" && device.id !== "spx-player" && (
+                              <span className="device-tag">{device.type || "Device"}</span>
+                            )}
                             {!device.is_active && device.is_restricted && (
                               <span className="device-tag restricted">Restricted</span>
                             )}

@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback, useRef } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getUserPlaylists, getSavedTracks, getSavedAlbums, getTopTracks } from "../lib/spotify";
 import { getCached, setCache } from "../lib/cache";
-import { formatTime } from "../lib/utils";
 import { View } from "../types";
 import { SpotifyPlaylist, SpotifyTrack, SpotifyAlbum } from "../types";
 import { Artwork } from "../components/Artwork";
+import { TrackRow } from "../components/TrackRow";
+import { playbackTrack, isPlaying } from "../stores/spotify";
 
 type Tab = "playlists" | "tracks" | "albums" | "top";
 
@@ -206,38 +207,25 @@ export default function Library({ onPlayUris, onNavigate }: Props) {
         </div>
       ) : (
         <div className="tracklist">
-          {items.map((item, i) => (
-            <div
-              key={item.id}
-              className="track"
-              role="button"
-              tabIndex={0}
-              onClick={() => handleTrackClick(item as SpotifyTrack)}
-              onKeyDown={(e) => handleTrackKeyDown(e, item as SpotifyTrack)}
-              aria-label={`${item.name} by ${(item as SpotifyTrack).artists?.map((a) => a.name).join(", ")}`}
-            >
-              <div className="track-num">{i + 1}</div>
-              <Artwork
-                src={(item as SpotifyTrack).album?.images?.[0]?.url}
-                alt=""
-                size={40}
-                className="track-art"
+          {items.map((item, i) => {
+            const track = item as SpotifyTrack;
+            return (
+              <TrackRow
+                key={track.id}
+                index={i}
+                name={track.name}
+                album={track.album?.name}
+                artists={track.artists?.map((a) => a.name).join(", ")}
+                durationMs={track.duration_ms || 0}
+                imageUrl={track.album?.images?.[0]?.url}
+                onClick={() => handleTrackClick(track)}
+                onKeyDown={(e) => handleTrackKeyDown(e, track)}
+                isActive={track.id === playbackTrack.value?.id}
+                isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
+                ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
               />
-              <div className="track-info">
-                <div className="track-title">{item.name}</div>
-                <div className="track-album">{(item as SpotifyTrack).artists?.map((a) => a.name).join(", ")}</div>
-              </div>
-              <div style={{
-                fontSize: 12,
-                color: "var(--fg-faint)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis"
-              }}>{(item as SpotifyTrack).album?.name}</div>
-              <div />
-              <div className="track-dur">{formatTime((item as SpotifyTrack).duration_ms || 0)}</div>
-            </div>
-          ))}
+            );
+          })}
           {items.length === 0 && (
             <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} role="status">
               No {tab === "top" ? "top tracks" : "tracks"} found

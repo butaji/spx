@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getArtist, getArtistTopTracks, getArtistAlbums } from "../lib/spotify";
 import { IconPlay, IconUsers, IconStar, IconDisc } from "../components/icons";
+import { TrackRow } from "../components/TrackRow";
+import { playbackTrack, isPlaying } from "../stores/spotify";
 import { SpotifyArtist, SpotifyTrack } from "../types";
 
 interface Props {
@@ -140,29 +142,19 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
           <h2 className="section-heading">Popular</h2>
           <div className="tracklist">
             {topTracks.map((track, i) => (
-              <div
+              <TrackRow
                 key={track.id}
-                className="track"
-                role="button"
-                tabIndex={0}
+                index={i}
+                name={track.name}
+                album={track.album?.name}
+                durationMs={track.duration_ms || 0}
+                imageUrl={track.album?.images?.[0]?.url}
                 onClick={() => onPlayUris([track.uri])}
                 onKeyDown={(e) => handleTrackKeyDown(e, track)}
-                aria-label={`${track.name} from ${track.album?.name}`}
-              >
-                <div className="track-num">
-                  {i + 1}
-                </div>
-                <div className="track-art" style={{
-                  background: track.album?.images?.[0]?.url ? `url(${track.album.images[0].url}) center/cover` : undefined
-                }} />
-                <div className="track-info">
-                  <div className="track-title">{track.name}</div>
-                  <div className="track-album">{track.album?.name}</div>
-                </div>
-                <div />
-                <div />
-                <div className="track-dur" />
-              </div>
+                isActive={track.id === playbackTrack.value?.id}
+                isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
+                ariaLabel={`${track.name} from ${track.album?.name}`}
+              />
             ))}
           </div>
 

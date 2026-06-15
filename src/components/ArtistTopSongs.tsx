@@ -20,6 +20,8 @@ interface ArtistTopSongsProps {
   topTracks: Track[];
   tags: string[];
   onPlayUris: (uris: string[], offset?: number) => void;
+  currentTrackId?: string | null;
+  isPlaying?: boolean;
 }
 
 export default function ArtistTopSongs({
@@ -27,6 +29,8 @@ export default function ArtistTopSongs({
   topTracks,
   tags,
   onPlayUris,
+  currentTrackId,
+  isPlaying,
 }: ArtistTopSongsProps) {
   if (!topTracks.length) return null;
 
@@ -47,7 +51,14 @@ export default function ArtistTopSongs({
 
       <div className="artist-tracks">
         {topTracks.map((track, i) => (
-          <SongRow key={track.id} track={track} index={i} onPlayUris={onPlayUris} />
+          <SongRow
+            key={track.id}
+            track={track}
+            index={i}
+            onPlayUris={onPlayUris}
+            isActive={track.id === currentTrackId}
+            isPlaying={isPlaying && track.id === currentTrackId}
+          />
         ))}
       </div>
     </div>
@@ -105,7 +116,13 @@ function PopularityBadge({ value }: { value: number }) {
   );
 }
 
-function SongRow({ track, index, onPlayUris }: { track: Track; index: number; onPlayUris: (uris: string[], offset?: number) => void }) {
+function SongRow({ track, index, onPlayUris, isActive, isPlaying }: {
+  track: Track;
+  index: number;
+  onPlayUris: (uris: string[], offset?: number) => void;
+  isActive?: boolean;
+  isPlaying?: boolean;
+}) {
   const handleClick = () => {
     if (track.uri) onPlayUris([track.uri]);
   };
@@ -117,11 +134,20 @@ function SongRow({ track, index, onPlayUris }: { track: Track; index: number; on
 
   return (
     <div
-      className="song-row"
+      className={`song-row ${isActive ? "active" : ""}`}
       onClick={handleClick}
+      aria-current={isActive ? "true" : undefined}
     >
       <div className="song-row-index">
-        {index + 1}
+        {isActive && isPlaying ? (
+          <span className="track-equalizer" aria-label="Playing">
+            <span />
+            <span />
+            <span />
+          </span>
+        ) : (
+          index + 1
+        )}
       </div>
 
       <AlbumArtwork image={track.album?.images?.[0]?.url} />
