@@ -9,6 +9,7 @@ import Home from "./screens/Home";
 import Search from "./screens/Search";
 import Library from "./screens/Library";
 import Queue from "./screens/Queue";
+import Diagnostics from "./screens/Diagnostics";
 import PlaylistDetail from "./screens/PlaylistDetail";
 import AlbumDetail from "./screens/AlbumDetail";
 import ArtistDetail from "./screens/ArtistDetail";
@@ -35,6 +36,7 @@ import { useAuth } from "./hooks/useAuth";
 import { usePlayback } from "./hooks/usePlayback";
 import { useDevices } from "./hooks/useDevices";
 import { useKeyboard } from "./hooks/useKeyboard";
+import { listen } from "@tauri-apps/api/event";
 
 import type { View, TrackInfo } from "./types";
 export type { View, TrackInfo } from "./types";
@@ -46,7 +48,7 @@ function getDerivedTrack(): TrackInfo | null {
     return {
       id: track.id,
       name: track.name,
-      artist: track.artists?.map(a => a.name).join(", ") || "Unknown",
+      artist: track.artists?.filter(Boolean).map(a => a.name).filter(Boolean).join(", ") || "Unknown",
       artistIds: track.artists?.map(a => a.id) || [],
       album: track.album?.name || "",
       durationMs: track.duration_ms ?? 0,
@@ -195,13 +197,40 @@ function App() {
     if (currentTrack) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTrack.name,
-        artist: currentTrack.artists?.map(a => a.name).join(", ") || "",
+        artist: currentTrack.artists?.filter(Boolean).map(a => a.name).filter(Boolean).join(", ") || "",
         album: currentTrack.album?.name || "",
         artwork: currentTrack.album?.images?.[0]?.url ? [{ src: currentTrack.album.images[0].url, sizes: '512x512', type: 'image/jpeg' }] : []
       });
       navigator.mediaSession.playbackState = isPlaying.value ? 'playing' : 'paused';
     }
   }, [handlePlayPause, handlePrev, handleNext, playbackTrack.value?.id, isPlaying.value]);
+
+  // Tauri media-key events from the Rust backend (global shortcuts)
+  useEffect(() => {
+    if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) return;
+
+    let unlisten: (() => void) | undefined;
+    const setup = async () => {
+      unlisten = await listen<{ action: string }>('media-key', (event) => {
+        switch (event.payload.action) {
+          case 'play_pause':
+            handlePlayPause();
+            break;
+          case 'next':
+            handleNext();
+            break;
+          case 'previous':
+            handlePrev();
+            break;
+        }
+      });
+    };
+    setup().catch(console.error);
+
+    return () => {
+      unlisten?.();
+    };
+  }, [handlePlayPause, handleNext, handlePrev]);
 
   // Show loading screen while restoring session
   if (isRestoring.value) {
@@ -303,6 +332,7 @@ function App() {
       case "search": return <Search {...common} initialQuery="" />;
       case "library": return <Library {...common} />;
       case "queue": return <Queue onPlayUris={playUrisFn} />;
+      case "diagnostics": return <Diagnostics />;
 
       case "playlist": return <PlaylistDetail id={view.id} name={view.name} {...common} />;
       case "album": return <AlbumDetail id={view.id} name={view.name} {...common} />;
@@ -367,10 +397,34 @@ function App() {
 }
 
 function BrowserConnect() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleBrowserAuth = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const { startAuthFlow } = await import("./lib/spotify");
+      await startAuthFlow();
+    } catch (e) {
+      console.error("[BrowserAuth] Failed to start auth:", e);
+      setIsLoading(false);
+    }
+  }, []);
+
   return (
-    <div>
-      <p className="auth-error">Spotify login is only available in the Tauri app.</p>
-    </div>
+    <button
+      className="btn-primary auth-btn"
+      onClick={handleBrowserAuth}
+      disabled={isLoading}
+    >
+      {isLoading ? (
+        <>
+          <span className="spinner-small" />
+          Connecting...
+        </>
+      ) : (
+        'Connect with Spotify'
+      )}
+    </button>
   );
 }
 

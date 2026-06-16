@@ -3,7 +3,7 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { h } from 'preact';
 import Library from './Library';
-import type { SpotifyTrack, SpotifyPlaylist, SpotifyAlbum } from '../types';
+import type { SpotifyTrack } from '../types';
 
 const mockTrack: SpotifyTrack = {
   id: 'track-1',

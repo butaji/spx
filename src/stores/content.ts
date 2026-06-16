@@ -86,8 +86,8 @@ export async function loadUserPlaylists(): Promise<void> {
   try {
     const playlists = await withRetry(() => getUserPlaylists());
     const items = (playlists as { items?: SpotifyPlaylist[] }).items ?? [];
-    userPlaylists.value = items;
-    setCache("user_playlists", items, CACHE_TTL.playlists);
+    userPlaylists.value = items.filter(Boolean);
+    setCache("user_playlists", items.filter(Boolean), CACHE_TTL.playlists);
   } catch (e) {
     console.warn("[Spotify] Failed to load playlists:", e);
   }
@@ -96,7 +96,7 @@ export async function loadUserPlaylists(): Promise<void> {
 export async function loadQueue(): Promise<void> {
   try {
     const queue = await getQueue();
-    playbackQueue.value = (queue.queue ?? []) as SpotifyTrack[];
+    playbackQueue.value = ((queue.queue ?? []) as SpotifyTrack[]).filter(Boolean);
   } catch (e) {
     console.warn("Failed to load queue:", e);
   }
@@ -111,8 +111,8 @@ export async function loadArtist(artistId: string): Promise<void> {
     ]);
 
     currentArtist.value = artist;
-    artistTopTracks.value = topTracksResult?.tracks ?? [];
-    artistAlbums.value = albumsResult?.items ?? [];
+    artistTopTracks.value = topTracksResult?.tracks?.filter(Boolean) ?? [];
+    artistAlbums.value = albumsResult?.items?.filter(Boolean) ?? [];
   } catch (e) {
     console.warn("Failed to load artist:", e);
   }
@@ -129,7 +129,7 @@ export async function loadRecentContainers(): Promise<void> {
         const track = items[0].track;
         lastPlayedTrack.value = {
           name: track.name,
-          artistName: track.artists?.map((a) => a.name).join(", ") || "",
+          artistName: track.artists?.filter(Boolean).map((a) => a.name).filter(Boolean).join(", ") || "",
           artistId: track.artists?.[0]?.id,
           albumName: track.album?.name || "",
           imageUrl: track.album?.images?.[0]?.url || "",
@@ -182,7 +182,7 @@ export async function loadRecentContainers(): Promise<void> {
             name: album.name || "Unknown Album",
             images: album.images || [],
             played_at: playedAt,
-            artistName: track.artists?.map((a: any) => a.name).join(", ") || "",
+            artistName: track.artists?.filter(Boolean).map((a: any) => a.name).filter(Boolean).join(", ") || "",
             uri: uri || album.uri,
           },
           playCount: 1,
@@ -249,7 +249,7 @@ export async function loadRecentContainers(): Promise<void> {
                     name: track.album?.name || "Spotify Mix",
                     images: track.album?.images || [],
                     played_at: playedAt,
-                    owner: track.artists?.map((a: any) => a.name).join(", ") || "",
+                    owner: track.artists?.filter(Boolean).map((a: any) => a.name).filter(Boolean).join(", ") || "",
                     uri: ctxUri,
                   },
                   playCount: 1,
@@ -364,7 +364,7 @@ export async function buildHomeFeed(): Promise<void> {
           name: a.name || "Unknown",
           image: a.images?.[0]?.url || "",
           uri: a.uri || `spotify:album:${a.id}`,
-          artist: track.artists?.map((x: any) => x.name).join(", ") || "",
+          artist: track.artists?.filter(Boolean).map((x: any) => x.name).filter(Boolean).join(", ") || "",
           count: 1,
         });
       }
@@ -388,7 +388,7 @@ export async function buildHomeFeed(): Promise<void> {
 
   try {
     const artists = await getTopArtists(3, "short_term") as any[];
-    const radios = artists.map((a: any) => ({
+    const radios = artists.filter(Boolean).map((a: any) => ({
       id: `radio-${a.id}`,
       name: `${a.name} Radio`,
       image: a.images?.[0]?.url || "",
@@ -440,6 +440,7 @@ export async function buildHomeFeed(): Promise<void> {
       }
       try {
         const pl = await getPlaylist(pid);
+        if (!pl) continue;
         items.push({
           id: pid,
           name: pl.name || "Playlist",
@@ -469,10 +470,10 @@ export async function loadCategoryPlaylists(): Promise<void> {
   try {
     const categories = await getBrowseCategories(10) as any[];
     const allPlaylists: any[] = [];
-    for (const category of categories.slice(0, 3)) {
+    for (const category of categories.filter(Boolean).slice(0, 3)) {
       try {
         const playlists = await getCategoryPlaylists(category.id, 5) as any[];
-        allPlaylists.push(...playlists.slice(0, 2));
+        allPlaylists.push(...playlists.filter(Boolean).slice(0, 2));
       } catch (err) {
         console.warn("[Store] Failed to load category playlists:", category.id);
       }

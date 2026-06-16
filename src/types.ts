@@ -308,6 +308,7 @@ export type View =
   | { type: "search" }
   | { type: "library"; tab?: string }
   | { type: "queue" }
+  | { type: "diagnostics" }
   | { type: "playlist"; id: string; name: string }
   | { type: "album"; id: string; name: string }
   | { type: "artist"; id: string; name: string };

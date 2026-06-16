@@ -206,8 +206,12 @@ export const mock = {
     mockPlaybackState.repeat_state = state;
   },
 
-  transferPlayback: async (_deviceId: string, _play = true): Promise<void> => {
-    // No-op in mock mode.
+  transferPlayback: async (deviceId: string, _play = true): Promise<void> => {
+    // Update the active device in mock state so the UI reflects the transfer.
+    MOCK_DEVICES.forEach((d) => {
+      d.is_active = d.id === deviceId;
+    });
+    mockPlaybackState.device = MOCK_DEVICES.find((d) => d.id === deviceId) ?? MOCK_DEVICES[0];
   },
 
   playContext: async (_contextUri: string, _offset?: number, _deviceId?: string): Promise<void> => {

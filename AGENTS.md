@@ -43,8 +43,30 @@ cargo clippy              # Rust linter
 
 | Directory | Purpose |
 |-----------|---------|
-| `src/` | Rust source (main.rs, actors, spotify_backend) |
+| `src/` | Rust source (main.rs, actors, spotify_backend, librespot_player) |
 | `capabilities/` | Tauri permissions |
+
+#### librespot Integration
+
+SPX can create a local Spotify Connect device using `librespot` crates:
+
+- `src-tauri/src/librespot_player.rs` — creates a `librespot_core::Session`, `librespot_playback::Player`, and `librespot_connect::Spirc` device.
+- `src-tauri/src/commands.rs` — exposes `start_local_connect_device` to the frontend.
+- `src/stores/devices.ts` — `startLocalConnectDevice()` triggers the backend and surfaces "SPX Connect" in the device list.
+
+The access token must include the `streaming` scope and must not be expired. A token obtained via SPX's existing PKCE browser flow works; `librespot-oauth` is also available as an alternative (`authenticate_librespot_oauth`).
+
+**Cast device support:** Google Cast receivers require a Spotify Web Player access token. SPX can obtain one in two ways:
+
+1. **Embedded WebView login** (recommended) — click the cookie/login button in the device selector. SPX opens a Spotify login window, captures the `sp_dc` cookie automatically, and stores it in the Tauri store.
+2. **Manual cookie** — set the `SPOTIFY_SP_DC` environment variable to the `sp_dc` cookie from an authenticated `https://open.spotify.com` session.
+
+- `src-tauri/src/web_player_token.rs` — fetches a Web Player token from `open.spotify.com/api/token` using `sp_dc` + TOTP.
+- `src-tauri/src/cookie_capture.rs` — embedded WebView that captures and persists `sp_dc`.
+- `src-tauri/src/spotify_cast.rs` — implements the modern Cast auth flow: `setCredentials` → `getInfo` → `spclient.wg.spotify.com/device-auth/v1/refresh` → `addUser`. This is the same flow used by Spotcast / pychromecast.
+- `src-tauri/src/commands.rs` — `authenticate_cast_device_command` / `authenticate_cast_device_raw_command` automatically use the Web Player token when a stored or env-var `sp_dc` is available.
+
+If no `sp_dc` is available, Cast activation falls back to the supplied access token (which fails for most Cast devices). In that case `selectDevice()` falls back to SPX Connect so playback still works on the local Mac.
 
 ## State Management
 
@@ -166,8 +188,10 @@ myState.value = newValue;
 |----------|----------|-------------|
 | `SPOTIFY_CLIENT_ID` | Yes | Spotify Developer App Client ID |
 | `SPOTIFY_CLIENT_SECRET` | Yes | Spotify Developer App Client Secret |
-| `SPOTIFY_REDIRECT_URI` | No | OAuth redirect (default: localhost:1422) |
+| `VITE_SPOTIFY_REDIRECT_URI` | No | OAuth redirect (default: `http://127.0.0.1:1422/callback`) |
+| `SPOTIFY_SP_DC` | No | Spotify Web Player `sp_dc` cookie; enables direct Google Cast activation |
 | `VITE_SPX_MOCK` | No | Set to "1" for mock mode |
+| `VITE_SPX_DIAGNOSTICS` | No | Set to "1" to show the Diagnostics tab in the sidebar |
 
 ## Tauri Commands
 

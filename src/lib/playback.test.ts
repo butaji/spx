@@ -4,9 +4,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('./spotify', () => ({
   getAccessToken: vi.fn(),
+  isMockMode: vi.fn(() => false),
 }));
 
-import { getAccessToken } from './spotify';
+import { getAccessToken, isMockMode } from './spotify';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -143,6 +144,7 @@ beforeEach(() => {
   clearSpotifySdk();
   document.body.innerHTML = '';
   installDomIntercepts();
+  (isMockMode as ReturnType<typeof vi.fn>).mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -420,7 +422,7 @@ describe('initPlayer — player event listeners', () => {
     const { initPlayer } = await import('./playback');
     await initPlayer();
 
-    const events = latestMockPlayer!.addListener.mock.calls.map((call: [string, unknown]) => call[0]);
+    const events = latestMockPlayer!.addListener.mock.calls.map((call: any[]) => call[0] as string);
 
     expect(events).toEqual([
       'ready',
@@ -575,5 +577,92 @@ describe('loadSpotifySdk — caching', () => {
     await initPlayer();
 
     expect(Player).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 8: waitForDeviceId
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('waitForDeviceId', () => {
+  it('returns the current device id immediately when ready', async () => {
+    setupSpotifySdk();
+    (getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue('token');
+
+    const { initPlayer, waitForDeviceId } = await import('./playback');
+    await initPlayer();
+    latestMockPlayer!._emit('ready', { device_id: 'device-123' });
+
+    const id = await waitForDeviceId();
+    expect(id).toBe('device-123');
+  });
+
+  it('resolves once the ready event fires', async () => {
+    setupSpotifySdk();
+    (getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue('token');
+
+    const { initPlayer, waitForDeviceId } = await import('./playback');
+    await initPlayer();
+
+    const waitPromise = waitForDeviceId(5000);
+    latestMockPlayer!._emit('ready', { device_id: 'device-456' });
+    expect(await waitPromise).toBe('device-456');
+  });
+
+  it('returns null when the device id does not arrive in time', async () => {
+    setupSpotifySdk();
+    (getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue('token');
+
+    const { initPlayer, waitForDeviceId } = await import('./playback');
+    await initPlayer();
+
+    const id = await waitForDeviceId(50);
+    expect(id).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 9: mock mode
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('initPlayer — mock mode', () => {
+  it('sets the mock SPX Player device id without loading the SDK', async () => {
+    clearSpotifySdk();
+    (getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue('token');
+    (isMockMode as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+    const { initPlayer, getDeviceId, onPlaybackEvent } = await import('./playback');
+    const handler = vi.fn();
+    onPlaybackEvent(handler);
+
+    await initPlayer();
+
+    expect(injectedScripts).toHaveLength(0);
+    expect(getDeviceId()).toBe('spx-player');
+    expect(handler).toHaveBeenCalledWith({ type: 'ready', data: { device_id: 'spx-player' } });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 10: reconnect after not_ready
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('initPlayer — reconnect', () => {
+  it('schedules a reconnect when the current device goes not_ready', async () => {
+    setupSpotifySdk();
+    (getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue('token');
+
+    const { initPlayer, getDeviceId } = await import('./playback');
+    await initPlayer();
+
+    latestMockPlayer!._emit('ready', { device_id: 'device-123' });
+    expect(getDeviceId()).toBe('device-123');
+
+    latestMockPlayer!._emit('not_ready', { device_id: 'device-123' });
+    expect(getDeviceId()).toBeNull();
+
+    // A new player should be created after the reconnect delay.
+    await vi.advanceTimersByTimeAsync(1500);
+    expect((window as any).Spotify.Player).toHaveBeenCalledTimes(2);
   });
 });

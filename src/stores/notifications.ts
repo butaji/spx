@@ -6,7 +6,7 @@
  */
 
 import { signal, computed } from "@preact/signals";
-import { ErrorCategory, AppError, ErrorSeverity } from "../lib/errors";
+import { ErrorCategory, AppError, ErrorSeverity, createError } from "../lib/errors";
 import type { IconName } from "../components/icons";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -415,7 +415,6 @@ export function updateSystemHealth(health: Partial<{
  */
 export function handleAuthError(error: unknown): string {
   authStatus.value = "expired";
-  const { createError } = require("../lib/errors");
   const appError = createError(error);
   return showAppError(appError);
 }

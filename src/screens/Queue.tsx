@@ -18,7 +18,7 @@ export default function Queue({ onPlayUris }: Props) {
     try {
       const data = await getQueue() as SpotifyQueueResponse;
       setCurrent(data.currently_playing || null);
-      setQueue(data.queue || []);
+      setQueue((data.queue || []).filter(Boolean));
     } catch (e) {
       console.error("Failed to load queue:", e);
     } finally {
@@ -31,7 +31,7 @@ export default function Queue({ onPlayUris }: Props) {
   }, [loadQueue]);
 
   const playFromQueue = useCallback((index: number) => {
-    const uris = ([current?.uri, ...queue.map((q) => q.uri)].filter(Boolean) as string[]);
+    const uris = ([current?.uri, ...queue.filter(Boolean).map((q) => q.uri)].filter(Boolean) as string[]);
     const adjustedOffset = current?.uri ? index : Math.max(0, index - 1);
     onPlayUris(uris, adjustedOffset);
   }, [current, queue, onPlayUris]);
@@ -113,7 +113,7 @@ export default function Queue({ onPlayUris }: Props) {
             }} />
             <div className="queue-item-info">
               <div className="queue-item-title">{current.name}</div>
-              <div className="queue-item-artist">{current.artists?.map((a) => a.name).join(", ")}</div>
+              <div className="queue-item-artist">{current.artists?.filter(Boolean).map((a) => a.name).join(", ")}</div>
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function Queue({ onPlayUris }: Props) {
             Next in Queue ({queue.length})
           </div>
           <div className="queue-list" role="list">
-            {queue.map((item, i) => (
+            {queue.filter(Boolean).map((item, i) => (
               <div
                 key={`${item.id}-${i}`}
                 className={`queue-item ${draggedIndex === i ? 'dragging' : ''}`}
@@ -137,7 +137,7 @@ export default function Queue({ onPlayUris }: Props) {
                 onDragStart={() => handleDragStart(i)}
                 onDragOver={(e) => handleDragOver(e, i)}
                 onDragEnd={handleDragEnd}
-                aria-label={`${item.name} by ${item.artists?.map((a) => a.name).join(", ")}`}
+                aria-label={`${item.name} by ${item.artists?.filter(Boolean).map((a) => a.name).join(", ")}`}
               >
                 <span className="drag-handle">
                   <IconDrag size={14} />
@@ -147,7 +147,7 @@ export default function Queue({ onPlayUris }: Props) {
                 }} />
                 <div className="queue-item-info">
                   <div className="queue-item-title">{item.name}</div>
-                  <div className="queue-item-artist">{item.artists?.map((a) => a.name).join(", ")}</div>
+                  <div className="queue-item-artist">{item.artists?.filter(Boolean).map((a) => a.name).join(", ")}</div>
                 </div>
                 <span className="queue-item-position">{i + 1}</span>
               </div>

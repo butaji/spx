@@ -7,7 +7,7 @@ import type { SpotifyDevice } from '../types';
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function createMockSignal<T>(initial: T) {
+function createMockSignal<T>(initial: T): { value: T } {
   let value = initial;
   return {
     get value() {
@@ -27,6 +27,7 @@ function renderUseDevices() {
     return null;
   }
 
+  // @ts-ignore — preact render types are strict in this environment but runtime works
   render(h(Wrapper), document.createElement('div'));
 
   if (!result) {
@@ -41,14 +42,19 @@ function renderUseDevices() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const mockCurrentDeviceId = vi.hoisted(() => ({ value: null as string | null }));
+const mockAvailableDevices = vi.hoisted(() => createMockSignal<SpotifyDevice[]>([]));
+const mockAllDevices = vi.hoisted(() => createMockSignal<Array<SpotifyDevice & { isLocal?: boolean; deviceIp?: string }>>([]));
+const mockSelectedDeviceId = vi.hoisted(() => createMockSignal<string | null>(null));
+const mockIsTransferring = vi.hoisted(() => createMockSignal<boolean>(false));
 
 vi.mock('../stores/devices', () => ({
   refreshSpotifyDevices: vi.fn(),
   refreshLocalDevices: vi.fn(),
-  availableDevices: createMockSignal<SpotifyDevice[]>([]),
-  allDevices: createMockSignal<Array<SpotifyDevice & { isLocal?: boolean; deviceIp?: string }>>([]),
-  selectedDeviceId: createMockSignal<string | null>(null),
+  availableDevices: mockAvailableDevices,
+  allDevices: mockAllDevices,
+  selectedDeviceId: mockSelectedDeviceId,
   selectDevice: vi.fn(),
+  isTransferring: mockIsTransferring,
 }));
 
 vi.mock('../lib/spotify', () => ({
@@ -59,6 +65,7 @@ vi.mock('../lib/playback', () => ({
   get currentDeviceId() {
     return mockCurrentDeviceId.value;
   },
+  waitForDeviceId: vi.fn(() => Promise.resolve(null)),
 }));
 
 vi.mock('../stores/notifications', () => ({
@@ -69,8 +76,6 @@ vi.mock('../stores/notifications', () => ({
 import {
   refreshSpotifyDevices,
   refreshLocalDevices,
-  availableDevices,
-  allDevices,
   selectDevice,
 } from '../stores/devices';
 import { transferPlayback } from '../lib/spotify';
@@ -84,8 +89,8 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.resetAllMocks();
 
-  availableDevices.value = [];
-  allDevices.value = [];
+  mockAvailableDevices.value = [];
+  mockAllDevices.value = [];
   mockCurrentDeviceId.value = null;
 });
 
@@ -103,8 +108,8 @@ describe('useDevices', () => {
     it('returns the active device id when one exists', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [{ id: 'active-device', name: 'Active Speaker', is_active: true }];
-      availableDevices.value = allDevices.value;
+      mockAllDevices.value = [{ id: 'active-device', name: 'Active Speaker', is_active: true }];
+      mockAvailableDevices.value = mockAllDevices.value;
 
       const result = await ensureActiveDevice();
 
@@ -116,8 +121,8 @@ describe('useDevices', () => {
     it('returns null only after waiting for the SPX Player when there are no devices', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      availableDevices.value = [];
-      allDevices.value = [];
+      mockAvailableDevices.value = [];
+      mockAllDevices.value = [];
 
       const resultPromise = ensureActiveDevice();
       await vi.advanceTimersByTimeAsync(16_000);
@@ -130,10 +135,10 @@ describe('useDevices', () => {
     it('transfers playback to a Spotify Connect device when no device is active', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [
+      mockAllDevices.value = [
         { id: 'spotify-device', name: 'Living Room Speaker', is_active: false, isLocal: false },
       ];
-      availableDevices.value = allDevices.value;
+      mockAvailableDevices.value = mockAllDevices.value;
       (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       const result = await ensureActiveDevice();
@@ -147,8 +152,8 @@ describe('useDevices', () => {
     it('activates the SPX Player and polls until it becomes active', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [{ id: 'spx-device', name: 'SPX Player', is_active: false, isLocal: true }];
-      availableDevices.value = [];
+      mockAllDevices.value = [{ id: 'spx-device', name: 'SPX Player', is_active: false, isLocal: true }];
+      mockAvailableDevices.value = [];
 
       (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
@@ -156,7 +161,7 @@ describe('useDevices', () => {
       (refreshSpotifyDevices as ReturnType<typeof vi.fn>).mockImplementation(async () => {
         pollCount += 1;
         if (pollCount >= 4) {
-          availableDevices.value = [{ id: 'spx-device', name: 'SPX Player', is_active: true }];
+          mockAvailableDevices.value = [{ id: 'spx-device', name: 'SPX Player', is_active: true }];
         }
       });
 
@@ -172,8 +177,8 @@ describe('useDevices', () => {
     it('returns the SPX Player id even if it never reports as active', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [{ id: 'spx-device', name: 'SPX Player', is_active: false, isLocal: true }];
-      availableDevices.value = [];
+      mockAllDevices.value = [{ id: 'spx-device', name: 'SPX Player', is_active: false, isLocal: true }];
+      mockAvailableDevices.value = [];
       (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       const resultPromise = ensureActiveDevice();
@@ -187,8 +192,8 @@ describe('useDevices', () => {
     it('always returns the in-app player id as a last resort', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [];
-      availableDevices.value = [];
+      mockAllDevices.value = [];
+      mockAvailableDevices.value = [];
       mockCurrentDeviceId.value = 'spx-web-player';
 
       const result = await ensureActiveDevice();
@@ -200,7 +205,7 @@ describe('useDevices', () => {
     it('falls back to selectDevice for the first available device', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [
+      mockAllDevices.value = [
         {
           id: 'cast-device',
           name: 'Chromecast',
@@ -209,7 +214,7 @@ describe('useDevices', () => {
           deviceIp: '192.168.1.10',
         },
       ];
-      availableDevices.value = [];
+      mockAvailableDevices.value = [];
       (selectDevice as ReturnType<typeof vi.fn>).mockResolvedValue({ success: true });
 
       const resultPromise = ensureActiveDevice();
@@ -225,7 +230,7 @@ describe('useDevices', () => {
     it('waits for the in-app player when currentDeviceId becomes available', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [
+      mockAllDevices.value = [
         {
           id: 'cast-device',
           name: 'Chromecast',
@@ -234,7 +239,7 @@ describe('useDevices', () => {
           deviceIp: '192.168.1.10',
         },
       ];
-      availableDevices.value = [];
+      mockAvailableDevices.value = [];
       (selectDevice as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: false,
         error: 'Wake timeout',
@@ -259,8 +264,8 @@ describe('useDevices', () => {
     it('scans local devices when Spotify returns no devices', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      availableDevices.value = [];
-      allDevices.value = [
+      mockAvailableDevices.value = [];
+      mockAllDevices.value = [
         { id: 'local-device', name: 'Local Speaker', is_active: true, isLocal: true },
       ];
 
@@ -277,8 +282,8 @@ describe('useDevices', () => {
     it('continues gracefully when local scan fails', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      availableDevices.value = [];
-      allDevices.value = [];
+      mockAvailableDevices.value = [];
+      mockAllDevices.value = [];
       (refreshLocalDevices as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('mDNS failed'));
 
       const resultPromise = ensureActiveDevice();
@@ -312,10 +317,10 @@ describe('useDevices', () => {
     it('handles transferPlayback failure for Spotify Connect device', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [
+      mockAllDevices.value = [
         { id: 'spotify-device', name: 'Living Room Speaker', is_active: false, isLocal: false },
       ];
-      availableDevices.value = allDevices.value;
+      mockAvailableDevices.value = mockAllDevices.value;
 
       const error = new Error('Transfer failed');
       (transferPlayback as ReturnType<typeof vi.fn>).mockRejectedValue(error);
@@ -336,8 +341,8 @@ describe('useDevices', () => {
     it('returns SPX Player id even when transfer to it fails', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [{ id: 'spx-device', name: 'SPX Player', is_active: false, isLocal: true }];
-      availableDevices.value = [];
+      mockAllDevices.value = [{ id: 'spx-device', name: 'SPX Player', is_active: false, isLocal: true }];
+      mockAvailableDevices.value = [];
 
       const error = new Error('Activation failed');
       (transferPlayback as ReturnType<typeof vi.fn>).mockRejectedValue(error);
@@ -354,7 +359,7 @@ describe('useDevices', () => {
     it('handles selectDevice failure', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [
+      mockAllDevices.value = [
         {
           id: 'cast-device',
           name: 'Chromecast',
@@ -363,7 +368,7 @@ describe('useDevices', () => {
           deviceIp: '192.168.1.10',
         },
       ];
-      availableDevices.value = [];
+      mockAvailableDevices.value = [];
       (selectDevice as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: false,
         error: 'Wake timeout',
@@ -387,11 +392,11 @@ describe('useDevices', () => {
     it('ignores an active device without an id', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [
+      mockAllDevices.value = [
         { name: 'Active No Id', is_active: true },
         { id: 'fallback-device', name: 'Fallback Speaker', is_active: false, isLocal: false },
       ];
-      availableDevices.value = allDevices.value;
+      mockAvailableDevices.value = mockAllDevices.value;
       (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       const result = await ensureActiveDevice();
@@ -404,11 +409,11 @@ describe('useDevices', () => {
     it('prefers non-local Spotify Connect device over SPX Player', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [
+      mockAllDevices.value = [
         { id: 'spx-device', name: 'SPX Player', is_active: false, isLocal: true },
         { id: 'spotify-device', name: 'Speaker', is_active: false, isLocal: false },
       ];
-      availableDevices.value = allDevices.value;
+      mockAvailableDevices.value = mockAllDevices.value;
       (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
       const result = await ensureActiveDevice();
@@ -422,7 +427,7 @@ describe('useDevices', () => {
       mockCurrentDeviceId.value = 'web-player-id';
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [
+      mockAllDevices.value = [
         {
           id: 'cast-device',
           name: 'Chromecast',
@@ -431,7 +436,7 @@ describe('useDevices', () => {
           deviceIp: '192.168.1.10',
         },
       ];
-      availableDevices.value = [];
+      mockAvailableDevices.value = [];
       (selectDevice as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: false,
         error: 'Wake timeout',
@@ -447,8 +452,8 @@ describe('useDevices', () => {
     it('returns null when currentDeviceId never appears within the wait window', async () => {
       const { ensureActiveDevice } = renderUseDevices();
 
-      allDevices.value = [];
-      availableDevices.value = [];
+      mockAllDevices.value = [];
+      mockAvailableDevices.value = [];
 
       const resultPromise = ensureActiveDevice();
       await vi.advanceTimersByTimeAsync(16_000);

@@ -252,7 +252,7 @@ describe('searchWithCache', () => {
     const result = await cache.searchWithCache('complex', fetcher);
 
     expect(result).toEqual(complexResults);
-    expect(result.tracks[0].artists[0].name).toBe('Artist A');
+    expect((result as any).tracks[0].artists[0].name).toBe('Artist A');
   });
 });
 

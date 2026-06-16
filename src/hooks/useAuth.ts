@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import {
   startAuthFlow as sdkStartAuth,
   handleAuthCallback,
-  isAuthenticated,
+  ensureValidToken,
   logout as sdkLogout,
   getCurrentUser,
 } from "../lib/spotify";
@@ -78,6 +78,7 @@ export function useAuth() {
   // Initialize auth on mount
   useEffect(() => {
     let unlisten: (() => void) | null = null;
+    let unlistenError: (() => void) | null = null;
     
     async function init() {
       // ─── Mock mode: skip Spotify auth entirely ───────────────────────────────
@@ -95,6 +96,7 @@ export function useAuth() {
             refreshPlayback(),
             refreshSpotifyDevices().catch((e) => console.error("[Auth] Mock device refresh failed:", e)),
             loadUserPlaylists(),
+            initPlayer().catch((e) => console.error("[Auth] Mock player init failed:", e)),
           ]);
           loadRecentActivity().catch((e) => console.warn("[Auth] Mock recent activity failed:", e));
           startPlaybackPolling();
@@ -118,6 +120,24 @@ export function useAuth() {
       }, 10000);
 
       try {
+        // Listen for OAuth callback errors from Tauri backend
+        unlistenError = await listen<string>("oauth-callback-error", (event) => {
+          console.error("[Auth] OAuth callback server error:", event.payload);
+          authError.value = event.payload;
+          showError(
+            "OAuth Callback Server Failed",
+            event.payload,
+            {
+              solution: [
+                "Quit any other SPX instances or dev servers",
+                "Make sure port 1422 is not in use",
+                "Restart SPX and try signing in again",
+              ],
+              category: ErrorCategory.AUTH_OAUTH_FAILED,
+            }
+          );
+        });
+
         // Listen for OAuth callback from Tauri backend
         unlisten = await listen<string>("oauth-callback", async (event) => {
           console.log("[Auth] OAuth callback received:", event.payload);
@@ -201,8 +221,8 @@ export function useAuth() {
           }
         }
         
-        // Check if already authenticated
-        if (isAuthenticated()) {
+        // Check if already authenticated and ensure token is set on SDK instance
+        if (await ensureValidToken()) {
           console.log("[Auth] Restoring session...");
           setAuthStatus("authenticated");
           setConnectionStatus("connected");
@@ -222,6 +242,7 @@ export function useAuth() {
           }
           
           console.log("[Auth] Session restored successfully");
+          isAuthSignal.value = true;
           showSuccess("Connected", "Successfully connected to Spotify");
 
           // Initialize the in-app Spotify Web Playback SDK player so SPX
@@ -287,6 +308,7 @@ export function useAuth() {
     // Cleanup on unmount
     return () => {
       if (unlisten) unlisten();
+      if (unlistenError) unlistenError();
       stopDevicePolling();
     };
   }, []);

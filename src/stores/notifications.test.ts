@@ -22,12 +22,10 @@ import {
   showSuccess,
   showInfo,
   showWarning,
-  showErrorFromRaw,
   dismissNotification,
   addNotification,
   notifications,
 } from './notifications';
-import { ErrorCategory } from '../lib/errors';
 
 describe('Notifications Store', () => {
   beforeEach(() => {

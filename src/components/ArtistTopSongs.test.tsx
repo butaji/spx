@@ -117,7 +117,7 @@ describe('ArtistTopSongs', () => {
       render(
         h(ArtistTopSongs, {
           artist: mockArtist,
-          topTracks: [{ ...mockTracks[0], uri: undefined } as SpotifyTrack],
+          topTracks: [{ ...mockTracks[0], uri: undefined } as unknown as SpotifyTrack],
           tags: ['rock'],
           onPlayUris,
         }),

@@ -42,7 +42,7 @@ export async function loadUserProfile(): Promise<void> {
 export async function loadTopArtists(): Promise<void> {
   try {
     const artists = await getTopArtists(10, "medium_term") as any[];
-    topArtists.value = artists;
+    topArtists.value = artists.filter(Boolean);
   } catch (err) {
     console.warn("[Store] Failed to load top artists:", err);
   }
@@ -51,7 +51,7 @@ export async function loadTopArtists(): Promise<void> {
 export async function loadTopTracks(): Promise<void> {
   try {
     const tracks = await getTopTracks(20, "short_term") as any[];
-    topTracks.value = tracks;
+    topTracks.value = tracks.filter(Boolean);
   } catch (err) {
     console.warn("[Store] Failed to load top tracks:", err);
   }

@@ -41,7 +41,7 @@ export default function Home({
 
   const displayTrack = track || lastPlayedTrack.value;
   const displayArtist = displayTrack?.artistName
-    || displayTrack?.artists?.map((a: any) => a.name).join(", ")
+    || displayTrack?.artists?.filter(Boolean).map((a: any) => a.name).join(", ")
     || displayTrack?.artist
     || "Unknown";
   /* Load data on mount */
@@ -71,7 +71,7 @@ export default function Home({
     ])
       .then(([artist, topTracks]) => {
         setArtistDetail(artist);
-        setArtistTopTracks(topTracks?.tracks?.slice(0, 3) || []);
+        setArtistTopTracks(topTracks?.tracks?.filter(Boolean).slice(0, 3) || []);
       })
       .catch((e) => {
         console.error("Failed to load artist:", e);

@@ -13,7 +13,7 @@ export default function RecentGrid({ onNavigate }: RecentGridProps) {
     <section style={{ marginTop: 24, paddingRight: 16 }}>
       <h2 className="section-title">Recent</h2>
       <div className="lib-grid">
-        {homeFeed.value.map((item) => (
+        {homeFeed.value.filter(Boolean).map((item) => (
           <FeedItem
             key={item.id}
             item={item}
@@ -34,22 +34,34 @@ function FeedItem({
 }) {
   const handleClick = () => {
     if (item.type === "artist") {
-      const artistId = item.id.replace("artist-", "");
-      onNavigate({ type: "artist", id: artistId, name: item.name });
+      if (item.id) {
+        const artistId = item.id.replace("artist-", "");
+        if (artistId && item.name) {
+          onNavigate({ type: "artist", id: artistId, name: item.name });
+        }
+      }
     } else if (item.type === "playlist") {
-      onNavigate({ type: "playlist", id: item.id, name: item.name });
+      if (item.id && item.name) {
+        onNavigate({ type: "playlist", id: item.id, name: item.name });
+      }
     } else if (item.type === "album") {
-      onNavigate({ type: "album", id: item.id, name: item.name });
+      if (item.id && item.name) {
+        onNavigate({ type: "album", id: item.id, name: item.name });
+      }
     } else if (item.type === "radio") {
       // Radio items are based on artists — navigate to the artist page
-      const artistId = item.id.replace("radio-", "");
-      onNavigate({ type: "artist", id: artistId, name: item.name.replace(" Radio", "") });
+      if (item.id && item.name) {
+        const artistId = item.id.replace("radio-", "");
+        if (artistId) {
+          onNavigate({ type: "artist", id: artistId, name: item.name.replace(" Radio", "") });
+        }
+      }
     } else if (item.uri) {
       // Fallback: parse URI to determine navigation type
       const parts = item.uri.split(":");
       const type = parts[1];
       const id = parts[2];
-      if (type && id) {
+      if (type && id && item.name) {
         onNavigate({ type: type as View["type"], id, name: item.name });
       }
     }

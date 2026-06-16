@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect, useMemo } from "preact/compat";
-import { memo, createPortal } from "preact/compat";
+import { memo } from "preact/compat";
 import {
   activeDevice,
   isScanning,
   isTransferring,
+  isStartingLocalConnect,
+  localConnectDeviceId,
   allDevices,
   selectDevice,
+  startLocalConnectDevice,
   selectedDeviceId,
   scanError,
+  lastTransferUsedFallback,
 } from "../stores/devices";
 import type { SpotifyDevice } from "../types";
 import {
@@ -15,426 +19,142 @@ import {
   IconVolume,
   IconSpeaker,
   IconMobile,
-  IconBolt,
-  IconLock,
-  IconWifi,
 } from "./icons";
 
 interface Props {
   onRefreshLocal: () => void;
 }
 
-type TransferStage = "waking" | "starting" | "transferring" | null;
-
-interface DeviceCategory {
-  name: string;
-  icon: typeof IconMonitor;
-}
-
-const DEVICE_CATEGORIES: Record<string, DeviceCategory> = {
-  "this-computer": { name: "This Mac", icon: IconMonitor },
-  "spotify-connect": { name: "Spotify Connect", icon: IconMonitor },
-  "google-cast": { name: "Google Cast", icon: IconMonitor },
-  "cast-audio": { name: "Speakers", icon: IconVolume },
-  "smart-speaker": { name: "Smart Speakers", icon: IconSpeaker },
-  "other": { name: "Other devices", icon: IconMobile },
-};
-
-const CATEGORY_ORDER = ["this-computer", "spotify-connect", "google-cast", "cast-audio", "smart-speaker", "other"];
-
-function categorizeDevice(
-  device: SpotifyDevice & { isLocal?: boolean }
-): string {
-  const type = device.type?.toLowerCase() || "";
-  const name = device.name?.toLowerCase() || "";
-
-  // The in-app SPX Player is always the primary "This Mac" target.
-  if (device.id === "spx-player") {
-    return "this-computer";
-  }
-
-  // Other Spotify Connect devices on this computer/network.
-  if (device.isLocal === false || type === "computer" || name.includes("this computer")) {
-    return "spotify-connect";
-  }
-
-  if (
-    type.includes("cast_video") ||
-    type === "tv" ||
-    name.includes("chromecast") ||
-    name.includes("nest hub") ||
-    name.includes("google tv")
-  ) {
-    return "google-cast";
-  }
-
-  if (
-    type.includes("cast_audio") ||
-    type === "speaker" ||
-    name.includes("home mini") ||
-    name.includes("nest mini") ||
-    name.includes("google home")
-  ) {
-    return "cast-audio";
-  }
-
-  if (name.includes("sonos") || name.includes("echo") || name.includes("homepod")) {
-    return "smart-speaker";
-  }
-
-  return "other";
+interface Group {
+  key: string;
+  label: string;
+  devices: SpotifyDevice[];
 }
 
 function getDeviceIcon(type: string) {
   switch (type?.toLowerCase()) {
     case "computer":
-      return <IconMonitor size={20} className="device-type-icon" />;
+      return <IconMonitor size={18} className="device-type-icon" />;
     case "smartphone":
-      return <IconMobile size={20} className="device-type-icon" />;
+      return <IconMobile size={18} className="device-type-icon" />;
     case "speaker":
     case "cast_audio":
-      return <IconVolume size={20} className="device-type-icon" />;
+      return <IconVolume size={18} className="device-type-icon" />;
     case "tv":
     case "cast_video":
-      return <IconMonitor size={20} className="device-type-icon" />;
+      return <IconMonitor size={18} className="device-type-icon" />;
     case "avr":
-      return <IconSpeaker size={20} className="device-type-icon" />;
+      return <IconSpeaker size={18} className="device-type-icon" />;
     default:
-      return <IconSpeaker size={20} className="device-type-icon" />;
+      return <IconSpeaker size={18} className="device-type-icon" />;
   }
 }
 
-function getDeviceHelpInfo(
-  device: SpotifyDevice & { isLocal?: boolean; needsWakeUp?: boolean; canTransfer?: boolean }
-): { icon: typeof IconBolt; text: string; type: "info" | "warning" | "error" } | null {
-  if (device.isLocal && device.needsWakeUp) {
-    return { icon: IconBolt, text: "Make sure your device is powered on", type: "info" };
+function groupDevices(devices: SpotifyDevice[]): Group[] {
+  const thisMac: SpotifyDevice[] = [];
+  const speakers: SpotifyDevice[] = [];
+  const others: SpotifyDevice[] = [];
+
+  for (const device of devices) {
+    if (!device) continue;
+    const type = device.type?.toLowerCase() || "";
+    const name = device.name?.toLowerCase() || "";
+
+    if (device.id === "spx-player" || type === "computer" || name.includes("this computer")) {
+      thisMac.push(device);
+    } else if (
+      type.includes("cast") ||
+      type === "speaker" ||
+      type === "avr" ||
+      name.includes("home mini") ||
+      name.includes("nest mini") ||
+      name.includes("google home") ||
+      name.includes("sonos") ||
+      name.includes("echo") ||
+      name.includes("homepod")
+    ) {
+      speakers.push(device);
+    } else {
+      others.push(device);
+    }
   }
-  if (device.is_restricted) {
-    return { icon: IconLock, text: "Requires Spotify Premium", type: "error" };
-  }
-  if (device.isLocal && !device.canTransfer && !device.needsWakeUp) {
-    return { icon: IconMobile, text: "Wake this device to control it from SPX", type: "info" };
-  }
-  return null;
-}
 
-function TransferStatus({ stage }: { stage: TransferStage }) {
-  if (!stage) return null;
-
-  const config = {
-    waking: { text: "Waking device...", className: "transfer-waking" },
-    starting: { text: "Starting Spotify...", className: "transfer-starting" },
-    transferring: { text: "Transferring...", className: "transfer-transferring" },
-  };
-
-  const { text, className } = config[stage];
-
-  return (
-    <span className={`transfer-status ${className}`}>
-      <IconWifi size={14} className="transfer-icon" />
-      <span className="transfer-text">{text}</span>
-      <span className="transfer-spinner" />
-    </span>
-  );
+  return [
+    { key: "this-mac", label: "This Mac", devices: thisMac },
+    { key: "speakers", label: "Speakers", devices: speakers },
+    { key: "other", label: "Other devices", devices: others },
+  ].filter((g) => g.devices.length > 0);
 }
 
 function DeviceSelector({ onRefreshLocal }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [errorFade, setErrorFade] = useState(false);
-  const [transferStage, setTransferStage] = useState<TransferStage>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<Record<string, string | number>>({});
   const ref = useRef<HTMLDivElement>(null);
-  const errorTimerRef = useRef<number | null>(null);
-  const portalRef = useRef<HTMLDivElement | null>(null);
 
   const active = activeDevice.value;
   const scanning = isScanning.value;
   const transferring = isTransferring.value;
+  const startingLocalConnect = isStartingLocalConnect.value;
   const transferringToId = selectedDeviceId.value;
   const unifiedDevices = allDevices.value;
   const deviceScanError = scanError.value;
+  const hasLocalConnect = !!localConnectDeviceId.value;
 
   const displayError = error || deviceScanError;
-
-  const groupedDevices = useMemo(() => {
-    return unifiedDevices.reduce((acc, device) => {
-      const category = categorizeDevice(device);
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(device);
-      return acc;
-    }, {} as Record<string, typeof unifiedDevices>);
-  }, [unifiedDevices]);
-
-  const orderedCategories = useMemo(() => {
-    return CATEGORY_ORDER.filter((cat) => groupedDevices[cat]?.length > 0);
-  }, [groupedDevices]);
-
-  // Auto-clear error after 3 seconds
-  useEffect(() => {
-    if (error) {
-      setErrorFade(false);
-      if (errorTimerRef.current) {
-        clearTimeout(errorTimerRef.current);
-      }
-      errorTimerRef.current = window.setTimeout(() => {
-        setErrorFade(true);
-        errorTimerRef.current = window.setTimeout(() => {
-          setError(null);
-          setErrorFade(false);
-        }, 300);
-      }, 3000);
-    }
-    return () => {
-      if (errorTimerRef.current) {
-        clearTimeout(errorTimerRef.current);
-      }
-    };
-  }, [error]);
-
-  // Create portal container for the dropdown so it can render above all other UI layers.
-  useEffect(() => {
-    const portal = document.createElement("div");
-    portal.className = "device-dropdown-portal";
-    document.body.appendChild(portal);
-    portalRef.current = portal;
-    return () => {
-      portal.remove();
-      portalRef.current = null;
-    };
-  }, []);
+  const groups = useMemo(() => groupDevices(unifiedDevices), [unifiedDevices]);
 
   // Close dropdown on outside click
   useEffect(() => {
+    if (!isOpen) return;
     const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      const insidePortal = portalRef.current?.contains(target) ?? false;
-      const insideSelector = ref.current?.contains(target) ?? false;
-      if (!insidePortal && !insideSelector) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  // Auto-scan local network the first time dropdown opens
-  useEffect(() => {
-    if (isOpen && !scanning && unifiedDevices.length === 0) {
-      onRefreshLocal();
-    }
   }, [isOpen]);
 
-  // Simulate transfer stage progress
+  // Clear fallback notice after a few seconds
   useEffect(() => {
-    if (!transferring) {
-      setTransferStage(null);
-      return;
-    }
-    setTransferStage("waking");
-    const startingTimer = window.setTimeout(() => setTransferStage("starting"), 800);
-    const transferringTimer = window.setTimeout(() => setTransferStage("transferring"), 2000);
-
-    return () => {
-      clearTimeout(startingTimer);
-      clearTimeout(transferringTimer);
-    };
-  }, [transferring]);
+    if (!lastTransferUsedFallback.value) return;
+    const timer = window.setTimeout(() => {
+      lastTransferUsedFallback.value = false;
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [lastTransferUsedFallback.value]);
 
   const handleSelectDevice = async (deviceId: string, deviceIp?: string) => {
     if (transferring) return;
     setError(null);
-    setErrorFade(false);
     const result = await selectDevice(deviceId, deviceIp);
     if (!result.success && result.error) {
       setError(result.error);
     }
   };
 
-  const updateDropdownPosition = () => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    setDropdownStyle({
-      position: "fixed",
-      bottom: `${window.innerHeight - rect.top + 8}px`,
-      right: `${window.innerWidth - rect.right}px`,
-      zIndex: 9999,
-    });
+  const handleStartLocalConnect = async () => {
+    if (startingLocalConnect || hasLocalConnect) return;
+    setError(null);
+    const result = await startLocalConnectDevice("SPX Connect", 50);
+    if (!result.success && result.error) {
+      setError(result.error);
+    }
   };
 
   const toggleDropdown = () => {
-    setIsOpen((open) => {
-      if (!open) {
-        updateDropdownPosition();
-      }
-      return !open;
-    });
+    setIsOpen((open) => !open);
   };
 
-  // Keep dropdown aligned with the button when the window is resized or scrolled.
-  useEffect(() => {
-    if (!isOpen) return;
-    updateDropdownPosition();
-    const onResize = () => updateDropdownPosition();
-    const onScroll = () => updateDropdownPosition();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, true);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onScroll, true);
-    };
-  }, [isOpen]);
-
-  const dropdownContent = isOpen ? (
-    <div className="device-dropdown" style={dropdownStyle}>
-      <div className="device-dropdown-header">
-        <span>
-          {scanning && unifiedDevices.length === 0
-            ? "Searching for devices..."
-            : "Connect to a device"}
-        </span>
-        <button
-          className={`device-refresh-btn ${scanning ? "spinning" : ""}`}
-          onClick={() => onRefreshLocal()}
-          title="Scan for local devices"
-          disabled={scanning}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="23 4 23 10 17 10" />
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-          </svg>
-        </button>
-      </div>
-
-      {displayError && (
-        <div className={`device-error ${errorFade ? "fading" : ""}`}>
-          <span className="error-icon">⚠️</span>
-          <span>{displayError}</span>
-        </div>
-      )}
-
-      {unifiedDevices.length === 0 && !scanning && (
-        <div className="device-empty">
-          <div className="device-empty-icon">📡</div>
-          <span className="device-empty-title">No devices found</span>
-          <span className="device-empty-hint">
-            Select SPX Player to play on this Mac, or make sure other devices are on the same Wi-Fi network.
-          </span>
-          <button
-            className="device-scan-btn"
-            onClick={() => onRefreshLocal()}
-            disabled={scanning}
-          >
-            {scanning ? "Scanning..." : "Scan again"}
-          </button>
-        </div>
-      )}
-
-      <div className="device-list">
-        {orderedCategories.map((category) => {
-          const CatIcon = DEVICE_CATEGORIES[category]?.icon;
-          return (
-            <div key={category} className="device-category">
-              <div className="device-section-header">
-                {CatIcon && <CatIcon size={16} className="category-icon" />}
-                <span>{DEVICE_CATEGORIES[category]?.name}</span>
-                <span className="category-count">({groupedDevices[category].length})</span>
-              </div>
-
-              {groupedDevices[category].map((device) => {
-                const isActiveDevice = device.is_active;
-                const isTransferringTo = transferring && transferringToId === device.id;
-                const isDisabled = !device.canTransfer || isTransferringTo;
-                const helpInfo = getDeviceHelpInfo(device as any);
-                const deviceKey = device.id || device.name;
-
-                return (
-                  <button
-                    key={deviceKey}
-                    className={`device-item ${isActiveDevice ? "active" : ""} ${
-                      isTransferringTo ? "transferring" : ""
-                    }`}
-                    onClick={() =>
-                      !isDisabled && handleSelectDevice(device.id!, (device as any).deviceIp)
-                    }
-                    disabled={isDisabled}
-                  >
-                    <span className="device-icon">{getDeviceIcon(device.type || "")}</span>
-                    <div className="device-info">
-                      <div className="device-name-row">
-                        <span className="device-name">{device.name}</span>
-                        {isActiveDevice && <span className="device-playing-badge">Playing</span>}
-                      </div>
-
-                      <div className="device-meta">
-                        {isTransferringTo ? (
-                          <TransferStatus stage={transferStage} />
-                        ) : (
-                          <>
-                            {device.id === "spx-player" && (
-                              <span className="device-tag spotify-connect">This Mac</span>
-                            )}
-                            {device.id !== "spx-player" && category === "spotify-connect" && (
-                              <span className="device-tag spotify-connect">Spotify Connect</span>
-                            )}
-                            {(category === "google-cast" || category === "cast-audio") && (
-                              <span className="device-tag cast-device">Cast device</span>
-                            )}
-                            {category === "smart-speaker" && (
-                              <span className="device-tag cast-device">Smart Speaker</span>
-                            )}
-                            {category === "other" && device.id !== "spx-player" && (
-                              <span className="device-tag">{device.type || "Device"}</span>
-                            )}
-                            {!device.is_active && device.is_restricted && (
-                              <span className="device-tag restricted">Restricted</span>
-                            )}
-                          </>
-                        )}
-                      </div>
-
-                      {helpInfo && (
-                        <div className={`device-help-hint hint-${helpInfo.type}`}>
-                          <helpInfo.icon size={14} className="help-icon" />
-                          <span>{helpInfo.text}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {isActiveDevice && !isTransferringTo && <span className="device-active-dot" />}
-                    {isTransferringTo && <span className="device-transferring-spinner" />}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-
-      {scanning && unifiedDevices.length > 0 && (
-        <div className="device-scanning-indicator">
-          <span className="scanning-spinner" />
-          <span>Scanning for more devices...</span>
-        </div>
-      )}
-    </div>
-  ) : null;
+  const activeName = active?.name || "Select device";
 
   return (
     <div className="device-selector" ref={ref}>
       <button
         className={`ctrl-btn device-btn ${active ? "active-device" : ""}`}
         onClick={toggleDropdown}
-        aria-label="Select playback device"
-        title={active?.name || "Select device"}
+        aria-label={`Current device: ${activeName}`}
+        title={activeName}
       >
         <svg
           viewBox="0 0 24 24"
@@ -451,9 +171,140 @@ function DeviceSelector({ onRefreshLocal }: Props) {
         {active && <span className="device-indicator" />}
       </button>
 
-      {portalRef.current && dropdownContent
-        ? createPortal(dropdownContent, portalRef.current)
-        : dropdownContent}
+      {isOpen && (
+        <div className="device-dropdown">
+          <div className="device-dropdown-header">
+            <span>Connect to a device</span>
+            <div className="device-header-actions">
+              <button
+                className={`device-connect-btn ${startingLocalConnect ? "spinning" : ""} ${hasLocalConnect ? "active" : ""}`}
+                onClick={handleStartLocalConnect}
+                title={hasLocalConnect ? "SPX Connect is active" : "Start SPX Connect on this Mac"}
+                disabled={startingLocalConnect || hasLocalConnect}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+              </button>
+              <button
+                className={`device-refresh-btn ${scanning ? "spinning" : ""}`}
+                onClick={() => onRefreshLocal()}
+                title="Scan for devices"
+                disabled={scanning}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {displayError && (
+            <div className="device-error">
+              <span className="error-icon">⚠️</span>
+              <span>{displayError}</span>
+            </div>
+          )}
+
+          {lastTransferUsedFallback.value && (
+            <div className="device-fallback-notice">
+              <span className="fallback-icon">🎧</span>
+              <span>Moved playback to SPX Player on this Mac</span>
+            </div>
+          )}
+
+          {unifiedDevices.length === 0 && !scanning && (
+            <div className="device-empty">
+              <div className="device-empty-icon">📡</div>
+              <span className="device-empty-title">No devices found</span>
+              <span className="device-empty-hint">
+                Select SPX Player to play here, or scan for devices on your Wi-Fi.
+              </span>
+              <button
+                className="device-scan-btn"
+                onClick={() => onRefreshLocal()}
+                disabled={scanning}
+              >
+                {scanning ? "Scanning..." : "Scan again"}
+              </button>
+            </div>
+          )}
+
+          <div className="device-list">
+            {groups.map((group) => (
+              <div key={group.key} className="device-category">
+                <div className="device-section-header">
+                  <span>{group.label}</span>
+                </div>
+                {group.devices.map((device) => {
+                  const isActiveDevice = device.is_active;
+                  const isTransferringTo = transferring && transferringToId === device.id;
+                  const isDisabled = !device.canTransfer || isTransferringTo;
+                  const deviceKey = device.id || device.name;
+
+                  return (
+                    <button
+                      key={deviceKey}
+                      className={`device-item ${isActiveDevice ? "active" : ""} ${
+                        isTransferringTo ? "transferring" : ""
+                      }`}
+                      onClick={() =>
+                        !isDisabled && device.id && handleSelectDevice(device.id, (device as any).deviceIp)
+                      }
+                      disabled={isDisabled}
+                    >
+                      <span className="device-icon">{getDeviceIcon(device.type || "")}</span>
+                      <div className="device-info">
+                        <div className="device-name-row">
+                          <span className="device-name">{device.name}</span>
+                          {isActiveDevice && <span className="device-playing-badge">Active</span>}
+                        </div>
+                        <div className="device-meta">
+                          {isTransferringTo ? (
+                            <span className="transfer-status">
+                              <span className="transfer-spinner" />
+                              Transferring…
+                            </span>
+                          ) : (
+                            <span className="device-type">
+                              {device.id === "spx-player" ? "This Mac" : device.type || "Device"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {isActiveDevice && !isTransferringTo && <span className="device-active-dot" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          {scanning && (
+            <div className="device-scanning-indicator">
+              <span className="scanning-spinner" />
+              <span>Scanning…</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

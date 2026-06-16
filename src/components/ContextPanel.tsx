@@ -52,8 +52,8 @@ export default function ContextPanel({ onClose, onPlayUris, onNavigate }: Props)
             getArtistRelatedArtists(itemId),
           ]);
           setData(artist);
-          setTopTracks(tracks?.tracks?.slice(0, 5) ?? []);
-          setRelatedArtists(related?.artists?.slice(0, 6) ?? []);
+          setTopTracks(tracks?.tracks?.filter(Boolean).slice(0, 5) ?? []);
+          setRelatedArtists(related?.artists?.filter(Boolean).slice(0, 6) ?? []);
         } else if (itemType === "album") {
           const album = await getAlbum(itemId);
           setData(album);
@@ -153,11 +153,11 @@ function ArtistContext({ data, topTracks, relatedArtists, onNavigate, onPlayUris
         <div>
           <div className="context-section-title">Similar Artists</div>
           <div className="context-similar-list">
-            {relatedArtists.map((a: any) => (
+            {relatedArtists.filter(Boolean).map((a: any) => (
               <div
                 key={a.id}
                 className="context-similar-item"
-                onClick={() => onNavigate?.({ type: "artist", id: a.id, name: a.name })}
+                onClick={() => a.id && a.name && onNavigate?.({ type: "artist", id: a.id, name: a.name })}
               >
                 {a.images?.[0]?.url ? (
                   <img src={a.images[0].url} alt={a.name} className="context-similar-image" />
@@ -175,11 +175,11 @@ function ArtistContext({ data, topTracks, relatedArtists, onNavigate, onPlayUris
         <div>
           <div className="context-section-title">Top Tracks</div>
           <div>
-            {topTracks.map((t: any, i: number) => (
+            {topTracks.filter(Boolean).map((t: any, i: number) => (
               <div
                 key={t.id}
                 className="context-mini-track"
-                onClick={() => onPlayUris?.([t.uri], i)}
+                onClick={() => t.uri && onPlayUris?.([t.uri], i)}
               >
                 <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontFamily: "var(--font-mono)" }}>
                   {i + 1}
@@ -197,7 +197,7 @@ function ArtistContext({ data, topTracks, relatedArtists, onNavigate, onPlayUris
 function AlbumContext({ data }: { data: any }) {
   const image = data.images?.[0]?.url;
   const year = data.release_date?.split("-")[0] ?? "";
-  const tracks = data.tracks?.items ?? [];
+  const tracks = data.tracks?.items?.filter(Boolean) ?? [];
 
   return (
     <>
@@ -209,7 +209,7 @@ function AlbumContext({ data }: { data: any }) {
         )}
         <div className="context-artist-name">{data.name}</div>
         <div className="context-artist-followers">
-          {data.artists?.map((a: any) => a.name).join(", ")} &middot; {year}
+          {data.artists?.filter(Boolean).map((a: any) => a.name).filter(Boolean).join(", ")} &middot; {year}
         </div>
       </div>
 

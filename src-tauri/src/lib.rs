@@ -8,6 +8,9 @@ pub mod spotify_cast;
 pub mod cast_raw_auth;
 pub mod media_keys;
 pub mod now_playing;
+pub mod librespot_player;
+pub mod web_player_token;
+pub mod cookie_capture;
 mod menu;
 
 #[cfg(target_os = "macos")]
@@ -61,7 +64,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
-            // Start OAuth callback server on port 1241
+            // Start OAuth callback server on port 1422
             oauth_callback::start_oauth_callback_server(app.handle().clone());
             
             // Build the macOS menu bar.
@@ -81,10 +84,19 @@ pub fn run() {
 
             commands::get_spotify_client_id,
             commands::check_credentials_status,
+            commands::authenticate_librespot_oauth,
+            commands::create_librespot_session,
+            commands::start_local_connect_device,
             commands::scan_spotify_devices,
             commands::wake_cast_device,
             commands::authenticate_cast_device_command,
             commands::authenticate_cast_device_raw_command,
+            commands::get_web_player_token_command,
+            commands::start_spotify_cookie_capture,
+            commands::clear_spotify_sp_dc,
+            commands::get_stored_sp_dc,
+            commands::get_callback_server_status,
+            commands::get_diagnostics,
             commands::diagnose_network,
             commands::request_macos_local_network_permission,
             now_playing::update_now_playing,

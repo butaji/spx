@@ -177,7 +177,9 @@ describe('initialization', () => {
     await renderHook(async () => 'device-123');
     playbackTrack.value = makeTrack({ id: 'liked-track' });
 
-    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(refreshLikedStatus).toHaveBeenCalledWith('liked-track');
   });
 
@@ -186,11 +188,15 @@ describe('initialization', () => {
     playbackTrack.value = makeTrack();
     await renderHook(async () => 'device-123');
 
-    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(likedTrack.value).toBe(true);
 
     playbackTrack.value = null;
-    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(likedTrack.value).toBe(false);
   });
 });
@@ -276,7 +282,7 @@ describe('handlePlayPause', () => {
     expect(storePlayTrack).toHaveBeenCalledTimes(1);
   });
 
-  it('refreshes playback state 500ms after success', async () => {
+  it('refreshes playback state 2s after success', async () => {
     (storePauseTrack as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     playbackTrack.value = makeTrack();
     isPlaying.value = true;
@@ -285,7 +291,9 @@ describe('handlePlayPause', () => {
     await act(() => result.handlePlayPause());
 
     expect(refreshPlayback).not.toHaveBeenCalled();
-    await act(() => vi.advanceTimersByTimeAsync(500));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
     expect(refreshPlayback).toHaveBeenCalledTimes(1);
   });
 });
@@ -386,7 +394,7 @@ describe('handleSeekPosition', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('handleShuffle', () => {
-  it('toggles shuffle optimistically and calls API after debounce', async () => {
+  it('toggles shuffle optimistically and calls API', async () => {
     (apiSetShuffle as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     playbackShuffle.value = false;
 
@@ -394,13 +402,16 @@ describe('handleShuffle', () => {
     await act(() => result.handleShuffle());
 
     expect(playbackShuffle.value).toBe(true);
-    expect(apiSetShuffle).not.toHaveBeenCalled();
+    expect(apiSetShuffle).toHaveBeenCalledWith(true, 'device-123');
 
-    await act(() => vi.advanceTimersByTimeAsync(300));
-    expect(apiSetShuffle).toHaveBeenCalledWith(true);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(refreshPlayback).toHaveBeenCalled();
   });
 
-  it('cancels a pending shuffle call when toggled again', async () => {
+  it('queues the latest shuffle state when toggled rapidly', async () => {
     (apiSetShuffle as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     playbackShuffle.value = false;
 
@@ -411,9 +422,12 @@ describe('handleShuffle', () => {
     await act(() => result.handleShuffle());
     expect(playbackShuffle.value).toBe(false);
 
-    await act(() => vi.advanceTimersByTimeAsync(300));
-    expect(apiSetShuffle).toHaveBeenCalledTimes(1);
-    expect(apiSetShuffle).toHaveBeenLastCalledWith(false);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(apiSetShuffle).toHaveBeenCalledTimes(2);
+    expect(apiSetShuffle).toHaveBeenLastCalledWith(false, 'device-123');
   });
 
   it('reverts shuffle on API error', async () => {
@@ -424,7 +438,10 @@ describe('handleShuffle', () => {
     await act(() => result.handleShuffle());
     expect(playbackShuffle.value).toBe(false);
 
-    await act(() => vi.advanceTimersByTimeAsync(300));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     expect(playbackShuffle.value).toBe(true);
     expect(handleError).toHaveBeenCalledWith(expect.any(Error), 'Shuffle');
   });
@@ -442,12 +459,15 @@ describe('handleRepeat', () => {
     for (const expected of ['context', 'track', 'off'] as const) {
       playbackRepeat.value = expected === 'context' ? 'off' : expected === 'track' ? 'context' : 'track';
       await act(() => result.handleRepeat());
-      await act(() => vi.advanceTimersByTimeAsync(300));
-      expect(apiSetRepeat).toHaveBeenLastCalledWith(expected);
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(apiSetRepeat).toHaveBeenLastCalledWith(expected, 'device-123');
     }
   });
 
-  it('debounces repeat API calls', async () => {
+  it('queues repeat API calls when toggled rapidly', async () => {
     (apiSetRepeat as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     playbackRepeat.value = 'off';
 
@@ -455,9 +475,7 @@ describe('handleRepeat', () => {
     await act(() => result.handleRepeat());
     await act(() => result.handleRepeat());
 
-    expect(apiSetRepeat).not.toHaveBeenCalled();
-    await act(() => vi.advanceTimersByTimeAsync(300));
-    expect(apiSetRepeat).toHaveBeenCalledTimes(1);
+    expect(apiSetRepeat).toHaveBeenCalledTimes(2);
   });
 
   it('reverts repeat on API error', async () => {
@@ -468,7 +486,10 @@ describe('handleRepeat', () => {
     await act(() => result.handleRepeat());
     expect(playbackRepeat.value).toBe('context');
 
-    await act(() => vi.advanceTimersByTimeAsync(300));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
     expect(playbackRepeat.value).toBe('off');
     expect(handleError).toHaveBeenCalledWith(expect.any(Error), 'Repeat');
   });
@@ -683,7 +704,9 @@ describe('play count tracking', () => {
     const { result } = await renderHook(async () => 'device-123');
     expect(result.isPlayActionLoading).toBe(false);
 
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
     expect(recordPlay).toHaveBeenCalledWith('Count Artist', 'Count Track');
   });
 
@@ -692,11 +715,15 @@ describe('play count tracking', () => {
     isPlaying.value = true;
 
     await renderHook(async () => 'device-123');
-    await act(() => vi.advanceTimersByTimeAsync(15_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
     await act(() => {
       isPlaying.value = false;
     });
-    await act(() => vi.advanceTimersByTimeAsync(20_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
 
     expect(recordPlay).not.toHaveBeenCalled();
   });
@@ -706,10 +733,14 @@ describe('play count tracking', () => {
     isPlaying.value = true;
 
     await renderHook(async () => 'device-123');
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
     expect(recordPlay).toHaveBeenCalledTimes(1);
 
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
     expect(recordPlay).toHaveBeenCalledTimes(1);
   });
 
@@ -718,12 +749,16 @@ describe('play count tracking', () => {
     isPlaying.value = true;
 
     await renderHook(async () => 'device-123');
-    await act(() => vi.advanceTimersByTimeAsync(20_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
 
     await act(() => {
       playbackTrack.value = makeTrack({ id: 'track-b', name: 'Track B', artists: [{ id: 'a2', name: 'Artist B' }] });
     });
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
 
     expect(recordPlay).toHaveBeenCalledTimes(1);
     expect(recordPlay).toHaveBeenCalledWith('Artist B', 'Track B');
@@ -734,12 +769,16 @@ describe('play count tracking', () => {
     isPlaying.value = true;
 
     await renderHook(async () => 'device-123');
-    await act(() => vi.advanceTimersByTimeAsync(20_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
 
     await act(() => {
       playbackTrack.value = makeTrack({ id: 'track-b', name: 'Track B' });
     });
-    await act(() => vi.advanceTimersByTimeAsync(15_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
 
     expect(recordPlay).not.toHaveBeenCalled();
   });

@@ -826,9 +826,26 @@
   border-radius: 2px;
   position: absolute;
   left: 0; top: 0;
+  width: var(--progress-width, 0%);
   transition: width 0.1s linear;
 }
 .progress-track:hover .progress-fill { background: var(--accent); }
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--progress-left, 0%);
+  width: 10px;
+  height: 10px;
+  background: var(--fg);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.15s ease, left 0.1s linear;
+  pointer-events: none;
+}
+.progress-track:hover .progress-thumb,
+.progress-track:active .progress-thumb {
+  transform: translate(-50%, -50%) scale(1);
+}
 .time {
   font-family: var(--font-mono);
   font-size: 10px;

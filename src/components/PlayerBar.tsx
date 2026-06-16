@@ -139,7 +139,7 @@ function PlayerBarComponent({
   const displayVolume = isDraggingVolume && dragVolume !== null ? dragVolume : volume;
 
   return (
-    <div className="player-bar" style={{ contain: "layout style paint" }}>
+    <div className="player-bar">
       <div className="player-track">
         <div className="player-art">
           {track?.imageUrl ? <img src={track.imageUrl} alt="" /> : null}

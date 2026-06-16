@@ -101,17 +101,17 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
     if (!results) return [];
     if (filter === "all") {
       return [
-        ...(results.tracks?.items || []).map((t) => ({ type: "track" as const, data: t })),
-        ...(results.albums?.items || []).map((a) => ({ type: "album" as const, data: a })),
-        ...(results.artists?.items || []).map((a) => ({ type: "artist" as const, data: a })),
-        ...(results.playlists?.items || []).map((p) => ({ type: "playlist" as const, data: p })),
+        ...(results.tracks?.items || []).filter(Boolean).map((t) => ({ type: "track" as const, data: t })),
+        ...(results.albums?.items || []).filter(Boolean).map((a) => ({ type: "album" as const, data: a })),
+        ...(results.artists?.items || []).filter(Boolean).map((a) => ({ type: "artist" as const, data: a })),
+        ...(results.playlists?.items || []).filter(Boolean).map((p) => ({ type: "playlist" as const, data: p })),
       ];
     }
     const key = filter === "tracks" ? "tracks"
       : filter === "albums" ? "albums"
       : filter === "artists" ? "artists"
       : "playlists";
-    const items = results[key]?.items || [];
+    const items = (results[key]?.items || []).filter(Boolean);
     const type = filter.slice(0, -1) as "track" | "album" | "artist" | "playlist";
     return items.map((d) => ({ type, data: d }));
   };
@@ -203,34 +203,34 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
           {/* Show results sections */}
           {filter === "all" ? (
             <>
-              {(results.tracks?.items || []).length > 0 && (
+              {(results.tracks?.items || []).filter(Boolean).length > 0 && (
                 <section style={{ marginBottom: 32 }}>
                   <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "var(--fg)" }}>Tracks</h2>
                   <div className="tracklist">
-                    {(results.tracks?.items || []).map((track, i) => (
+                    {(results.tracks?.items || []).filter(Boolean).map((track, i) => (
                       <TrackRow
                         key={track.id}
                         index={i}
                         name={track.name}
-                        artists={track.artists?.map((a) => a.name).join(", ")}
+                        artists={track.artists?.filter(Boolean).map((a) => a.name).join(", ")}
                         durationMs={track.duration_ms || 0}
                         imageUrl={track.album?.images?.[0]?.url}
                         onClick={() => playTrack(track)}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); playTrack(track); } }}
                         isActive={track.id === playbackTrack.value?.id}
                         isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
-                        ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
+                        ariaLabel={`${track.name} by ${track.artists?.filter(Boolean).map((a) => a.name).join(", ")}`}
                       />
                     ))}
                   </div>
                 </section>
               )}
 
-              {(results.albums?.items || []).length > 0 && (
+              {(results.albums?.items || []).filter(Boolean).length > 0 && (
                 <section style={{ marginBottom: 32 }}>
                   <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "var(--fg)" }}>Albums</h2>
                   <div className="lib-grid">
-                    {(results.albums?.items || []).map((album) => (
+                    {(results.albums?.items || []).filter(Boolean).map((album) => (
                       <div
                         key={album.id}
                         className="lib-item"
@@ -247,18 +247,18 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
                           <IconPlay size={24} />
                         </div>
                         <div className="lib-item-title">{album.name}</div>
-                        <div className="lib-item-sub">{album.artists?.map((a) => a.name).join(", ")}</div>
+                        <div className="lib-item-sub">{album.artists?.filter(Boolean).map((a) => a.name).join(", ")}</div>
                       </div>
                     ))}
                   </div>
                 </section>
               )}
 
-              {(results.artists?.items || []).length > 0 && (
+              {(results.artists?.items || []).filter(Boolean).length > 0 && (
                 <section style={{ marginBottom: 32 }}>
                   <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "var(--fg)" }}>Artists</h2>
                   <div className="lib-grid">
-                    {(results.artists?.items || []).map((artist) => (
+                    {(results.artists?.items || []).filter(Boolean).map((artist) => (
                       <div
                         key={artist.id}
                         className="lib-item"
@@ -282,11 +282,11 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
                 </section>
               )}
 
-              {(results.playlists?.items || []).length > 0 && (
+              {(results.playlists?.items || []).filter(Boolean).length > 0 && (
                 <section style={{ marginBottom: 32 }}>
                   <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "var(--fg)" }}>Playlists</h2>
                   <div className="lib-grid">
-                    {(results.playlists?.items || []).map((playlist) => (
+                    {(results.playlists?.items || []).filter(Boolean).map((playlist) => (
                       <div
                         key={playlist.id}
                         className="lib-item"
@@ -335,14 +335,14 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
                     key={`track-${track.id}-${i}`}
                     index={i}
                     name={track.name}
-                    artists={track.artists?.map((a) => a.name).join(", ")}
+                    artists={track.artists?.filter(Boolean).map((a) => a.name).join(", ")}
                     durationMs={track.duration_ms || 0}
                     imageUrl={imageUrl}
                     onClick={() => handleItemClick(item)}
                     onKeyDown={(e) => handleItemKeyDown(e, item)}
                     isActive={track.id === playbackTrack.value?.id}
                     isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
-                    ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
+                    ariaLabel={`${track.name} by ${track.artists?.filter(Boolean).map((a) => a.name).join(", ")}`}
                   />
                 ) : (
                   <div

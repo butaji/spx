@@ -6,15 +6,21 @@ import {
   seek,
   setVolume,
 } from "./spotify";
+import { ensureActiveDevice } from "./deviceManager";
 
-// Get the current device ID for player commands
+// Get the current device ID for player commands, falling back to ensureActiveDevice
 async function getCurrentDeviceId(): Promise<string | undefined> {
   try {
     const { effectiveDeviceId } = await import("../stores/devices");
-    return effectiveDeviceId.value ?? undefined;
+    if (effectiveDeviceId.value) {
+      return effectiveDeviceId.value;
+    }
   } catch {
-    return undefined;
+    // store not available
   }
+
+  // No effective device — try to activate one.
+  return (await ensureActiveDevice()) ?? undefined;
 }
 
 export async function controllerPlay(): Promise<void> {
@@ -28,10 +34,12 @@ export async function controllerPause(): Promise<void> {
 }
 
 export async function controllerNext(): Promise<void> {
+  await getCurrentDeviceId();
   await next();
 }
 
 export async function controllerPrevious(): Promise<void> {
+  await getCurrentDeviceId();
   await previous();
 }
 

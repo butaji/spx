@@ -54,16 +54,16 @@ export default function Library({ onPlayUris, onNavigate }: Props) {
       let freshItems: LibraryItem[] = [];
       if (tab === "playlists") {
         const d = await getUserPlaylists();
-        freshItems = d.items || [];
+        freshItems = (d.items || []).filter(Boolean);
       } else if (tab === "tracks") {
         const d = await getSavedTracks();
-        freshItems = (d.items || []).map((i: any) => i.track).filter(Boolean) as SpotifyTrack[];
+        freshItems = (d.items || []).filter(Boolean).map((i: any) => i.track).filter(Boolean) as SpotifyTrack[];
       } else if (tab === "albums") {
         const d = await getSavedAlbums();
-        freshItems = (d.items || []).map((i: any) => i.album).filter(Boolean) as SpotifyAlbum[];
+        freshItems = (d.items || []).filter(Boolean).map((i: any) => i.album).filter(Boolean) as SpotifyAlbum[];
       } else if (tab === "top") {
         const d = await getTopTracks(50, 'short_term');
-        freshItems = d;
+        freshItems = (d || []).filter(Boolean);
       }
 
       if (isMountedRef.current) {
@@ -177,7 +177,7 @@ export default function Library({ onPlayUris, onNavigate }: Props) {
 
       {tab === "playlists" || tab === "albums" ? (
         <div className="lib-grid">
-          {items.map((item) => (
+          {items.filter(Boolean).map((item) => (
             <div
               key={item.id}
               className="lib-item"
@@ -195,7 +195,7 @@ export default function Library({ onPlayUris, onNavigate }: Props) {
               />
               <div className="lib-item-title">{item.name}</div>
               <div className="lib-item-sub">
-                {tab === "playlists" ? `${("tracks" in item ? item.tracks?.total || 0 : 0)} tracks` : ("artists" in item && item.artists?.[0]?.name) || ""}
+                {tab === "playlists" ? `${("tracks" in item ? item.tracks?.total || 0 : 0)} tracks` : ("artists" in item && item.artists?.filter(Boolean)?.[0]?.name) || ""}
               </div>
             </div>
           ))}
@@ -207,7 +207,7 @@ export default function Library({ onPlayUris, onNavigate }: Props) {
         </div>
       ) : (
         <div className="tracklist">
-          {items.map((item, i) => {
+          {items.filter(Boolean).map((item, i) => {
             const track = item as SpotifyTrack;
             return (
               <TrackRow
@@ -215,14 +215,14 @@ export default function Library({ onPlayUris, onNavigate }: Props) {
                 index={i}
                 name={track.name}
                 album={track.album?.name}
-                artists={track.artists?.map((a) => a.name).join(", ")}
+                artists={track.artists?.filter(Boolean).map((a) => a.name).join(", ")}
                 durationMs={track.duration_ms || 0}
                 imageUrl={track.album?.images?.[0]?.url}
                 onClick={() => handleTrackClick(track)}
                 onKeyDown={(e) => handleTrackKeyDown(e, track)}
                 isActive={track.id === playbackTrack.value?.id}
                 isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
-                ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
+                ariaLabel={`${track.name} by ${track.artists?.filter(Boolean).map((a) => a.name).join(", ")}`}
               />
             );
           })}

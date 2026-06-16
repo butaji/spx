@@ -317,7 +317,7 @@ fn test_mailbox_creation_custom_capacity() {
 /// Test mailbox creation with default capacity.
 #[test]
 fn test_mailbox_creation_default() {
-    let (_mailbox, _sender) = Mailbox::<IncrementMessage>::default();
+    let (_mailbox, _sender) = Mailbox::<IncrementMessage>::with_default_capacity();
     // Default capacity is 100
     assert!(true);
 }

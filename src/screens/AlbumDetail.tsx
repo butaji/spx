@@ -37,7 +37,7 @@ export default function AlbumDetail({ id, name, onPlayContext, onPlayUris, onNav
   }, [album, onPlayContext]);
 
   const playTrack = useCallback((index: number) => {
-    const uris = album?.tracks?.items?.map((t) => t.uri).filter(Boolean) || [];
+    const uris = album?.tracks?.items?.filter(Boolean).map((t) => t.uri).filter(Boolean) || [];
     onPlayUris(uris, index);
   }, [album, onPlayUris]);
 
@@ -86,9 +86,9 @@ export default function AlbumDetail({ id, name, onPlayContext, onPlayUris, onNav
             tabIndex={0}
             onClick={handleArtistClick}
             onKeyDown={handleArtistKeyDown}
-            aria-label={`Artist: ${album?.artists?.map((a) => a.name).join(", ")}`}
+            aria-label={`Artist: ${album?.artists?.filter(Boolean).map((a) => a.name).join(", ")}`}
           >
-            {album?.artists?.map((a) => a.name).join(", ")}
+            {album?.artists?.filter(Boolean).map((a) => a.name).join(", ")}
           </p>
           <p className="text-xs text-muted" style={{ marginTop: 4 }}>{album?.tracks?.items?.length || 0} tracks · {album?.release_date?.split("-")[0]}</p>
           <div className="station-actions">
@@ -103,19 +103,19 @@ export default function AlbumDetail({ id, name, onPlayContext, onPlayUris, onNav
         <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} aria-live="polite">Loading...</p>
       ) : (
         <div className="tracklist">
-          {album?.tracks?.items?.map((track, i) => (
+          {album?.tracks?.items?.filter(Boolean).map((track, i) => (
             <TrackRow
               key={track.id}
               index={i}
               name={track.name}
-              artists={track.artists?.map((a) => a.name).join(", ")}
+              artists={track.artists?.filter(Boolean).map((a) => a.name).join(", ")}
               durationMs={track.duration_ms || 0}
               imageUrl={album?.images?.[0]?.url}
               onClick={() => playTrack(i)}
               onKeyDown={(e) => handleTrackKeyDown(e, i)}
               isActive={track.id === playbackTrack.value?.id}
               isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
-              ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
+              ariaLabel={`${track.name} by ${track.artists?.filter(Boolean).map((a) => a.name).join(", ")}`}
             />
           ))}
         </div>

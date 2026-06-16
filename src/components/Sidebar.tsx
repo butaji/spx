@@ -4,6 +4,7 @@ import {
   IconSearch,
   IconLibrary,
   IconQueue,
+  IconStethoscope,
 } from "./icons";
 
 interface SidebarProps {
@@ -11,16 +12,24 @@ interface SidebarProps {
   history: View[];
   setHistory: (update: View[] | ((prev: View[]) => View[])) => void;
   user: { name: string; image?: string } | null;
+  showDiagnostics?: boolean;
 }
 
-const navItems: { view: View; label: string; icon: (active: boolean) => preact.JSX.Element }[] = [
+const baseNavItems: { view: View; label: string; icon: (active: boolean) => preact.JSX.Element }[] = [
   { view: { type: "home" }, label: "Now Playing", icon: (active) => <IconHome active={active} /> },
   { view: { type: "search" }, label: "Search", icon: () => <IconSearch /> },
   { view: { type: "library", tab: "playlists" }, label: "Library", icon: () => <IconLibrary /> },
   { view: { type: "queue" }, label: "Queue", icon: () => <IconQueue /> },
 ];
 
-export function Sidebar({ view, history, setHistory, user }: SidebarProps) {
+export function Sidebar({ view, history, setHistory, user, showDiagnostics }: SidebarProps) {
+  const diagnosticsEnabled = showDiagnostics ?? import.meta.env.VITE_SPX_DIAGNOSTICS === "1";
+  const diagnosticsItem: { view: View; label: string; icon: (active: boolean) => preact.JSX.Element } = {
+    view: { type: "diagnostics" },
+    label: "Diagnostics",
+    icon: () => <IconStethoscope />,
+  };
+  const navItems = diagnosticsEnabled ? [...baseNavItems, diagnosticsItem] : baseNavItems;
   const handleNavClick = (itemView: View) => {
     if (view.type !== itemView.type) {
       setHistory([itemView]);
@@ -48,7 +57,7 @@ export function Sidebar({ view, history, setHistory, user }: SidebarProps) {
       {history.length > 2 && (
         <div className="sidebar-breadcrumbs">
           <div className="sidebar-divider" />
-          {history.slice(1, -1).map((h, i) => (
+          {history.slice(1, -1).filter(Boolean).map((h, i) => (
             <button
               key={i}
               className="sidebar-btn breadcrumb"

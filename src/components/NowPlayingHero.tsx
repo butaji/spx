@@ -142,7 +142,7 @@ export default function NowPlayingHero({
               {userPlaylists.value.length === 0 ? (
                 <p className="text-sm text-muted">No playlists found</p>
               ) : (
-                userPlaylists.value.map((pl) => (
+                userPlaylists.value.filter(Boolean).map((pl) => (
                   <button
                     key={pl.id}
                     className="playlist-select-row"

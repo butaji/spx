@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SPX Web Playback Test</title>
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
+</head>
+<body>
+  <h1>SPX Web Playback Test Device</h1>
+  <p id="status">Initializing...</p>
+  <button id="togglePlay">Play/Pause</button>
+  <script>
+    const token = new URLSearchParams(location.search).get('token');
+    if (!token) {
+      document.getElementById('status').textContent = 'No token provided';
+    }
+
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      const player = new Spotify.Player({
+        name: 'SPX Test Player',
+        getOAuthToken: cb => cb(token),
+        volume: 0.0
+      });
+
+      player.addListener('ready', ({ device_id }) => {
+        document.getElementById('status').textContent = 'Ready: ' + device_id;
+        console.log('SPX_WEB_PLAYER_READY', device_id);
+      });
+
+      player.addListener('not_ready', ({ device_id }) => {
+        document.getElementById('status').textContent = 'Not ready: ' + device_id;
+      });
+
+      player.addListener('initialization_error', ({ message }) => {
+        document.getElementById('status').textContent = 'Init error: ' + message;
+        console.error('SPX_WEB_PLAYER_INIT_ERROR', message);
+      });
+
+      player.addListener('authentication_error', ({ message }) => {
+        document.getElementById('status').textContent = 'Auth error: ' + message;
+      });
+
+      player.connect();
+
+      document.getElementById('togglePlay').onclick = () => {
+        player.togglePlay();
+      };
+    };
+  </script>
+</body>
+</html>

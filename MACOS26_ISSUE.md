@@ -41,6 +41,23 @@ inside the `setup` callback. This means you only need to launch `spx`; you no
 longer need to start `ws-server` as a separate process before the GUI. The
 standalone `ws-server` binary is still built for backend-only / headless use.
 
+### 4. Disable librespot local audio (SPX Connect) on macOS 26
+macOS 26 (Tahoe) has a known CoreAudio memory-corruption bug that causes a
+`SIGSEGV` inside `HALC_ProxyIOContext::GetPropertyData` when CPAL/Rodio
+initialise the default output device. Apple has acknowledged the issue but has
+not yet shipped a fix.
+
+`src-tauri/src/librespot_player.rs` detects macOS 26+ and refuses to create the
+librespot audio sink, returning a clear error instead of crashing. The frontend
+falls back to the SPX Player (Web Playback SDK) so playback on this Mac still
+works.
+
+To force-enable SPX Connect anyway (for testing), launch SPX with:
+
+```bash
+SPX_FORCE_LIBRESPOT=1 /Applications/SPX.app/Contents/MacOS/spx
+```
+
 ## Running the app
 
 ### From a normal macOS GUI session
@@ -84,10 +101,13 @@ Copy it to `/Applications` or `~/Desktop` and run the launcher script.
 - ✅ App builds successfully
 - ✅ Single-binary launch (`spx` now starts the WS backend internally)
 - ✅ GUI appears when launched from a real Aqua session
+- ⚠️  SPX Connect local audio is disabled on macOS 26 to avoid a CoreAudio `SIGSEGV`
 - ⚠️  Still requires a real macOS GUI session; headless shells are not supported
 
 ## Files changed
 - `src-tauri/Cargo.toml`
 - `src-tauri/src/lib.rs`
+- `src-tauri/src/librespot_player.rs`
+- `src/stores/devices.ts`
 - `launch_spx.sh`
 - `MACOS26_ISSUE.md`

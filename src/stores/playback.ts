@@ -16,6 +16,23 @@ export const likedTrack = signal<boolean>(false);
 
 let playbackPollInterval: ReturnType<typeof setInterval> | null = null;
 
+// Cooldown to prevent stale API responses from overriding optimistic UI state
+// immediately after a user-initiated play/pause action.
+let playbackUserActionCooldownUntil = 0;
+const PLAYBACK_USER_ACTION_COOLDOWN_MS = 3000;
+
+export function setPlaybackUserActionCooldown() {
+  playbackUserActionCooldownUntil = Date.now() + PLAYBACK_USER_ACTION_COOLDOWN_MS;
+}
+
+export function resetPlaybackUserActionCooldown() {
+  playbackUserActionCooldownUntil = 0;
+}
+
+function isPlaybackUserActionCooldownActive() {
+  return Date.now() < playbackUserActionCooldownUntil;
+}
+
 // ─── Buffered Playback State (per spotify-player pattern) ─────────────────────
 
 // Local buffer for optimistic updates and smooth progress
@@ -137,11 +154,13 @@ export async function refreshPlayback(): Promise<void> {
     }
 
     playbackProgress.value = state.progress_ms ?? 0;
-    isPlaying.value = state.is_playing ?? false;
+    if (!isPlaybackUserActionCooldownActive()) {
+      isPlaying.value = state.is_playing ?? false;
+    }
     playbackShuffle.value = state.shuffle_state ?? false;
     playbackRepeat.value = (state.repeat_state as "off" | "context" | "track") ?? "off";
     playbackVolume.value = state.device?.volume_percent ?? 100;
-    
+
     // Update buffer for smooth progress tracking
     updateBufferFromState(state, item);
     
@@ -191,6 +210,7 @@ export async function playTrack(): Promise<void> {
   
   try {
     await controllerPlay();
+    setPlaybackUserActionCooldown();
     // Don't wait for refreshPlayback - RAF will handle progress smoothly
     // refreshPlayback(); // Optional: uncomment if you want strict API sync
   } catch (e) {
@@ -213,6 +233,7 @@ export async function pauseTrack(): Promise<void> {
   
   try {
     await controllerPause();
+    setPlaybackUserActionCooldown();
     // Don't wait for refreshPlayback - RAF handles progress
     // refreshPlayback(); // Optional: uncomment if you want strict API sync
   } catch (e) {

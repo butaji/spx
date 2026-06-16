@@ -33,6 +33,7 @@ import {
   setIsPlayingOptimistic,
   setProgressOptimistic,
   refreshLikedStatus,
+  resetPlaybackUserActionCooldown,
 } from './playback';
 
 describe('playback store', () => {
@@ -48,6 +49,7 @@ describe('playback store', () => {
     playbackDuration.value = 0;
     isPlaying.value = false;
     likedTrack.value = false;
+    resetPlaybackUserActionCooldown();
   });
 
   afterEach(() => {

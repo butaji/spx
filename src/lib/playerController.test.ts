@@ -9,6 +9,10 @@ vi.mock('./spotify', () => ({
   setVolume: vi.fn(),
 }));
 
+vi.mock('./deviceManager', () => ({
+  ensureActiveDevice: vi.fn(() => Promise.resolve(null)),
+}));
+
 import {
   play as restPlay,
   pause as restPause,

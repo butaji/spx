@@ -37,13 +37,13 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
     }
     try {
       const tt = await getArtistTopTracks(id);
-      setTopTracks((tt.tracks || []) as SpotifyTrack[]);
+      setTopTracks(((tt.tracks || []).filter(Boolean)) as SpotifyTrack[]);
     } catch (e) {
       console.error("Failed to load artist top tracks:", e);
     }
     try {
       const ab = await getArtistAlbums(id);
-      setAlbums(ab.items || []);
+      setAlbums((ab.items || []).filter(Boolean));
     } catch (e) {
       console.error("Failed to load artist albums:", e);
     }
@@ -53,7 +53,7 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
   useEffect(() => { loadData(); }, [loadData]);
 
   const playTopTracks = useCallback(() => {
-    const uris = topTracks.map((t) => t.uri).filter(Boolean);
+    const uris = topTracks.filter(Boolean).map((t) => t.uri).filter(Boolean);
     if (uris.length) onPlayUris(uris);
   }, [topTracks, onPlayUris]);
 
@@ -141,7 +141,7 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
         <div>
           <h2 className="section-heading">Popular</h2>
           <div className="tracklist">
-            {topTracks.map((track, i) => (
+            {topTracks.filter(Boolean).map((track, i) => (
               <TrackRow
                 key={track.id}
                 index={i}
@@ -162,7 +162,7 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
             <>
               <h2 className="section-heading" style={{ marginTop: 32 }}>Discography</h2>
               <div className="lib-grid">
-                {albums.map((album) => (
+                {albums.filter(Boolean).map((album) => (
                   <div
                     key={album.id}
                     className="lib-item"

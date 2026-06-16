@@ -38,12 +38,6 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
   const isPlayActionLoadingRef = useRef(isPlayActionLoading);
   isPlayActionLoadingRef.current = isPlayActionLoading;
 
-  // Shuffle/Repeat debounce refs
-  const shufflePendingRef = useRef(false);
-  const shuffleTimeoutRef = useRef<number | null>(null);
-  const repeatPendingRef = useRef(false);
-  const repeatTimeoutRef = useRef<number | null>(null);
-
   // Play count tracking refs
   const playCountRecordedRef = useRef(false);
   const playCountTimerRef = useRef<number | null>(null);
@@ -54,20 +48,6 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
   useEffect(() => {
     const cleanup = startPlaybackPolling();
     return cleanup;
-  }, []);
-
-  // Cleanup debounced timers on unmount
-  useEffect(() => {
-    return () => {
-      if (shuffleTimeoutRef.current) {
-        clearTimeout(shuffleTimeoutRef.current);
-        shuffleTimeoutRef.current = null;
-      }
-      if (repeatTimeoutRef.current) {
-        clearTimeout(repeatTimeoutRef.current);
-        repeatTimeoutRef.current = null;
-      }
-    };
   }, []);
 
   // Refresh liked status when track changes
@@ -143,6 +123,9 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
     }
 
     try {
+      // Prevent stale API responses from flipping the button back immediately.
+      const { setPlaybackUserActionCooldown } = await import('../stores/playback');
+      setPlaybackUserActionCooldown();
       if (playing) {
         debug('[Play/Pause] Calling pauseTrack()...');
         await pauseTrack();
@@ -186,7 +169,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       setTimeout(() => {
         debug('[Play/Pause] Refreshing playback state...');
         refreshPlayback();
-      }, 500);
+      }, 2000);
     } catch (error) {
       console.error('[Play/Pause] ERROR:', error);
       // Revert optimistic update on any error.
@@ -258,33 +241,37 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
     }
   }, []);
 
-  const handleShuffle = useCallback(async () => {
-    // Cancel any pending API call
-    if (shuffleTimeoutRef.current) {
-      clearTimeout(shuffleTimeoutRef.current);
-    }
-
+  const handleShuffle = useCallback(() => {
     const originalValue = playbackShuffle.value;
     const newValue = !originalValue;
 
     // Optimistic update
     playbackShuffle.value = newValue;
-    shufflePendingRef.current = true;
 
-    // Debounce: wait 300ms before calling API
-    shuffleTimeoutRef.current = window.setTimeout(async () => {
-      try {
-        await apiSetShuffle(newValue);
-        shufflePendingRef.current = false;
-      } catch (e) {
-        // Revert on error
+    ensureActiveDevice()
+      .then((deviceId) => {
+        if (!deviceId) {
+          playbackShuffle.value = originalValue;
+          showError(
+            "No Active Device",
+            "Select a playback device before toggling shuffle.",
+            {
+              solution: [
+                "Wait for the SPX Player to connect",
+                "Select a speaker from the device menu",
+              ],
+            }
+          );
+          return;
+        }
+        return apiSetShuffle(newValue, deviceId).then(() => refreshPlayback());
+      })
+      .catch((e) => {
         playbackShuffle.value = originalValue;
-        shufflePendingRef.current = false;
         console.error("Failed to set shuffle:", e);
         handleError(e, "Shuffle");
-      }
-    }, 300);
-  }, []);
+      });
+  }, [ensureActiveDevice]);
 
   const handleMuteToggle = useCallback(async () => {
     const v = playbackVolume.value > 0 ? 0 : 74;
@@ -296,34 +283,38 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
     }
   }, []);
 
-  const handleRepeat = useCallback(async () => {
-    // Cancel any pending API call
-    if (repeatTimeoutRef.current) {
-      clearTimeout(repeatTimeoutRef.current);
-    }
-
+  const handleRepeat = useCallback(() => {
     const current = playbackRepeat.value;
     const next = current === "off" ? "context" : current === "context" ? "track" : "off";
     const originalValue = current;
 
     // Optimistic update
     playbackRepeat.value = next;
-    repeatPendingRef.current = true;
 
-    // Debounce: wait 300ms before calling API
-    repeatTimeoutRef.current = window.setTimeout(async () => {
-      try {
-        await apiSetRepeat(next);
-        repeatPendingRef.current = false;
-      } catch (e) {
-        // Revert on error
+    ensureActiveDevice()
+      .then((deviceId) => {
+        if (!deviceId) {
+          playbackRepeat.value = originalValue;
+          showError(
+            "No Active Device",
+            "Select a playback device before toggling repeat.",
+            {
+              solution: [
+                "Wait for the SPX Player to connect",
+                "Select a speaker from the device menu",
+              ],
+            }
+          );
+          return;
+        }
+        return apiSetRepeat(next, deviceId).then(() => refreshPlayback());
+      })
+      .catch((e) => {
         playbackRepeat.value = originalValue;
-        repeatPendingRef.current = false;
         console.error("Failed to set repeat:", e);
         handleError(e, "Repeat");
-      }
-    }, 300);
-  }, []);
+      });
+  }, [ensureActiveDevice]);
 
   const playContextFn = useCallback(async (uri: string, offsetUri?: string) => {
     try {

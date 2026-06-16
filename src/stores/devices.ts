@@ -1,5 +1,5 @@
 import { signal, computed } from "@preact/signals";
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
 import { playbackVolume } from "../stores/playback";
@@ -16,6 +16,17 @@ export const selectedDeviceId = signal<string | null>(null);
 
 // Whether we're currently transferring playback to a device
 export const isTransferring = signal(false);
+
+// Whether the last successful transfer fell back to the SPX Player
+export const lastTransferUsedFallback = signal(false);
+
+// librespot-based local Connect device created by SPX
+export const localConnectDeviceId = signal<string | null>(null);
+export const isStartingLocalConnect = signal(false);
+
+// Embedded WebView cookie capture state for Google Cast support
+export const isCapturingSpDc = signal(false);
+export const spDcCaptureError = signal<string | null>(null);
 
 // ─── Mute State ────────────────────────────────────────────────────────────
 
@@ -86,6 +97,22 @@ export const allDevices = computed(() => {
       isLocal: false,
       canTransfer: true,
     });
+  }
+
+  // Add the librespot-based SPX Connect device if started
+  if (localConnectDeviceId.value) {
+    const exists = merged.some(d => d.id === localConnectDeviceId.value);
+    if (!exists) {
+      merged.unshift({
+        id: localConnectDeviceId.value,
+        name: "SPX Connect",
+        type: "speaker",
+        is_active: false,
+        is_restricted: false,
+        isLocal: false,
+        canTransfer: true,
+      });
+    }
   }
 
   // Add local devices that aren't already in the Spotify list
@@ -175,6 +202,11 @@ export function __resetDeviceStore() {
   isTransferring.value = false;
   selectedDeviceId.value = null;
   isMuted.value = false;
+  lastTransferUsedFallback.value = false;
+  localConnectDeviceId.value = null;
+  isStartingLocalConnect.value = false;
+  isCapturingSpDc.value = false;
+  spDcCaptureError.value = null;
   previousVolume = 100;
   lastLocalScanAt = 0;
   activeScanPromise = null;
@@ -231,11 +263,17 @@ async function wakeDevice(ip: string): Promise<string> {
  */
 async function authenticateCastDevice(ip: string, deviceName: string): Promise<string> {
   try {
+    // Refresh the token if expired so Cast auth always has a valid token.
+    const tokenValid = await ensureValidToken();
+    if (!tokenValid) {
+      throw new Error("No access token available");
+    }
+
     const token = getAccessToken();
     if (!token) {
       throw new Error("No access token available");
     }
-    
+
     // Try new raw protocol with proper Spotify CONNECT message
     console.log(`[authenticateCastDevice] Trying raw auth for ${deviceName} at ${ip}`);
     try {
@@ -390,11 +428,145 @@ async function resolveDevice(
 }
 
 /**
+ * Retry a Spotify transfer with a short backoff.
+ * Retries on transient failures (429, 5xx, network, and 404 when the device
+ * may still be registering with Spotify Connect).
+ */
+async function transferPlaybackWithRetry(
+  deviceId: string,
+  play = true,
+  onStatus?: (msg: string) => void,
+  maxAttempts = 3
+): Promise<void> {
+  let lastError: any;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = Math.min(1000 * 2 ** (attempt - 1), 4000);
+        onStatus?.(`Retrying transfer (${attempt}/${maxAttempts})...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      await transferPlayback(deviceId, play);
+      return;
+    } catch (e: any) {
+      lastError = e;
+      const msg = e?.message || String(e);
+      const status = e?.statusCode || e?.status || e?.response?.status;
+      const isTransient =
+        status === 429 ||
+        (typeof status === "number" && status >= 500 && status < 600) ||
+        status == null ||
+        msg.includes("Device not found") ||
+        msg.includes("404") ||
+        msg.includes("No active device");
+
+      if (!isTransient || attempt === maxAttempts - 1) {
+        break;
+      }
+      console.warn(`[Devices] Transfer attempt ${attempt + 1} failed, retrying:`, msg);
+    }
+  }
+
+  throw lastError ?? new Error("Failed to transfer playback");
+}
+
+/**
+ * Fall back to the local SPX Connect device when another device fails.
+ * SPX Connect uses librespot and works with the current OAuth token,
+ * unlike Cast devices which require a Spotify Web Player token.
+ *
+ * If SPX Connect cannot be started (e.g. macOS 26 CoreAudio workaround),
+ * fall back to the SPX Player (Web Playback SDK) so playback still works
+ * on this Mac.
+ */
+async function fallbackToSpxConnect(onStatus?: (msg: string) => void): Promise<string | null> {
+  onStatus?.("Falling back to SPX Connect...");
+  console.log("[selectDevice] Attempting SPX Connect fallback");
+
+  let spxId = localConnectDeviceId.value;
+  if (!spxId) {
+    const result = await startLocalConnectDevice("SPX Connect", 50);
+    if (!result.success || !result.deviceId) {
+      console.warn("[selectDevice] SPX Connect failed:", result.error);
+      onStatus?.("SPX Connect unavailable, using SPX Player...");
+      if (currentDeviceId) {
+        await transferPlayback(currentDeviceId, true);
+        selectedDeviceId.value = currentDeviceId;
+        return currentDeviceId;
+      }
+      throw new Error(result.error || "SPX Connect could not be started.");
+    }
+    spxId = result.deviceId;
+  }
+
+  await transferPlayback(spxId, true);
+  selectedDeviceId.value = spxId;
+  return spxId;
+}
+
+/**
+ * Start the librespot-based local Spotify Connect device.
+ * Once started, "SPX Connect" appears in the device list and can receive playback.
+ */
+export async function startLocalConnectDevice(name = "SPX Connect", volume = 50): Promise<{ success: boolean; error?: string; deviceId?: string }> {
+  if (isStartingLocalConnect.value) return { success: false, error: "Already starting SPX Connect" };
+  if (localConnectDeviceId.value) return { success: true, deviceId: localConnectDeviceId.value };
+
+  const token = getAccessToken();
+  if (!token) {
+    return { success: false, error: "No access token. Please sign in to Spotify first." };
+  }
+
+  isStartingLocalConnect.value = true;
+  try {
+    const deviceId = await tauriInvoke<string>("start_local_connect_device", {
+      accessToken: token,
+      name,
+      volumePercent: Math.min(100, Math.max(0, volume)),
+    });
+    localConnectDeviceId.value = deviceId;
+    console.log("[Devices] Started SPX Connect device:", deviceId);
+    // Refresh so the device appears alongside Spotify API devices
+    await refreshDevices();
+    return { success: true, deviceId };
+  } catch (error: any) {
+    console.error("[Devices] Failed to start SPX Connect:", error);
+    const msg = error?.message || String(error);
+    return { success: false, error: msg };
+  } finally {
+    isStartingLocalConnect.value = false;
+  }
+}
+
+/**
+ * Open an embedded WebView so the user can log in to Spotify and grant SPX
+ * the `sp_dc` cookie that Google Cast receivers require.
+ */
+export async function startSpotifyCookieCapture(): Promise<{ success: boolean; error?: string }> {
+  if (isCapturingSpDc.value) return { success: false, error: "Cookie capture already in progress" };
+  isCapturingSpDc.value = true;
+  spDcCaptureError.value = null;
+  try {
+    const result = await tauriInvoke<string>("start_spotify_cookie_capture");
+    console.log("[Devices] Cookie capture started:", result);
+    return { success: true };
+  } catch (error) {
+    const msg = (error as Error)?.message || String(error);
+    console.error("[Devices] Cookie capture failed:", msg);
+    spDcCaptureError.value = msg;
+    return { success: false, error: msg };
+  } finally {
+    isCapturingSpDc.value = false;
+  }
+}
+
+/**
  * Select a device and transfer playback to it.
  * For Cast-only devices: wakes the device first, then transfers.
  * Returns the actual error message so the UI can show something useful.
  */
-export async function selectDevice(deviceId: string, deviceIp?: string): Promise<{ success: boolean; error?: string }> {
+export async function selectDevice(deviceId: string, deviceIp?: string): Promise<{ success: boolean; error?: string; usedFallback?: boolean }> {
   if (isTransferring.value) return { success: false, error: "Transfer already in progress" };
 
   isTransferring.value = true;
@@ -411,6 +583,7 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
 
   let statusMessage = "";
   const onStatus = (msg: string) => { statusMessage = msg; };
+  let usedFallback = false;
 
   try {
     // Resolve Cast devices to Spotify Connect IDs (40s timeout inside)
@@ -433,17 +606,31 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
       if (match?.id) {
         console.log(`[selectDevice] Found match by name: ${match.id}`);
         selectedDeviceId.value = match.id;
-      } else {
+      } else if (resolvedId !== currentDeviceId) {
         console.log(`[selectDevice] Device ${resolvedId} not found in API after refresh`);
         return { success: false, error: "Device went offline. Select SPX Player or another available device." };
       }
     }
 
-    console.log(`[selectDevice] Calling transferPlayback(${selectedDeviceId.value})...`);
-    await transferPlayback(selectedDeviceId.value, true);
+    const targetId = selectedDeviceId.value!;
+    console.log(`[selectDevice] Calling transferPlayback(${targetId})...`);
+
+    try {
+      await transferPlaybackWithRetry(targetId, true, onStatus);
+    } catch (transferError: any) {
+      // Don't fall back to SPX Player if the user explicitly selected SPX Player.
+      if (targetId === currentDeviceId) {
+        throw transferError;
+      }
+      console.warn("[selectDevice] Primary transfer failed, trying SPX Connect fallback:", transferError);
+      await fallbackToSpxConnect(onStatus);
+      usedFallback = true;
+    }
+
     console.log(`[selectDevice] Transfer succeeded!`);
+    lastTransferUsedFallback.value = usedFallback;
     await refreshSpotifyDevices();
-    return { success: true };
+    return { success: true, ...(usedFallback ? { usedFallback: true as const } : {}) };
   } catch (error: any) {
     console.error("[Devices] Failed to transfer playback:", error);
     selectedDeviceId.value = activeDevice.value?.id ?? null;
@@ -454,7 +641,7 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
       return { success: false, error: statusMessage };
     }
     if (msg.includes("isn't visible") || msg.includes("Spotify is not running")) {
-      return { success: false, error: "This speaker needs to be activated. Select the SPX Player to play here, or start playback on the speaker from SPX." };
+      return { success: false, error: "This speaker needs to be activated. Select SPX Connect to play on this Mac, or start playback on the speaker from the official Spotify app." };
     }
     if (msg.includes("403") || msg.includes("Premium")) {
       return { success: false, error: "Spotify Premium required to control playback remotely." };
@@ -498,7 +685,7 @@ export function clearDeviceSelection() {
  * Graceful device switching: pauses current playback before transferring
  * to ensure clean state transition.
  */
-export async function switchDevice(deviceId: string, deviceIp?: string): Promise<{ success: boolean; error?: string }> {
+export async function switchDevice(deviceId: string, deviceIp?: string): Promise<{ success: boolean; error?: string; usedFallback?: boolean }> {
   try {
     // Pause current playback first (graceful switch per spotify-player pattern)
     await pause(effectiveDeviceId.value ?? undefined);
@@ -564,9 +751,16 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
           ? { ...active, id: active.id ?? undefined, volume_percent: active.volume_percent ?? undefined }
           : null;
 
-        // If selected device disappeared, fall back to active
-        if (selectedDeviceId.value && !availableDevices.value.some(d => d.id === selectedDeviceId.value)) {
-          selectedDeviceId.value = active?.id ?? null;
+        // If selected device disappeared, fall back to active.
+        // Keep SPX Connect and the Web Playback SDK device even if Spotify's API
+        // doesn't list them yet.
+        if (selectedDeviceId.value) {
+          const isKnownLocalDevice =
+            selectedDeviceId.value === localConnectDeviceId.value ||
+            selectedDeviceId.value === currentDeviceId;
+          if (!isKnownLocalDevice && !availableDevices.value.some(d => d.id === selectedDeviceId.value)) {
+            selectedDeviceId.value = active?.id ?? null;
+          }
         }
       } catch (spotifyErr) {
         debug("[Devices] Spotify API unavailable (likely not authenticated yet):", spotifyErr);

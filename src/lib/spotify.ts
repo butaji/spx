@@ -32,6 +32,7 @@ export const validateToken = async () => isAuthenticated();
 export const startAuthFlow = SDK.startAuthFlow;
 export const handleAuthCallback = SDK.handleAuthCallback;
 export const logout = SDK.logout;
+export const ensureValidToken = SDK.ensureValidToken;
 export async function getCurrentUser(): Promise<any> {
   if (isMockActive()) return mock.getCurrentUser();
   return SDK.getCurrentUser();
@@ -67,13 +68,13 @@ export async function setVolume(volumePercent: number, deviceId?: string) {
   if (isMockActive()) return mock.setVolume(volumePercent, deviceId);
   return SDK.setVolume(volumePercent, deviceId);
 }
-export async function setShuffle(state: boolean) {
+export async function setShuffle(state: boolean, deviceId?: string) {
   if (isMockActive()) return mock.toggleShuffle(state);
-  return SDK.toggleShuffle(state);
+  return SDK.toggleShuffle(state, deviceId);
 }
-export async function setRepeat(state: string) {
+export async function setRepeat(state: string, deviceId?: string) {
   if (isMockActive()) return mock.setRepeat(state as 'off' | 'track' | 'context');
-  return SDK.setRepeat(state as 'off' | 'track' | 'context');
+  return SDK.setRepeat(state as 'off' | 'track' | 'context', deviceId);
 }
 export async function transferPlayback(deviceId: string, play = true) {
   if (isMockActive()) return mock.transferPlayback(deviceId, play);

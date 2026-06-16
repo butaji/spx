@@ -11,17 +11,20 @@ vi.mock('../lib/spotify', () => ({
   scanLocalDevices: vi.fn(),
   transferPlayback: vi.fn(),
   getAccessToken: vi.fn(() => 'mock-token'),
+  ensureValidToken: vi.fn(() => Promise.resolve(true)),
   setVolume: vi.fn(),
   pause: vi.fn(),
+  tauriInvoke: vi.fn(),
 }));
 
-const mockCurrentDeviceId = vi.hoisted(() => ({ value: 'web-sdk-device-id' }));
+const mockCurrentDeviceId = vi.hoisted(() => ({ value: 'web-sdk-device-id' as string | null }));
 
 vi.mock('../lib/playback', () => ({
   get currentDeviceId() {
     return mockCurrentDeviceId.value;
   },
   playbackVolume: { value: 50 },
+  waitForDeviceId: vi.fn(() => Promise.resolve(null)),
 }));
 
 vi.mock('../lib/utils', () => ({
@@ -30,7 +33,7 @@ vi.mock('../lib/utils', () => ({
 
 // ─── Import after mocks ────────────────────────────────────────────────────────
 
-import { getAvailableDevices, scanLocalDevices, transferPlayback, setVolume, pause } from '../lib/spotify';
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, setVolume, pause, tauriInvoke, ensureValidToken } from '../lib/spotify';
 import { playbackVolume } from '../stores/playback';
 import {
   availableDevices,
@@ -86,6 +89,13 @@ beforeEach(() => {
 
   // Default to a connected in-app player; individual describes can override.
   mockCurrentDeviceId.value = 'web-sdk-device-id';
+
+  // SPX Connect fallback is available by default.
+  (tauriInvoke as ReturnType<typeof vi.fn>).mockResolvedValue('spx-connect-device-id');
+
+  // Reset auth mocks in case a previous test overrode them.
+  (getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue('mock-token');
+  (ensureValidToken as ReturnType<typeof vi.fn>).mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -489,6 +499,52 @@ describe('selectDevice timeout handling', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
+// TEST: Cast auth token handling
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('selectDevice Cast auth token handling', () => {
+  it('returns an auth error when no valid token is available for Cast auth', async () => {
+    // Arrange
+    mockGetAvailableDevices([]);
+    mockScanLocalDevices([
+      {
+        name: 'Chromecast',
+        ip: '192.168.1.70',
+        port: 8009,
+        service_type: '_googlecast._tcp.local.',
+      },
+    ]);
+
+    await refreshDevices({ includeLocal: true });
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Simulate an expired / missing token that cannot be refreshed
+    (ensureValidToken as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+    (getAccessToken as ReturnType<typeof vi.fn>).mockReturnValue(null);
+
+    // Mock wakeDevice succeeds
+    const { invoke } = await import('@tauri-apps/api/core');
+    (invoke as ReturnType<typeof vi.fn>).mockResolvedValue('Chromecast woken');
+
+    // Device never appears in Spotify API, so it falls through to Cast auth
+    (getAvailableDevices as ReturnType<typeof vi.fn>).mockResolvedValue({ devices: [] });
+
+    const castDevice = allDevices.value.find(d => d.name === 'Chromecast');
+
+    // Act
+    const resultPromise = import('./devices').then(m =>
+      m.selectDevice(castDevice!.id!, (castDevice as any).deviceIp)
+    );
+    await vi.advanceTimersByTimeAsync(16_000);
+    const result = await resultPromise;
+
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/token|authenticate|sign in/i);
+  }, 20000);
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // TEST: clearDeviceSelection resets all state
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -840,7 +896,7 @@ describe('switchDevice', () => {
     await refreshDevices();
     await vi.advanceTimersByTimeAsync(0);
 
-    const result = await switchDevice('dev2');
+    await switchDevice('dev2');
 
     expect(pause).toHaveBeenCalledBefore(transferPlayback as any);
   });
@@ -955,7 +1011,7 @@ describe('isTransferring flag', () => {
       new Promise(() => {}) // Never resolves
     );
 
-    const selectPromise = selectDevice('dev1');
+    selectDevice('dev1');
     
     // Wait for the signal to be set
     await vi.advanceTimersByTimeAsync(0);
@@ -1125,5 +1181,88 @@ describe('Volume preservation across operations', () => {
     await setMuteState(false);
     expect(isMuted.value).toBe(false);
     expect(setVolume).toHaveBeenLastCalledWith(72, 'web-sdk-device-id');
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TEST: SPX Player fallback on transfer failure
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('selectDevice — SPX Player fallback', () => {
+  beforeEach(() => {
+    mockSetVolume();
+    mockCurrentDeviceId.value = 'spx-player';
+  });
+
+  it('falls back to SPX Connect when the primary device transfer fails', async () => {
+    mockGetAvailableDevices([
+      { id: 'dev1', name: 'Device 1', type: 'speaker', is_active: false, is_restricted: false },
+    ]);
+    await refreshDevices();
+    await vi.advanceTimersByTimeAsync(0);
+
+    // First three calls (retries) for dev1 fail, then SPX Connect fallback succeeds.
+    let callCount = 0;
+    (transferPlayback as ReturnType<typeof vi.fn>).mockImplementation((deviceId: string) => {
+      callCount++;
+      if (deviceId === 'dev1' && callCount <= 3) {
+        return Promise.reject(new Error('Device not found'));
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const result = await selectDevice('dev1');
+
+    expect(result.success).toBe(true);
+    expect(result.usedFallback).toBe(true);
+    expect(selectedDeviceId.value).toBe('spx-connect-device-id');
+    expect(tauriInvoke).toHaveBeenCalledWith('start_local_connect_device', {
+      accessToken: 'mock-token',
+      name: 'SPX Connect',
+      volumePercent: 50,
+    });
+    expect(transferPlayback).toHaveBeenLastCalledWith('spx-connect-device-id', true);
+  });
+
+  it('falls back to SPX Player when both primary transfer and SPX Connect fail', async () => {
+    mockGetAvailableDevices([
+      { id: 'dev1', name: 'Device 1', type: 'speaker', is_active: false, is_restricted: false },
+    ]);
+    await refreshDevices();
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Primary transfer to dev1 fails, but fallback to SPX Player succeeds.
+    (transferPlayback as ReturnType<typeof vi.fn>).mockImplementation((deviceId: string) => {
+      if (deviceId === 'dev1') {
+        return Promise.reject(new Error('Device not found'));
+      }
+      return Promise.resolve(undefined);
+    });
+    // SPX Connect start fails (e.g. macOS 26 CoreAudio guard).
+    (tauriInvoke as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error('SPX Connect local audio is temporarily unavailable on macOS 26')
+    );
+
+    const result = await selectDevice('dev1');
+
+    expect(result.success).toBe(true);
+    expect(result.usedFallback).toBe(true);
+    expect(selectedDeviceId.value).toBe('spx-player');
+    expect(transferPlayback).toHaveBeenLastCalledWith('spx-player', true);
+  });
+
+  it('does not fall back when the user selected the SPX Player', async () => {
+    mockGetAvailableDevices([
+      { id: 'spx-player', name: 'SPX Player', type: 'computer', is_active: false, is_restricted: false },
+    ]);
+    await refreshDevices();
+    await vi.advanceTimersByTimeAsync(0);
+
+    (transferPlayback as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('SPX Player not ready'));
+
+    const result = await selectDevice('spx-player');
+
+    expect(result.success).toBe(false);
+    expect(transferPlayback).toHaveBeenCalledWith('spx-player', true);
   });
 });

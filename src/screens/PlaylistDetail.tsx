@@ -22,7 +22,7 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
     setLoading(true);
     try {
       const data = await getPlaylistTracks(id);
-      setTracks((data.items || []).map((i: any) => i.track).filter(Boolean) as SpotifyTrack[]);
+      setTracks((data.items || []).filter(Boolean).map((i: any) => i.track).filter(Boolean) as SpotifyTrack[]);
     } catch (e) {
       console.error("Failed to load playlist tracks:", e);
     }
@@ -38,12 +38,12 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
   useEffect(() => { loadTracks(); }, [loadTracks]);
 
   const playAll = useCallback(() => {
-    const uris = tracks.map((t) => t.uri).filter(Boolean);
+    const uris = tracks.filter(Boolean).map((t) => t.uri).filter(Boolean);
     if (uris.length) onPlayUris(uris);
   }, [tracks, onPlayUris]);
 
   const playTrack = useCallback((index: number) => {
-    const uris = tracks.map((t) => t.uri).filter(Boolean);
+    const uris = tracks.filter(Boolean).map((t) => t.uri).filter(Boolean);
     onPlayUris(uris, index);
   }, [tracks, onPlayUris]);
 
@@ -82,26 +82,23 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
         </div>
       </div>
 
-      const currentTrackId = playbackTrack.value?.id;
-      const isPlaybackActive = isPlaying.value;
-
       {loading ? (
         <p className="text-sm text-muted" style={{ textAlign: "center", padding: 30 }} aria-live="polite">Loading...</p>
       ) : (
         <div className="tracklist">
-          {tracks.map((track, i) => (
+          {tracks.filter(Boolean).map((track, i) => (
             <TrackRow
               key={track.id}
               index={i}
               name={track.name}
-              artists={track.artists?.map((a) => a.name).join(", ")}
+              artists={track.artists?.filter(Boolean).map((a) => a.name).join(", ")}
               durationMs={track.duration_ms || 0}
               imageUrl={track.album?.images?.[0]?.url}
               onClick={() => playTrack(i)}
               onKeyDown={(e) => handleTrackKeyDown(e, i)}
               isActive={track.id === playbackTrack.value?.id}
               isPlaying={track.id === playbackTrack.value?.id && isPlaying.value}
-              ariaLabel={`${track.name} by ${track.artists?.map((a) => a.name).join(", ")}`}
+              ariaLabel={`${track.name} by ${track.artists?.filter(Boolean).map((a) => a.name).join(", ")}`}
             />
           ))}
         </div>

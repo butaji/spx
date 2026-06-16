@@ -17,7 +17,7 @@ impl<M> Mailbox<M> {
     }
 
     /// Create a mailbox with default capacity (100 messages).
-    pub fn default() -> (Self, mpsc::Sender<M>) {
+    pub fn with_default_capacity() -> (Self, mpsc::Sender<M>) {
         Self::new(100)
     }
 

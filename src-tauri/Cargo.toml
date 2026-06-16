@@ -30,14 +30,25 @@ tokio = { version = "1", features = ["net", "io-util", "time", "process", "sync"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 urlencoding = "2"
-rust_cast = "0.21"
+rust_cast = { path = "rust_cast_fork" }
 rustls = { version = "0.23", features = ["aws-lc-rs", "std"] }
 md5 = "0.7"
+librespot-oauth = "0.8"
+librespot-core = "0.8"
+librespot-connect = "0.8"
+librespot-playback = { version = "0.8", default-features = false, features = ["rodio-backend"] }
+vergen = "=9.0.6"
 anyhow = "1"
 chrono = "0.4"
 dirs = "5"
 thiserror = "2"
 futures = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+data-encoding = "2.8"
+hmac = "0.12"
+sha1 = "0.10"
+hex = "0.4"
+libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
