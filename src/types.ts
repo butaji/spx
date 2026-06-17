@@ -276,6 +276,65 @@ export interface SpotifyArtistTopTracks {
   tracks?: SpotifyTrack[];
 }
 
+export interface SpotifyAudioFeatures {
+  id: string;
+  danceability: number;
+  energy: number;
+  key: number;
+  loudness: number;
+  mode: number;
+  speechiness: number;
+  acousticness: number;
+  instrumentalness: number;
+  liveness: number;
+  valence: number;
+  tempo: number;
+  type: string;
+  uri: string;
+  track_href: string;
+  analysis_url: string;
+  duration_ms: number;
+}
+
+export interface SpotifyAudioAnalysis {
+  meta: {
+    analyzer_version: string;
+    platform: string;
+    detailed_status: string;
+    lookup_time_utc: string;
+  };
+  track: {
+    num_samples: number;
+    duration: number;
+    sample_md5: string;
+    window_seconds: number;
+    analysis_sample_rate: number;
+    analysis_channels: number;
+    end_of_fade_in: number;
+    start_of_fade_out: number;
+    loudness: number;
+    tempo: number;
+    tempo_confidence: number;
+    time_signature: number;
+    time_signature_confidence: number;
+    key: number;
+    key_confidence: number;
+    mode: number;
+    mode_confidence: number;
+    codestring: string;
+    code_version: number;
+    echoprintstring: string;
+    echoprint_version: number;
+    syncs: string;
+    rhythm_version: number;
+  };
+  bars: Array<{ start: number; duration: number; confidence: number }>;
+  beats: Array<{ start: number; duration: number; confidence: number }>;
+  sections: Array<{ start: number; duration: number; confidence: number; loudness: number; tempo: number; tempo_confidence: number; key: number; key_confidence: number; mode: number; mode_confidence: number }>;
+  segments: Array<{ start: number; duration: number; confidence: number; loudness_start: number; loudness_max: number; pitches: number[]; timbre: number[] }>;
+  tatums: Array<{ start: number; duration: number; confidence: number }>;
+}
+
 export interface SpotifyAlbumOrArtist {
   id?: string;
   name?: string;

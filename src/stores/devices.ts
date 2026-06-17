@@ -1,5 +1,5 @@
 import { signal, computed } from "@preact/signals";
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause, getPlaybackState } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
 import { playbackVolume } from "../stores/playback";
@@ -76,14 +76,14 @@ export async function setMuteState(muted: boolean): Promise<void> {
 
 // Merged view: all controllable devices (Spotify API devices + matched local devices)
 export const allDevices = computed(() => {
-  const spotify = availableDevices.value;
-  const local = localDevices.value;
+  const spotify = availableDevices.value ?? [];
+  const local = localDevices.value ?? [];
 
 
 
   // Start with Spotify API devices
   const merged: Array<SpotifyDevice & { isLocal?: boolean; localNote?: string; canTransfer?: boolean; needsWakeUp?: boolean; deviceIp?: string }> =
-    spotify.map(d => ({ ...d, isLocal: false, canTransfer: true }));
+    spotify.filter(d => d?.id).map(d => ({ ...d, isLocal: false, canTransfer: true }));
 
   // Inject the in-app SPX Player as a guaranteed device if it has a device ID
   // but Spotify's API hasn't returned it yet (e.g. right after connect).
@@ -215,16 +215,17 @@ let devicePollingInterval: ReturnType<typeof setInterval> | null = null;
 
 // ─── Device Polling ──────────────────────────────────────────────────────────
 
-/**
- * Start polling devices every 10s.
- * Includes local mDNS scan on each poll.
- */
+let pollingRefreshVersion = 0; // Deduplicate polling refreshes
+
 export function startDevicePolling(intervalMs = 10_000) {
   if (devicePollingInterval) {
     // Already polling; avoid duplicate intervals.
     return;
   }
+  const currentVersion = ++pollingRefreshVersion;
   devicePollingInterval = setInterval(() => {
+    // Skip if another refresh is already in progress (debounce)
+    if (pollingRefreshVersion !== currentVersion) return;
     refreshDevices({ includeLocal: true }).catch(console.warn);
   }, intervalMs);
   refreshDevices({ includeLocal: true }).catch(console.warn);
@@ -472,6 +473,42 @@ async function transferPlaybackWithRetry(
 }
 
 /**
+ * Verify that the target device became active after transfer.
+ * Returns true if the device is now the active device, false otherwise.
+ * This is a health check pattern used by spotcast and other mature Spotify projects.
+ */
+async function verifyDeviceHealth(
+  targetDeviceId: string,
+  onStatus?: (msg: string) => void,
+  maxAttempts = 3
+): Promise<boolean> {
+  console.log(`[verifyDeviceHealth] Checking if device ${targetDeviceId} is active...`);
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (attempt > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+    
+    try {
+      const state = await getPlaybackState();
+      const activeId = state?.device?.id;
+      
+      if (activeId === targetDeviceId) {
+        console.log(`[verifyDeviceHealth] ✓ Device ${targetDeviceId} is active`);
+        return true;
+      }
+      
+      console.log(`[verifyDeviceHealth] Attempt ${attempt + 1}/${maxAttempts}: device=${activeId ?? 'none'} (waiting for ${targetDeviceId})`);
+    } catch (e) {
+      console.warn(`[verifyDeviceHealth] Attempt ${attempt + 1} failed:`, e);
+    }
+  }
+  
+  console.warn(`[verifyDeviceHealth] ✗ Device ${targetDeviceId} did not become active after ${maxAttempts} attempts`);
+  return false;
+}
+
+/**
  * Fall back to the local SPX Connect device when another device fails.
  * SPX Connect uses librespot and works with the current OAuth token,
  * unlike Cast devices which require a Spotify Web Player token.
@@ -617,6 +654,15 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
 
     try {
       await transferPlaybackWithRetry(targetId, true, onStatus);
+      
+      // Health check: verify device became active (pattern from spotcast/spotifyd)
+      const isHealthy = await verifyDeviceHealth(targetId, onStatus);
+      if (!isHealthy && targetId !== currentDeviceId) {
+        console.warn("[selectDevice] Device health check failed, trying fallback...");
+        onStatus?.("Device not responding, trying SPX Connect...");
+        await fallbackToSpxConnect(onStatus);
+        usedFallback = true;
+      }
     } catch (transferError: any) {
       // Don't fall back to SPX Player if the user explicitly selected SPX Player.
       if (targetId === currentDeviceId) {
@@ -711,27 +757,33 @@ export interface RefreshDevicesOptions {
  * Unified device refresh.
  * - Always fetches Spotify Connect devices
  * - Optionally scans mDNS for local Cast devices
+ * 
+ * FIX: Properly handle concurrent calls by returning existing promise only when
+ * options are identical, otherwise start a new refresh.
  */
 export async function refreshDevices(options: RefreshDevicesOptions = {}): Promise<void> {
 
   const { force = false, includeLocal = false } = options;
 
+  // Only return existing promise if options are identical (avoid redundant refreshes)
   if (activeScanPromise) {
     const currentOptions = activeScanOptions;
     if (currentOptions && currentOptions.includeLocal === includeLocal && currentOptions.force === force) {
       return activeScanPromise;
     }
+    // Different options requested - let current scan finish but don't await it
+    // The new call will proceed with its own scan
   }
 
   // Only scan if includeLocal=true AND (cooldown passed OR never scanned)
   const shouldScanLocal = includeLocal && (force || lastLocalScanAt === 0 || (lastLocalScanAt > 0 && Date.now() - lastLocalScanAt >= LOCAL_SCAN_COOLDOWN_MS));
 
-
-    activeScanOptions = options;
-    activeScanPromise = (async () => {
+  activeScanOptions = options;
+  const scanPromise = (async () => {
     isScanning.value = true;
     scanError.value = null;
     let spotifyDevices: any[] = [];
+    let localScanError: Error | null = null;
 
     try {
       // Fetch Spotify devices (always) — but don't let auth failures block local scanning
@@ -770,32 +822,39 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
       // Always scan local devices when requested, regardless of Spotify auth state
       if (shouldScanLocal) {
         console.log(`[refreshDevices] Scanning local devices (force=${force}, cooldown=${Date.now() - lastLocalScanAt}ms ago)`);
-        const local = await scanLocalDevices();
-        console.log(`[refreshDevices] mDNS found ${local.length} devices:`, local.map(d => ({ name: d.friendly_name || d.name, ip: d.ip, port: d.port })));
-        const matched = local.map((device) => {
-          const displayName = device.friendly_name || device.name;
-          const byId = device.id ? spotifyDevices.find(sd => sd.id === device.id) : null;
-          const byName = spotifyDevices.find(sd => sd.name?.toLowerCase() === displayName.toLowerCase());
-          const byFuzzyName = !byId && !byName
-            ? spotifyDevices.find(sd =>
-                sd.name?.toLowerCase().includes(displayName.toLowerCase()) ||
-                displayName.toLowerCase().includes(sd.name?.toLowerCase() ?? "")
-              )
-            : null;
-          const spotifyMatch = byId || byName || byFuzzyName;
+        try {
+          const local = await scanLocalDevices();
+          console.log(`[refreshDevices] mDNS found ${local.length} devices:`, local.map(d => ({ name: d.friendly_name || d.name, ip: d.ip, port: d.port })));
+          const matched = local.map((device) => {
+            const displayName = device.friendly_name || device.name;
+            const byId = device.id ? spotifyDevices.find(sd => sd.id === device.id) : null;
+            const byName = spotifyDevices.find(sd => sd.name?.toLowerCase() === displayName.toLowerCase());
+            const byFuzzyName = !byId && !byName
+              ? spotifyDevices.find(sd =>
+                  sd.name?.toLowerCase().includes(displayName.toLowerCase()) ||
+                  displayName.toLowerCase().includes(sd.name?.toLowerCase() ?? "")
+                )
+              : null;
+            const spotifyMatch = byId || byName || byFuzzyName;
 
-          if (spotifyMatch?.id) {
-            console.log(`[refreshDevices] MATCHED local "${displayName}" to Spotify API device "${spotifyMatch.name}" (id=${spotifyMatch.id})`);
-            return { ...device, id: spotifyMatch.id, is_active: spotifyMatch.is_active, canTransfer: true, friendly_name: displayName };
-          } else {
-            console.log(`[refreshDevices] NO MATCH for local "${displayName}" — will show as Cast-only device`);
-            return { ...device, canTransfer: false, friendly_name: displayName, note: "Start playback in SPX to activate this speaker" };
+            if (spotifyMatch?.id) {
+              console.log(`[refreshDevices] MATCHED local "${displayName}" to Spotify API device "${spotifyMatch.name}" (id=${spotifyMatch.id})`);
+              return { ...device, id: spotifyMatch.id, is_active: spotifyMatch.is_active, canTransfer: true, friendly_name: displayName };
+            } else {
+              console.log(`[refreshDevices] NO MATCH for local "${displayName}" — will show as Cast-only device`);
+              return { ...device, canTransfer: false, friendly_name: displayName, note: "Start playback in SPX to activate this speaker" };
+            }
+          });
+          localDevices.value = matched;
+          // Only update timestamp when scan actually ran (not when blocked by cooldown)
+          if (shouldScanLocal) {
+            lastLocalScanAt = Date.now();
           }
-        });
-        localDevices.value = matched;
-        // Only update timestamp when scan actually ran (not when blocked by cooldown)
-        if (shouldScanLocal) {
-          lastLocalScanAt = Date.now();
+        } catch (localError) {
+          // Surface local scan errors but don't fail the whole refresh
+          localScanError = localError instanceof Error ? localError : new Error(String(localError));
+          console.warn("[refreshDevices] Local scan failed:", localScanError.message);
+          // Keep existing local devices on scan failure
         }
       }
     } catch (error) {
@@ -803,11 +862,16 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
       scanError.value = error instanceof Error ? error.message : "Failed to scan devices";
     } finally {
       isScanning.value = false;
+      // Report local scan errors if no main error occurred
+      if (localScanError && !scanError.value) {
+        console.log("[refreshDevices] Reporting local scan error:", localScanError.message);
+      }
       activeScanPromise = null;
       activeScanOptions = null;
     }
   })();
 
+  activeScanPromise = scanPromise;
   return activeScanPromise;
 }
 

@@ -16,10 +16,14 @@ use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha1::Sha1;
 use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36";
 const SECRETS_URL: &str = "https://raw.githubusercontent.com/xyloflake/spot-secrets-go/main/secrets/secretDict.json";
+/// Refresh token 5 minutes before expiration to avoid edge-case failures.
+const TOKEN_REFRESH_BUFFER_SECS: u64 = 300;
 
 /// Web Player token response from Spotify.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -44,10 +48,33 @@ impl WebPlayerToken {
     }
 }
 
-/// Fetch a web-player token using the `sp_dc` cookie.
+/// Cached token state with sp_dc for cache invalidation.
+#[derive(Clone)]
+struct CachedToken {
+    token: WebPlayerToken,
+    sp_dc_hash: u64, // Hash of sp_dc to detect cookie changes
+}
+
+/// Module-level token cache (shared across all callers).
+static TOKEN_CACHE: std::sync::LazyLock<Arc<RwLock<Option<CachedToken>>>> =
+    std::sync::LazyLock::new(|| Arc::new(RwLock::new(None)));
+
+/// Simple hash for cache invalidation (not cryptographic, just for quick comparison).
+fn hash_sp_dc(sp_dc: &str) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    let mut s = DefaultHasher::new();
+    sp_dc.hash(&mut s);
+    s.finish()
+}
+
+/// Fetch a web-player token using the `sp_dc` cookie (with caching).
 ///
 /// `sp_dc` can be supplied directly. If `None`, the function falls back to the
 /// `SPOTIFY_SP_DC` environment variable.
+///
+/// Returns a cached token if still valid (>5 min before expiration).
+/// Automatically invalidates cache if the `sp_dc` cookie changes.
 pub async fn get_web_player_token(sp_dc: Option<&str>) -> Result<WebPlayerToken, String> {
     let sp_dc = sp_dc
         .map(|s| s.trim().to_string())
@@ -55,6 +82,32 @@ pub async fn get_web_player_token(sp_dc: Option<&str>) -> Result<WebPlayerToken,
         .filter(|s| !s.is_empty())
         .ok_or("sp_dc cookie is required. Set SPOTIFY_SP_DC or pass it as an argument.")?;
 
+    let sp_dc_hash = hash_sp_dc(&sp_dc);
+
+    // Check cache first
+    {
+        let cache = TOKEN_CACHE.read().await;
+        if let Some(cached) = cache.as_ref() {
+            if cached.sp_dc_hash == sp_dc_hash {
+                let remaining = cached.token.expires_in_secs();
+                if remaining > TOKEN_REFRESH_BUFFER_SECS {
+                    debug!(
+                        "Returning cached Web Player token ({}s remaining)",
+                        remaining
+                    );
+                    return Ok(cached.token.clone());
+                }
+                debug!(
+                    "Cached token expiring soon ({}s remaining), will refresh",
+                    remaining
+                );
+            } else {
+                debug!("sp_dc changed, forcing token refresh");
+            }
+        }
+    }
+
+    // Fetch fresh token
     info!("Fetching Web Player TOTP secrets...");
     let secrets = fetch_totp_secrets().await?;
 
@@ -105,12 +158,29 @@ pub async fn get_web_player_token(sp_dc: Option<&str>) -> Result<WebPlayerToken,
         return Err("Spotify returned an empty Web Player access token".to_string());
     }
 
+    // Update cache
+    let cached = CachedToken {
+        token: token.clone(),
+        sp_dc_hash,
+    };
+    {
+        let mut cache = TOKEN_CACHE.write().await;
+        *cache = Some(cached);
+    }
+
     info!(
         "Got Web Player token (expires in {}s, anonymous={})",
         token.expires_in_secs(),
         token.is_anonymous
     );
     Ok(token)
+}
+
+/// Force-clear the token cache (e.g., after sp_dc cookie changes).
+pub async fn clear_token_cache() {
+    let mut cache = TOKEN_CACHE.write().await;
+    *cache = None;
+    debug!("Web Player token cache cleared");
 }
 
 /// Fetch the public TOTP cipher secrets dictionary.
@@ -266,6 +336,27 @@ mod tests {
         };
         // Allow a few seconds of drift.
         assert!((token.expires_in_secs() as i64 - 3600).abs() < 5);
+    }
+
+    #[test]
+    fn test_hash_sp_dc_is_deterministic() {
+        let hash1 = hash_sp_dc("test_cookie_123");
+        let hash2 = hash_sp_dc("test_cookie_123");
+        assert_eq!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_hash_sp_dc_different_inputs() {
+        let hash1 = hash_sp_dc("cookie_a");
+        let hash2 = hash_sp_dc("cookie_b");
+        assert_ne!(hash1, hash2);
+    }
+
+    #[tokio::test]
+    async fn test_clear_token_cache() {
+        clear_token_cache().await;
+        // Verify cache is empty by checking internal state (would need async inspection in real scenario)
+        // This test just verifies the function doesn't panic
     }
 
     #[tokio::test]

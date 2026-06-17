@@ -273,9 +273,29 @@ pub async fn start_local_connect_device(
     name: String,
     volume_percent: u16,
 ) -> Result<String, String> {
-    let device = crate::librespot_player::start_connect_device(access_token, name, volume_percent)
-        .await?;
-    Ok(device.device_id)
+    use crate::events::helpers as event;
+    
+    // Emit event: local connect started
+    event::local_connect_started().await;
+    
+    let result = crate::librespot_player::start_connect_device(
+        access_token, 
+        name.clone(), 
+        volume_percent
+    ).await;
+    
+    match result {
+        Ok(device) => {
+            // Emit event: local connect completed
+            event::local_connect_completed(device.device_id.clone()).await;
+            Ok(device.device_id)
+        }
+        Err(e) => {
+            // Emit event: local connect failed
+            event::local_connect_failed(e.clone()).await;
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
@@ -608,15 +628,22 @@ pub async fn authenticate_cast_device_command(
     access_token: String,
     device_name: String,
 ) -> Result<String, String> {
+    use crate::events::helpers as event;
+    
     info!("Authenticating Cast device {} at {}", device_name, ip);
+    
+    // Emit event: auth started
+    event::cast_auth_started(device_name.clone()).await;
 
     let token_to_use = resolve_cast_token(access_token, Some(app)).await?;
 
     let ip_owned = ip;
     let token_owned = token_to_use;
-    let name_owned = device_name;
+    let name_owned = device_name.clone();
 
     let result = tokio::task::spawn_blocking(move || {
+        // Emit progress events during authentication
+        tracing::info!("[CastAuth] Starting authentication for {}", name_owned);
         crate::spotify_cast::authenticate_cast_device(
             &ip_owned,
             &token_owned,
@@ -626,10 +653,26 @@ pub async fn authenticate_cast_device_command(
 
     // Wrap in a 70-second timeout (internal waits can sum to ~50s)
     match timeout(Duration::from_secs(70), result).await {
-        Ok(Ok(Ok(s))) => Ok(s),
-        Ok(Ok(Err(e))) => Err(e),
-        Ok(Err(_)) => Err("Cast auth task panicked".to_string()),
-        Err(_) => Err("Cast auth timed out after 30 seconds".to_string()),
+        Ok(Ok(Ok(s))) => {
+            // Emit event: auth completed
+            event::cast_auth_completed(device_name).await;
+            Ok(s)
+        }
+        Ok(Ok(Err(e))) => {
+            // Emit event: auth failed
+            event::cast_auth_failed(device_name, e.clone()).await;
+            Err(e)
+        }
+        Ok(Err(_)) => {
+            let err = "Cast auth task panicked".to_string();
+            event::cast_auth_failed(device_name, err.clone()).await;
+            Err(err)
+        }
+        Err(_) => {
+            let err = "Cast auth timed out after 70 seconds".to_string();
+            event::cast_auth_failed(device_name, err.clone()).await;
+            Err(err)
+        }
     }
 }
 
@@ -803,6 +846,33 @@ pub fn request_macos_local_network_permission() -> String {
     {
         "Not on macOS".to_string()
     }
+}
+
+/// Subscribe to the event stream.
+/// Returns recent events for initial sync, then events are emitted via Tauri events.
+#[tauri::command]
+pub async fn get_event_history(limit: Option<usize>) -> Result<Vec<serde_json::Value>, String> {
+    let bus = crate::events::EVENT_BUS.read().await;
+    let events = bus.history(limit.unwrap_or(50)).await;
+    
+    // Convert to JSON-serializable format
+    Ok(events
+        .into_iter()
+        .map(|e| serde_json::to_value(&e).unwrap_or_else(|_| serde_json::json!({"type": "unknown"})))
+        .collect())
+}
+
+/// Emit a custom event from the frontend.
+/// Used for testing the event system or triggering event-based flows.
+#[tauri::command]
+pub async fn emit_spx_event(event: serde_json::Value) -> Result<(), String> {
+    use crate::events::SpxEvent;
+    
+    let spx_event: SpxEvent = serde_json::from_value(event)
+        .map_err(|e| format!("Invalid event format: {}", e))?;
+    
+    crate::events::EVENT_BUS.read().await.publish(spx_event).await;
+    Ok(())
 }
 
 #[cfg(test)]

@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@preact/signals": "^2.9.0",
+    "@spotify/web-api-ts-sdk": "^1.2.0",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-shell": "^2.0.0",

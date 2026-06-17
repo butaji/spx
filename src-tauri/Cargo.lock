@@ -4542,6 +4542,7 @@ dependencies = [
  "md5",
  "objc",
  "objc2",
+ "once_cell",
  "reqwest 0.12.28",
  "rust_cast",
  "rustls",

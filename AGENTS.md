@@ -36,7 +36,7 @@ cargo clippy              # Rust linter
 | `screens/` | Page components (Home, Search, Library, etc.) |
 | `stores/` | Preact Signals state management |
 | `hooks/` | Custom React hooks (useAuth, usePlayback, useDevices) |
-| `lib/` | Utilities (spotify.ts, ws-client.ts, errors.ts) |
+| `lib/` | Utilities (spotify.ts, errors.ts, mock.ts) |
 | `styles/` | CSS stylesheets |
 
 ### Backend (`src-tauri/`)
@@ -45,6 +45,55 @@ cargo clippy              # Rust linter
 |-----------|---------|
 | `src/` | Rust source (main.rs, actors, spotify_backend, librespot_player) |
 | `capabilities/` | Tauri permissions |
+
+### Rust Architecture (Event-Based Reactive)
+
+The Rust backend follows an **event-driven, functional-reactive** architecture:
+
+#### Core Modules
+
+| Module | Purpose |
+|--------|---------|
+| `events.rs` | EventBus for publish-subscribe event streaming |
+| `fn_utils.rs` | Functional utilities (Option/Result extensions, pipeline operators) |
+| `actors/` | Actor framework for state management |
+
+#### Event System
+
+All backend operations publish events to the global EventBus:
+
+```rust
+// Events flow through the system
+Command → EventBus.publish() → Frontend Subscribers
+
+// Event types
+SpxEvent::DeviceDiscovered(DeviceInfo)
+SpxEvent::AuthCompleted { username }
+SpxEvent::CastAuthProgress { device_id, step }
+SpxEvent::LocalConnectCompleted { device_id }
+SpxEvent::Error { code, message }
+```
+
+#### Functional Patterns
+
+```rust
+use crate::fn_utils::*;
+
+// Pipeline operator
+let result = value.pipe(transform).pipe(validate);
+
+// Option chaining
+let value = option.filter(predicate).map(|v| v * 2);
+
+// Result handling
+result.map_err_to_string()?.pipe(process)
+```
+
+#### Adding New Commands
+
+1. Define event types in `events.rs::SpxEvent`
+2. Use `events::helpers::*` to emit events
+3. Follow functional patterns from `fn_utils.rs`
 
 #### librespot Integration
 
@@ -208,8 +257,42 @@ fn command_name() -> Result<Type, String> {
 ## API Integration
 
 Spotify API is accessed via:
-- `src/lib/spotify.ts` - Main API client (rspotify wrapper)
+- `src/lib/spotify.ts` - Unified API layer (PKCE, tokens, API, mock)
+- `src/lib/cache.ts` - Simple TTL cache
+- `src/lib/request-hooks.ts` - Before/after request hooks
 - `src/lib/ws-client.ts` - WebSocket for real-time updates
+
+### Similar Projects (Cross-Reference)
+
+| Project | Language | Stars | Key Patterns |
+|---------|----------|-------|--------------|
+| [rspotify](https://github.com/ramsayleung/rspotify) | Rust | 2.1k | Trait-based OAuth, auto-refresh |
+| [spotify-tui](https://github.com/Rigellute/spotify-tui) | Rust | 9.3k | rspotify + TUI pattern |
+| [spotify-web-api-ts-sdk](https://github.com/spotify/spotify-web-api-ts-sdk) | TypeScript | 1.5k | Auto-refresh, caching, request hooks |
+| [librespot](https://github.com/librespot-org/librespot) | Rust | 6.3k | Spotify Connect protocol (used by SPX) |
+
+### Patterns to Consider
+
+1. **Token Management** - Official TS SDK has built-in auto-refresh; SPX does manual refresh
+2. **Caching** - Official TS SDK uses LocalStorage/browser strategy; SPX has no caching
+3. **Request Hooks** - Official TS SDK supports `beforeRequest`/`afterRequest` interceptors
+4. **Error Types** - rspotify uses typed error enums; SPX uses centralized error system
+
+See `docs/CROSS_REFERENCE.md` for detailed comparison.
+
+### Library Evaluation
+
+| Custom Code | Lines | Library Alternative | Recommendation |
+|-------------|-------|-------------------|----------------|
+| PKCE Auth | ~60 | `@spotify/web-api-ts-sdk` | **Keep** - external browser required |
+| Token Storage | ~80 | `@spotify/web-api-ts-sdk` | **Keep** - sp_dc for Cast |
+| API Layer | 615 | `@spotify/web-api-ts-sdk` | ✅ **Now uses Official SDK** |
+| Cache | 220 | `@spotify/web-api-ts-sdk` | **Keep** - simplified TTL cache |
+| Mock Mode | 467 | N/A | **Keep** - project-specific |
+
+**Key finding**: SPX now uses `@spotify/web-api-ts-sdk` for API calls while keeping custom PKCE auth (for external browser) and token storage (for sp_dc Cast support).
+
+See `docs/CROSS_REFERENCE.md` and `docs/ARCHITECTURE.md` for details.
 
 ## Known Issues
 

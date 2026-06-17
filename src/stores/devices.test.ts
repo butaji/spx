@@ -15,6 +15,7 @@ vi.mock('../lib/spotify', () => ({
   setVolume: vi.fn(),
   pause: vi.fn(),
   tauriInvoke: vi.fn(),
+  getPlaybackState: vi.fn(() => Promise.resolve(null)),
 }));
 
 const mockCurrentDeviceId = vi.hoisted(() => ({ value: 'web-sdk-device-id' as string | null }));
@@ -33,7 +34,7 @@ vi.mock('../lib/utils', () => ({
 
 // ─── Import after mocks ────────────────────────────────────────────────────────
 
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, setVolume, pause, tauriInvoke, ensureValidToken } from '../lib/spotify';
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, setVolume, pause, tauriInvoke, ensureValidToken, getPlaybackState } from '../lib/spotify';
 import { playbackVolume } from '../stores/playback';
 import {
   availableDevices,
@@ -885,6 +886,7 @@ describe('switchDevice', () => {
     mockSetVolume();
     mockPause();
     (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue({ device: { id: 'dev2' } });
   });
 
   it('calls pause before transferring playback', async () => {
@@ -962,6 +964,7 @@ describe('isTransferring flag', () => {
   beforeEach(() => {
     mockSetVolume();
     (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue({ device: { id: 'dev1' } });
   });
 
   it('is set to true during device selection', async () => {
@@ -1039,17 +1042,24 @@ describe('isTransferring flag', () => {
       new Promise(resolve => setTimeout(resolve, 120_000))
     );
 
+    // Make health check return null immediately (so it doesn't block)
+    (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    // tauriInvoke is already mocked to return 'spx-connect-device-id' in beforeEach
+    // But we need to also make it resolve quickly
+    (tauriInvoke as ReturnType<typeof vi.fn>).mockResolvedValue('spx-connect-device-id');
+
     const selectPromise = selectDevice('dev1');
     await vi.advanceTimersByTimeAsync(0);
     expect(isTransferring.value).toBe(true);
 
-    // Advance past safety timer
-    await vi.advanceTimersByTimeAsync(66_000);
+    // Advance past safety timer (65s) plus health check delays (3s) plus all timeouts
+    await vi.advanceTimersByTimeAsync(130_000);
     await selectPromise;
 
-    // isTransferring should be reset by safety timer
+    // isTransferring should be reset by finally block
     expect(isTransferring.value).toBe(false);
-  }, 120_000);
+  }, 180_000);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════

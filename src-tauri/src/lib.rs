@@ -2,6 +2,8 @@
 
 pub mod actors;
 pub mod commands;
+pub mod events;
+pub mod fn_utils;
 pub mod mdns;
 pub mod oauth_callback;
 pub mod spotify_cast;
@@ -99,6 +101,8 @@ pub fn run() {
             commands::get_diagnostics,
             commands::diagnose_network,
             commands::request_macos_local_network_permission,
+            commands::get_event_history,
+            commands::emit_spx_event,
             now_playing::update_now_playing,
             now_playing::clear_now_playing,
         ])

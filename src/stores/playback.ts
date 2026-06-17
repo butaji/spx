@@ -84,7 +84,7 @@ function startProgressRAF() {
   }
 }
 
-function stopProgressRAF() {
+export function stopProgressRAF() {
   if (rafId !== null) {
     cancelAnimationFrame(rafId);
     rafId = null;
@@ -183,6 +183,20 @@ export function stopPlaybackPolling(): void {
     clearInterval(playbackPollInterval);
     playbackPollInterval = null;
   }
+}
+
+/**
+ * Full cleanup of playback state. Stops polling and RAF loop.
+ */
+export function cleanupPlayback(): void {
+  stopPlaybackPolling();
+  stopProgressRAF();
+  resetPlaybackUserActionCooldown();
+  playbackTrack.value = null;
+  isPlaying.value = false;
+  playbackProgress.value = 0;
+  playbackDuration.value = 0;
+  likedTrack.value = false;
 }
 
 export function startPlaybackPolling(): () => void {

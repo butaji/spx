@@ -1,33 +1,30 @@
+/**
+ * usePlayback - Main playback hook
+ * 
+ * Composes smaller focused hooks for playback functionality:
+ * - usePlaybackControls: play/pause, next/prev, seek, shuffle, repeat, mute
+ * - usePlayCount: play count tracking
+ * - useLikedTrack: liked track state
+ */
+
 import { useState, useCallback, useEffect, useRef } from "preact/compat";
 import { debug } from "../lib/utils";
-import {
-  setShuffle as apiSetShuffle, setRepeat as apiSetRepeat,
-  playContext, playUris,
-  saveTracks,
-  removeSavedTracks,
-} from "../lib/spotify";
-import {
-  controllerNext,
-  controllerPrevious,
-  controllerSeek,
-  controllerSetVolume,
-} from "../lib/playerController";
+import { playContext, playUris } from "../lib/spotify";
+import { controllerSetVolume } from "../lib/playerController";
 import {
   playbackTrack,
   playbackVolume,
-  playbackShuffle,
-  playbackRepeat,
   isPlaying,
-  likedTrack,
   refreshPlayback,
-  refreshLikedStatus,
   playTrack,
   pauseTrack,
   startPlaybackPolling,
 } from "../stores/spotify";
-
-import { recordPlay } from "../stores/playCounts";
 import { handleError, showError } from "../lib/errors";
+import { setPlaybackUserActionCooldown } from "../stores/playback";
+import { usePlaybackControls } from "./usePlaybackControls";
+import { usePlayCount } from "./usePlayCount";
+import { useLikedTrack } from "./useLikedTrack";
 
 interface UsePlaybackOptions {
   ensureActiveDevice: () => Promise<string | null>;
@@ -38,68 +35,16 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
   const isPlayActionLoadingRef = useRef(isPlayActionLoading);
   isPlayActionLoadingRef.current = isPlayActionLoading;
 
-  // Play count tracking refs
-  const playCountRecordedRef = useRef(false);
-  const playCountTimerRef = useRef<number | null>(null);
-  const currentTrackIdRef = useRef<string | null>(null);
-  const wasPlayingRef = useRef(false);
-
   // Start playback polling
   useEffect(() => {
     const cleanup = startPlaybackPolling();
     return cleanup;
   }, []);
 
-  // Refresh liked status when track changes
-  useEffect(() => {
-    const id = playbackTrack.value?.id;
-    if (id) {
-      refreshLikedStatus(id);
-    } else {
-      likedTrack.value = false;
-    }
-  }, [playbackTrack.value?.id]);
-
-  // Track play counts - record after 30 seconds of playback
-  useEffect(() => {
-    const track = playbackTrack.value;
-    const playing = isPlaying.value;
-    const trackId = track?.id;
-
-    // Clear any existing timer
-    if (playCountTimerRef.current) {
-      clearTimeout(playCountTimerRef.current);
-      playCountTimerRef.current = null;
-    }
-
-    // If track changed or playback stopped then started again, reset
-    if (trackId !== currentTrackIdRef.current || (!wasPlayingRef.current && playing)) {
-      playCountRecordedRef.current = false;
-      currentTrackIdRef.current = trackId ?? null;
-    }
-    wasPlayingRef.current = playing;
-
-    // If playing and haven't recorded yet, set timer for 30 seconds
-    if (playing && trackId && !playCountRecordedRef.current) {
-      playCountTimerRef.current = window.setTimeout(() => {
-        const currentTrack = playbackTrack.value;
-        if (isPlaying.value && currentTrack?.id === trackId) {
-          const artistName = currentTrack?.artists?.map(a => a.name).join(", ") || "Unknown";
-          const trackName = currentTrack?.name || "Unknown";
-          recordPlay(artistName, trackName);
-          playCountRecordedRef.current = true;
-          debug(`[PlayCount] Recorded play: ${artistName} - ${trackName}`);
-        }
-      }, 30000);
-    }
-
-    return () => {
-      if (playCountTimerRef.current) {
-        clearTimeout(playCountTimerRef.current);
-        playCountTimerRef.current = null;
-      }
-    };
-  }, [playbackTrack.value?.id, isPlaying.value]);
+  // Compose smaller hooks
+  const controls = usePlaybackControls({ ensureActiveDevice });
+  usePlayCount();
+  const liked = useLikedTrack();
 
   const handlePlayPause = useCallback(async () => {
     debug('[Play/Pause] Button clicked');
@@ -124,7 +69,6 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
 
     try {
       // Prevent stale API responses from flipping the button back immediately.
-      const { setPlaybackUserActionCooldown } = await import('../stores/playback');
       setPlaybackUserActionCooldown();
       if (playing) {
         debug('[Play/Pause] Calling pauseTrack()...');
@@ -181,148 +125,13 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
     }
   }, [ensureActiveDevice]);
 
-  const handleNext = useCallback(async () => {
-    try {
-      const hasDevice = await ensureActiveDevice();
-      if (!hasDevice) {
-        showError(
-          "No Active Device",
-          "SPX can play through the built-in SPX Player on this Mac. If you want to use another speaker, select it from the device menu.",
-          {
-            solution: [
-              "Wait for the SPX Player to connect",
-              "Select a speaker from the device menu",
-              "Check that macOS Local Network permission is allowed for SPX"
-            ]
-          }
-        );
-        return;
-      }
-      await controllerNext();
-      refreshPlayback();
-    } catch (e) {
-      console.error("Failed to skip next:", e);
-      handleError(e, "Skip Next");
-    }
-  }, [ensureActiveDevice]);
-
-  const handlePrev = useCallback(async () => {
-    try {
-      const hasDevice = await ensureActiveDevice();
-      if (!hasDevice) {
-        showError(
-          "No Active Device",
-          "SPX can play through the built-in SPX Player on this Mac. If you want to use another speaker, select it from the device menu.",
-          {
-            solution: [
-              "Wait for the SPX Player to connect",
-              "Select a speaker from the device menu",
-              "Check that macOS Local Network permission is allowed for SPX"
-            ]
-          }
-        );
-        return;
-      }
-      await controllerPrevious();
-      refreshPlayback();
-    } catch (e) {
-      console.error("Failed to skip previous:", e);
-      handleError(e, "Previous Track");
-    }
-  }, [ensureActiveDevice]);
-
-  const handleSeekPosition = useCallback(async (pos: number) => {
-    try {
-      await controllerSeek(pos);
-      refreshPlayback();
-    } catch (e) {
-      console.error("Failed to seek:", e);
-      handleError(e, "Seek");
-    }
-  }, []);
-
-  const handleShuffle = useCallback(() => {
-    const originalValue = playbackShuffle.value;
-    const newValue = !originalValue;
-
-    // Optimistic update
-    playbackShuffle.value = newValue;
-
-    ensureActiveDevice()
-      .then((deviceId) => {
-        if (!deviceId) {
-          playbackShuffle.value = originalValue;
-          showError(
-            "No Active Device",
-            "Select a playback device before toggling shuffle.",
-            {
-              solution: [
-                "Wait for the SPX Player to connect",
-                "Select a speaker from the device menu",
-              ],
-            }
-          );
-          return;
-        }
-        return apiSetShuffle(newValue, deviceId).then(() => refreshPlayback());
-      })
-      .catch((e) => {
-        playbackShuffle.value = originalValue;
-        console.error("Failed to set shuffle:", e);
-        handleError(e, "Shuffle");
-      });
-  }, [ensureActiveDevice]);
-
-  const handleMuteToggle = useCallback(async () => {
-    const v = playbackVolume.value > 0 ? 0 : 74;
-    try {
-      await controllerSetVolume(v);
-      playbackVolume.value = v;
-    } catch (e) {
-      console.error("Failed to toggle mute:", e);
-    }
-  }, []);
-
-  const handleRepeat = useCallback(() => {
-    const current = playbackRepeat.value;
-    const next = current === "off" ? "context" : current === "context" ? "track" : "off";
-    const originalValue = current;
-
-    // Optimistic update
-    playbackRepeat.value = next;
-
-    ensureActiveDevice()
-      .then((deviceId) => {
-        if (!deviceId) {
-          playbackRepeat.value = originalValue;
-          showError(
-            "No Active Device",
-            "Select a playback device before toggling repeat.",
-            {
-              solution: [
-                "Wait for the SPX Player to connect",
-                "Select a speaker from the device menu",
-              ],
-            }
-          );
-          return;
-        }
-        return apiSetRepeat(next, deviceId).then(() => refreshPlayback());
-      })
-      .catch((e) => {
-        playbackRepeat.value = originalValue;
-        console.error("Failed to set repeat:", e);
-        handleError(e, "Repeat");
-      });
-  }, [ensureActiveDevice]);
-
   const playContextFn = useCallback(async (uri: string, offsetUri?: string) => {
     try {
       const deviceId = await ensureActiveDevice();
       if (!deviceId) {
         showError(
           "No Active Device",
-          "SPX can play through the built-in SPX Player on this Mac. If you want to use another speaker, select it from the device menu.",
+          "SPX can play through the built-in SPX Player on this Mac.",
           {
             solution: [
               "Wait for the SPX Player to connect",
@@ -347,7 +156,7 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
       if (!deviceId) {
         showError(
           "No Active Device",
-          "SPX can play through the built-in SPX Player on this Mac. If you want to use another speaker, select it from the device menu.",
+          "SPX can play through the built-in SPX Player on this Mac.",
           {
             solution: [
               "Wait for the SPX Player to connect",
@@ -376,23 +185,6 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
     }
   }, []);
 
-  const handleToggleLike = useCallback(async () => {
-    const id = playbackTrack.value?.id;
-    if (!id) return;
-    try {
-      if (likedTrack.value) {
-        await removeSavedTracks([id]);
-        likedTrack.value = false;
-      } else {
-        await saveTracks([id]);
-        likedTrack.value = true;
-      }
-    } catch (e) {
-      console.error("Failed to toggle like:", e);
-      handleError(e, "Like Song");
-    }
-  }, []);
-
   const handleVolumeChange = useCallback(async (vol: number) => {
     try {
       await controllerSetVolume(vol);
@@ -405,16 +197,11 @@ export function usePlayback({ ensureActiveDevice }: UsePlaybackOptions) {
   return {
     isPlayActionLoading,
     handlePlayPause,
-    handleNext,
-    handlePrev,
-    handleSeekPosition,
-    handleShuffle,
-    handleMuteToggle,
-    handleRepeat,
+    ...controls,
     playContextFn,
     playUrisFn,
     adjustVolume,
-    handleToggleLike,
+    handleToggleLike: liked.toggleLike,
     handleVolumeChange,
   };
 }

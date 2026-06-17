@@ -49,6 +49,7 @@ hmac = "0.12"
 sha1 = "0.10"
 hex = "0.4"
 libc = "0.2"
+once_cell = "1.19"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"

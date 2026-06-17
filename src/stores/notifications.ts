@@ -299,7 +299,6 @@ export function showErrorFromRaw(
   message?: string,
   category?: ErrorCategory
 ): string {
-  const { createError } = require("../lib/errors");
   const appError = createError(rawError, category);
   
   // Store in history
@@ -423,7 +422,6 @@ export function handleAuthError(error: unknown): string {
  * Handle network errors
  */
 export function handleNetworkError(error: unknown, context?: string): string {
-  const { createError } = require("../lib/errors");
   const appError = createError(error, undefined, context);
   return showAppError(appError);
 }
@@ -433,7 +431,6 @@ export function handleNetworkError(error: unknown, context?: string): string {
  */
 export function handleDeviceError(error: unknown, context?: string): string {
   deviceStatus.value = "error";
-  const { createError } = require("../lib/errors");
   const appError = createError(error, undefined, context);
   return showAppError(appError);
 }
@@ -442,7 +439,6 @@ export function handleDeviceError(error: unknown, context?: string): string {
  * Handle playback errors
  */
 export function handlePlaybackError(error: unknown, context?: string): string {
-  const { createError } = require("../lib/errors");
   const appError = createError(error, undefined, context);
   return showAppError(appError);
 }
