@@ -4,6 +4,7 @@ import { Artwork } from "./Artwork";
 import { AudioFeatures } from "./AudioFeatures";
 import { userPlaylists } from "../stores/content";
 import { addTracksToPlaylist } from "../lib/spotify";
+import { showSuccess } from "../stores/notifications";
 
 interface Track {
   id?: string;
@@ -38,7 +39,7 @@ export default function NowPlayingHero({
     if (track?.id) {
       const url = `https://open.spotify.com/track/${track.id}`;
       navigator.clipboard.writeText(url).then(() => {
-        // Could show a toast notification here
+        showSuccess("Link Copied", `Share link for "${track.name}" copied to clipboard.`);
       });
     }
   };

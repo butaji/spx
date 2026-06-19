@@ -4,7 +4,7 @@
  * Handles: play, pause, next, previous, seek, shuffle, repeat, mute toggle
  */
 
-import { useCallback } from "preact/hooks";
+import { useCallback, useRef } from "preact/hooks";
 import { setShuffle as apiSetShuffle, setRepeat as apiSetRepeat } from "../lib/spotify";
 import {
   controllerNext,
@@ -25,6 +25,7 @@ interface UsePlaybackControlsOptions {
 }
 
 export function usePlaybackControls({ ensureActiveDevice }: UsePlaybackControlsOptions) {
+  const prevVolumeRef = useRef<number | null>(null);
   const handleNext = useCallback(async () => {
     try {
       const hasDevice = await ensureActiveDevice();
@@ -95,10 +96,21 @@ export function usePlaybackControls({ ensureActiveDevice }: UsePlaybackControlsO
   }, [ensureActiveDevice]);
 
   const handleMuteToggle = useCallback(async () => {
-    const v = playbackVolume.value > 0 ? 0 : 74;
+    const currentVol = playbackVolume.value;
+    let newVol: number;
+
+    if (currentVol > 0) {
+      // Mute: save current volume, set to 0
+      prevVolumeRef.current = currentVol;
+      newVol = 0;
+    } else {
+      // Unmute: restore previous volume (or 50% if no previous)
+      newVol = prevVolumeRef.current ?? 50;
+    }
+
     try {
-      await controllerSetVolume(v);
-      playbackVolume.value = v;
+      await controllerSetVolume(newVol);
+      playbackVolume.value = newVol;
     } catch (e) {
       console.error("Failed to toggle mute:", e);
     }

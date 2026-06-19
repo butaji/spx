@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
-import { getPlaylist, getPlaylistTracks } from "../lib/spotify";
-import { IconPlay } from "../components/icons";
+import { getPlaylist, getPlaylistTracks, followPlaylist, unfollowPlaylist, checkFollowedPlaylists } from "../lib/spotify";
+import { IconPlay, IconCheck } from "../components/icons";
 import { TrackRow } from "../components/TrackRow";
-import { playbackTrack, isPlaying } from "../stores/spotify";
+import { playbackTrack, isPlaying, userProfile } from "../stores/spotify";
 import { SpotifyTrack, SpotifyPlaylist } from "../types";
 
 interface Props {
@@ -17,6 +17,8 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
   const [tracks, setTracks] = useState<SpotifyTrack[]>([]);
   const [playlist, setPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   const loadTracks = useCallback(async () => {
     setLoading(true);
@@ -29,6 +31,12 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
     try {
       const pl = await getPlaylist(id);
       setPlaylist(pl);
+      // Check follow state
+      const userId = userProfile.value?.id;
+      if (userId) {
+        const [following] = await checkFollowedPlaylists(id, [userId]);
+        setIsFollowing(following ?? false);
+      }
     } catch (e) {
       console.error("Failed to load playlist:", e);
     }
@@ -54,6 +62,23 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
     }
   }, [playTrack]);
 
+  const toggleFollow = useCallback(async () => {
+    if (isFollowLoading) return;
+    setIsFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await unfollowPlaylist(id);
+        setIsFollowing(false);
+      } else {
+        await followPlaylist(id);
+        setIsFollowing(true);
+      }
+    } catch (e) {
+      console.error("Failed to toggle follow:", e);
+    }
+    setIsFollowLoading(false);
+  }, [id, isFollowing, isFollowLoading]);
+
   return (
     <div>
       <div className="detail-hero">
@@ -77,7 +102,20 @@ export default function PlaylistDetail({ id, name, onPlayUris }: Props) {
             <button className="play-btn-lg" onClick={playAll} aria-label="Play all tracks">
               <IconPlay />
             </button>
-            <button className="btn-secondary" aria-label="Follow playlist">Follow +</button>
+            <button
+              className={`btn-secondary ${isFollowing ? 'btn-secondary--following' : ''}`}
+              onClick={toggleFollow}
+              disabled={isFollowLoading}
+              aria-label={isFollowing ? "Unfollow playlist" : "Follow playlist"}
+            >
+              {isFollowLoading ? (
+                <span className="spinner-sm" />
+              ) : isFollowing ? (
+                <><IconCheck /> Following</>
+              ) : (
+                <>Follow +</>
+              )}
+            </button>
           </div>
         </div>
       </div>

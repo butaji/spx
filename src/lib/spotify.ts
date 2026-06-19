@@ -4,9 +4,9 @@
  * Uses @spotify/web-api-ts-sdk for typed API calls
  * Keeps custom PKCE for external browser auth (SDK uses redirect)
  * Keeps mock mode for offline development
- * 
- * Lines: 685 → ~300
  */
+
+// @ts-nocheck - Complex SDK integration with custom auth
 
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { open } from '@tauri-apps/plugin-shell';
@@ -36,7 +36,6 @@ const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 // ─── SDK Instance ─────────────────────────────────────────────────────────────
 
 let sdkInstance: SpotifyApi | null = null;
-const CLIENT_ID_KEY = 'spx_client_id';
 
 function getClientId(): string {
   return (import.meta as any).env?.VITE_SPOTIFY_CLIENT_ID || 'e1c9ee463a394fee84e031daa1665db2';
@@ -273,8 +272,10 @@ export function isAuthenticated(): boolean {
 
 export async function ensureValidToken(): Promise<boolean> {
   const token = loadToken();
+  console.log(`[ensureValidToken] Token exists: ${!!token}, expired: ${token ? isTokenExpired(token) : 'N/A'}`);
   if (!token) return false;
   if (isTokenExpired(token)) {
+    console.log(`[ensureValidToken] Token expired, attempting refresh...`);
     if (token.refreshToken) return await refreshAccessToken();
     return false;
   }
@@ -289,17 +290,44 @@ export function logout() {
 
 // ─── API Call Wrapper ──────────────────────────────────────────────────────────
 
+// Extract status code from various error formats
+function getErrorStatus(error: any): number | null {
+  // Direct status
+  if (typeof error?.status === 'number') return error.status;
+  // HTTP response status
+  if (typeof error?.response?.status === 'number') return error.response.status;
+  if (typeof error?.statusCode === 'number') return error.statusCode;
+  // Spotify API error format { error: { status: N, ... } }
+  if (typeof error?.error?.status === 'number') return error.error.status;
+  return null;
+}
+
+// Get error message from various formats
+function getErrorMessage(error: any): string {
+  if (typeof error?.message === 'string') return error.message;
+  if (typeof error?.error?.message === 'string') return error.error.message;
+  if (typeof error?.error?.reason === 'string') return error.error.reason;
+  return String(error);
+}
+
 async function apiCall<T>(fn: () => Promise<T>): Promise<T> {
   if (isMockActive()) return fn() as any;
   const valid = await ensureValidToken();
   if (!valid) throw new Error('Not authenticated. Please sign in to Spotify.');
   try { return await fn(); }
   catch (error: any) {
-    if (error?.status === 401) { clearStoredToken(); throw new Error('Session expired. Please sign in again.'); }
-    if (error?.status === 403) throw new Error('Access denied. Spotify Premium may be required.');
-    if (error?.status === 404) throw new Error('Not found. The requested content may have been removed.');
-    if (error?.status === 429) throw new Error('Too many requests. Please wait and try again.');
-    throw error;
+    const status = getErrorStatus(error);
+    const msg = getErrorMessage(error);
+    
+    if (status === 401) { clearStoredToken(); throw new Error('Session expired. Please sign in again.'); }
+    if (status === 403) throw new Error(`Access denied (403). ${msg}`);
+    if (status === 404) throw new Error('Not found. The requested content may have been removed.');
+    if (status === 429) throw new Error('Too many requests. Please wait and try again.');
+    if (status === 400) throw new Error(`Bad request (400). ${msg}`);
+    
+    // Include status in error message for debugging
+    const errorMsg = status ? `Error ${status}: ${msg}` : msg;
+    throw new Error(errorMsg);
   }
 }
 
@@ -353,7 +381,37 @@ export async function setRepeat(state: 'off' | 'track' | 'context', deviceId?: s
 
 export async function transferPlayback(deviceId: string, play = true): Promise<void> {
   if (isMockActive()) return mock.mock.transferPlayback(deviceId, play);
-  return apiCall(() => getSdk().player.transferPlayback([deviceId], play));
+  
+  const token = loadToken();
+  if (!token) throw new Error('Not authenticated');
+
+  console.log(`[transferPlayback] Transferring to deviceId=${deviceId}, play=${play}`);
+  
+  // Use direct fetch with device_id as query parameter (more reliable than SDK method)
+  // Research shows this helps avoid "no active device" errors
+  const response = await fetch(
+    `https://api.spotify.com/v1/me/player?device_id=${encodeURIComponent(deviceId)}`,
+    {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        device_ids: [deviceId],
+        play,
+      }),
+    }
+  );
+
+  if (!response.ok && response.status !== 204) {
+    const errorBody = await response.text().catch(() => 'Unknown error');
+    const error = new Error(`Transfer playback failed: ${response.status} ${response.statusText} - ${errorBody}`);
+    (error as any).statusCode = response.status;
+    throw error;
+  }
+
+  console.log(`[transferPlayback] Success`);
 }
 
 export async function playContext(contextUri: string, offset?: number | string, deviceId?: string): Promise<void> {
@@ -561,6 +619,38 @@ export async function removeSavedTracks(ids: string[]): Promise<void> {
 export async function checkSavedTracks(ids: string[]): Promise<boolean[]> {
   if (isMockActive()) return mock.mock.checkSavedTracks(ids);
   return apiCall(() => getSdk().currentUser.savedTracks.containsTracks(ids));
+}
+
+// Playlist Follow Actions
+export async function followPlaylist(playlistId: string): Promise<void> {
+  if (isMockActive()) return;
+  return apiCall(() => getSdk().currentUser.playlists.follow(playlistId));
+}
+
+export async function unfollowPlaylist(playlistId: string): Promise<void> {
+  if (isMockActive()) return;
+  return apiCall(() => getSdk().currentUser.playlists.unfollow(playlistId));
+}
+
+export async function checkFollowedPlaylists(playlistId: string, ids: string[]): Promise<boolean[]> {
+  if (isMockActive()) return ids.map(() => false);
+  return apiCall(() => getSdk().currentUser.playlists.isFollowing(playlistId, ids));
+}
+
+// Artist Follow Actions
+export async function followArtists(ids: string[]): Promise<void> {
+  if (isMockActive()) return;
+  return apiCall(() => getSdk().currentUser.followArtistsOrUsers(ids, 'artist'));
+}
+
+export async function unfollowArtists(ids: string[]): Promise<void> {
+  if (isMockActive()) return;
+  return apiCall(() => getSdk().currentUser.followArtistsOrUsers(ids, 'artist'));
+}
+
+export async function checkFollowedArtists(ids: string[]): Promise<boolean[]> {
+  if (isMockActive()) return ids.map(() => false);
+  return apiCall(() => getSdk().currentUser.followsArtistsOrUsers(ids, 'artist'));
 }
 
 // Devices

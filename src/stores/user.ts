@@ -10,7 +10,7 @@ import { withRetry } from "../lib/retry";
 import { getCached, setCache, isCacheFresh } from "../lib/cache";
 import type { SpotifyArtist, SpotifyTrack, SpotifyAlbum } from "../types";
 
-export const userProfile = signal<{ name: string; image?: string } | null>(null);
+export const userProfile = signal<{ id?: string; name: string; image?: string } | null>(null);
 export const topArtists = signal<SpotifyArtist[]>([]);
 export const topTracks = signal<SpotifyTrack[]>([]);
 export const followedArtists = signal<SpotifyArtist[]>([]);
@@ -23,7 +23,7 @@ const CACHE_TTL = {
 };
 
 export async function loadUserProfile(): Promise<void> {
-  const cached = await getCached("user_profile");
+  const cached = await getCached<{ name: string; image?: string }>("user_profile");
   if (cached) {
     userProfile.value = cached;
     if (await isCacheFresh("user_profile")) return;
@@ -31,7 +31,7 @@ export async function loadUserProfile(): Promise<void> {
 
   try {
     const data = await withRetry(() => getUserProfile()) as any;
-    const profile = { name: data.display_name || 'Spotify User', image: data.images?.[0]?.url };
+    const profile = { id: data.id, name: data.display_name || 'Spotify User', image: data.images?.[0]?.url };
     userProfile.value = profile;
     setCache("user_profile", profile, CACHE_TTL.profile);
   } catch (e) {
@@ -80,7 +80,7 @@ export async function loadSavedAlbums(): Promise<void> {
 }
 
 export async function loadFollowedArtistsFromCache(): Promise<void> {
-  const cached = await getCached("followed_artists");
+  const cached = await getCached<SpotifyArtist[]>("followed_artists");
   if (cached && cached.length > 0) {
     followedArtists.value = cached;
     if (await isCacheFresh("followed_artists")) return;
@@ -90,7 +90,7 @@ export async function loadFollowedArtistsFromCache(): Promise<void> {
 }
 
 export async function loadSavedAlbumsFromCache(): Promise<void> {
-  const cached = await getCached("saved_albums");
+  const cached = await getCached<SpotifyAlbum[]>("saved_albums");
   if (cached && cached.length > 0) {
     savedAlbums.value = cached;
     if (await isCacheFresh("saved_albums")) return;

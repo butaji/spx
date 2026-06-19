@@ -609,7 +609,7 @@
   margin-bottom: 0;
 }
 
-.queue-clear-btn {
+.queue-refresh-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -622,7 +622,7 @@
   cursor: pointer;
   transition: all 0.15s;
 }
-.queue-clear-btn:hover {
+.queue-refresh-btn:hover {
   background: var(--surface-hover);
   color: var(--fg);
   border-color: var(--edge-light);

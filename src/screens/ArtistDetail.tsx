@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
-import { getArtist, getArtistTopTracks, getArtistAlbums } from "../lib/spotify";
-import { IconPlay, IconUsers, IconStar, IconDisc } from "../components/icons";
+import { getArtist, getArtistTopTracks, getArtistAlbums, followArtists, unfollowArtists, checkFollowedArtists } from "../lib/spotify";
+import { IconPlay, IconUsers, IconStar, IconDisc, IconCheck } from "../components/icons";
 import { TrackRow } from "../components/TrackRow";
 import { playbackTrack, isPlaying } from "../stores/spotify";
 import { SpotifyArtist, SpotifyTrack, SpotifyAlbum } from "../types";
@@ -18,6 +18,8 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
   const [topTracks, setTopTracks] = useState<SpotifyTrack[]>([]);
   const [albums, setAlbums] = useState<SpotifyAlbum[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -39,6 +41,13 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
     } catch (e) {
       console.error("Failed to load artist albums:", e);
     }
+    // Check follow state
+    try {
+      const [following] = await checkFollowedArtists([id]);
+      setIsFollowing(following ?? false);
+    } catch (e) {
+      console.error("Failed to check follow state:", e);
+    }
     setLoading(false);
   }, [id]);
 
@@ -55,6 +64,23 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
       onPlayUris([track.uri]);
     }
   }, [onPlayUris]);
+
+  const toggleFollow = useCallback(async () => {
+    if (isFollowLoading) return;
+    setIsFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await unfollowArtists([id]);
+        setIsFollowing(false);
+      } else {
+        await followArtists([id]);
+        setIsFollowing(true);
+      }
+    } catch (e) {
+      console.error("Failed to toggle follow:", e);
+    }
+    setIsFollowLoading(false);
+  }, [id, isFollowing, isFollowLoading]);
 
   const popularityPct = artist?.popularity ?? 0;
   const followerCount = artist?.followers?.total ?? 0;
@@ -108,6 +134,20 @@ export default function ArtistDetail({ id, name, onPlayContext, onPlayUris }: Pr
           <div className="station-actions">
             <button className="play-btn-lg" onClick={playTopTracks} aria-label="Play popular tracks">
               <IconPlay />
+            </button>
+            <button
+              className={`btn-secondary ${isFollowing ? 'btn-secondary--following' : ''}`}
+              onClick={toggleFollow}
+              disabled={isFollowLoading}
+              aria-label={isFollowing ? "Unfollow artist" : "Follow artist"}
+            >
+              {isFollowLoading ? (
+                <span className="spinner-sm" />
+              ) : isFollowing ? (
+                <><IconCheck /> Following</>
+              ) : (
+                <>Follow +</>
+              )}
             </button>
           </div>
         </div>

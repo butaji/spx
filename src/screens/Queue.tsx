@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from "preact/compat";
+import { useEffect, useState, useCallback, useRef } from "preact/compat";
 import type { KeyboardEvent } from "preact/compat";
 import { getQueue } from "../lib/spotify";
 import { SpotifyTrack, SpotifyQueueResponse } from "../types";
-import { IconPlay, IconDrag, IconTrash } from "../components/icons";
+import { IconPlay, IconRefresh } from "../components/icons";
 
 interface Props {
   onPlayUris: (uris: string[], offset?: number) => void;
@@ -12,22 +12,38 @@ export default function Queue({ onPlayUris }: Props) {
   const [queue, setQueue] = useState<SpotifyTrack[]>([]);
   const [current, setCurrent] = useState<SpotifyTrack | null>(null);
   const [loading, setLoading] = useState(true);
+  const isMountedRef = useRef(true);
 
   const loadQueue = useCallback(async () => {
+    if (!isMountedRef.current) return;
     setLoading(true);
     try {
       const data = await getQueue() as SpotifyQueueResponse;
+      if (!isMountedRef.current) return;
       setCurrent(data.currently_playing || null);
       setQueue((data.queue || []).filter(Boolean));
     } catch (e) {
       console.error("Failed to load queue:", e);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { 
-    loadQueue(); 
+  useEffect(() => {
+    isMountedRef.current = true;
+    loadQueue();
+    return () => { isMountedRef.current = false; };
+  }, [loadQueue]);
+
+  // Refresh queue when screen becomes visible
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadQueue();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [loadQueue]);
 
   const playFromQueue = useCallback((index: number) => {
@@ -42,34 +58,6 @@ export default function Queue({ onPlayUris }: Props) {
       playFromQueue(index + 1);
     }
   }, [playFromQueue]);
-
-  // Drag and drop for reordering
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
-  const handleDragStart = useCallback((index: number) => {
-    setDraggedIndex(index);
-  }, []);
-
-  const handleDragOver = useCallback((e: DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-    
-    setQueue(prev => {
-      const newQueue = [...prev];
-      const [removed] = newQueue.splice(draggedIndex, 1);
-      newQueue.splice(index, 0, removed);
-      return newQueue;
-    });
-    setDraggedIndex(index);
-  }, [draggedIndex]);
-
-  const handleDragEnd = useCallback(() => {
-    setDraggedIndex(null);
-  }, []);
-
-  const clearQueue = useCallback(() => {
-    setQueue([]);
-  }, []);
 
   if (loading) {
     return (
@@ -89,16 +77,14 @@ export default function Queue({ onPlayUris }: Props) {
     <div>
       <div className="queue-header">
         <h1 className="screen-title">Up Next</h1>
-        {queue.length > 0 && (
-          <button 
-            className="queue-clear-btn"
-            onClick={clearQueue}
-            aria-label="Clear queue"
-          >
-            <IconTrash size={14} />
-            <span>Clear queue</span>
-          </button>
-        )}
+        <button
+          className="queue-refresh-btn"
+          onClick={loadQueue}
+          aria-label="Refresh queue"
+        >
+          <IconRefresh size={14} />
+          <span>Refresh</span>
+        </button>
       </div>
 
       {current && (
@@ -128,20 +114,13 @@ export default function Queue({ onPlayUris }: Props) {
             {queue.filter(Boolean).map((item, i) => (
               <div
                 key={`${item.id}-${i}`}
-                className={`queue-item ${draggedIndex === i ? 'dragging' : ''}`}
+                className="queue-item"
                 role="listitem"
                 tabIndex={0}
-                draggable
                 onClick={() => playFromQueue(i + 1)}
                 onKeyDown={(e) => handleQueueItemKeyDown(e, i)}
-                onDragStart={() => handleDragStart(i)}
-                onDragOver={(e) => handleDragOver(e, i)}
-                onDragEnd={handleDragEnd}
                 aria-label={`${item.name} by ${item.artists?.filter(Boolean).map((a) => a.name).join(", ")}`}
               >
-                <span className="drag-handle">
-                  <IconDrag size={14} />
-                </span>
                 <div className="queue-item-img" style={{
                   background: item.album?.images?.[0]?.url ? `url(${item.album.images[0].url}) center/cover` : undefined
                 }} />

@@ -12,6 +12,7 @@ type Tab = "playlists" | "tracks" | "albums" | "top";
 
 interface Props {
   onPlayUris: (uris: string[], offset?: number) => void;
+  onPlayContext: (uri: string, offsetUri?: string) => void;
   onNavigate: (v: View) => void;
 }
 
@@ -21,7 +22,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 const cacheKey = (tab: Tab) => `library:${tab}`;
 
-export default function Library({ onPlayUris, onNavigate }: Props) {
+export default function Library({ onPlayUris, onPlayContext, onNavigate }: Props) {
   const [tab, setTab] = useState<Tab>("playlists");
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -33,8 +34,8 @@ export default function Library({ onPlayUris, onNavigate }: Props) {
 
     // Check cache first - render immediately if available
     if (fromCache) {
-      const cached = await getCached(key);
-      if (cached && cached.length > 0) {
+      const cached = await getCached<LibraryItem[]>(key);
+      if (cached && Array.isArray(cached) && cached.length > 0) {
         setItems(cached);
         setInitialLoading(false);
         // Background refresh
@@ -103,11 +104,15 @@ export default function Library({ onPlayUris, onNavigate }: Props) {
   const handleItemClick = useCallback((item: LibraryItem) => {
     if (tab === "playlists") {
       onNavigate({ type: "playlist", id: (item as SpotifyPlaylist).id, name: (item as SpotifyPlaylist).name });
-    } else if (tab === "albums" || tab === "top") {
+    } else if (tab === "albums") {
       const albumId = (item as SpotifyAlbum).id;
       if (albumId) onNavigate({ type: "album", id: albumId, name: (item as SpotifyAlbum).name });
+    } else if (tab === "top") {
+      // "Top" tab shows top tracks - play them as a context
+      const track = item as SpotifyTrack;
+      if (track.uri) onPlayContext(track.uri);
     }
-  }, [tab, onNavigate]);
+  }, [tab, onNavigate, onPlayContext]);
 
   const handleItemKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>, item: LibraryItem) => {
     if (e.key === "Enter" || e.key === " ") {
