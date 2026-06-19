@@ -1,9 +1,10 @@
 import { signal, computed } from "@preact/signals";
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause, getPlaybackState } from "../lib/spotify";
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
 import { playbackVolume } from "../stores/playback";
 import { debug } from "../lib/utils";
+import { showInfo } from "./notifications";
 
 export const availableDevices = signal<SpotifyDevice[]>([]);
 export const localDevices = signal<LocalDevice[]>([]);
@@ -312,8 +313,9 @@ async function authenticateCastDevice(ip: string, deviceName: string): Promise<s
 }
 
 /**
- * Poll until a Cast device appears in Spotify Connect (max 30s).
+ * Poll until a Cast device appears in Spotify Connect (max 15s).
  * Progressively reports waiting state to caller via onStatus callback.
+ * Handles network errors gracefully - continues polling even if API calls fail.
  */
 async function waitForDevice(
   deviceName: string,
@@ -326,7 +328,16 @@ async function waitForDevice(
     if (i === 3) onStatus?.("Waiting for Spotify to register...");
     if (i === 8) onStatus?.("Still waiting...");
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const data = await getAvailableDevices();
+    
+    let data: any;
+    try {
+      data = await getAvailableDevices();
+    } catch (apiError) {
+      // Network error or token issue - continue polling
+      console.warn(`[waitForDevice] Poll ${i + 1}/15: API call failed, retrying: ${apiError}`);
+      continue;
+    }
+    
     console.log(`[waitForDevice] Poll ${i + 1}/15: API returned ${data.devices?.length ?? 0} devices`);
     if (data.devices?.length) {
       console.log(`[waitForDevice] Device names: ${data.devices.map((d: any) => `"${d.name}" (id=${d.id?.slice(0, 8)}...)`).join(', ')}`);
@@ -368,7 +379,12 @@ async function waitForDevice(
 
 /**
  * Resolve device ID (handles Cast devices that need wake-up first).
- * Pre-checks availableDevices before waking. Entire operation is wrapped in a 20s timeout.
+ * For Cast devices: wakes, authenticates, then finds the Spotify Connect device ID.
+ * After successful Cast auth, we try to find the device in Spotify's API.
+ * If not found via API (which is common due to API limitations), we attempt
+ * direct transfer as a fallback - some devices accept this.
+ * 
+ * Entire operation is wrapped in a 60s timeout.
  */
 async function resolveDevice(
   deviceId: string,
@@ -407,17 +423,43 @@ async function resolveDevice(
         onStatus?.("Device is starting up...");
         console.log(`[resolveDevice] Calling wakeDevice(${deviceIp})...`);
         await wakeDevice(deviceIp);
-        console.log(`[resolveDevice] Wake done, now polling for "${deviceName}"...`);
+        console.log(`[resolveDevice] Wake done, now authenticating with Spotify...`);
         
+        // Authenticate with Spotify (this registers the device with Spotify Connect)
+        onStatus?.("Authenticating with Spotify...");
+        const authResult = await authenticateCastDevice(deviceIp, device?.name ?? "");
+        console.log(`[resolveDevice] Cast auth result: ${authResult}`);
+        
+        // Now try to find the device in Spotify's API
+        // Note: The Spotify API /me/player/devices doesn't always return all devices
+        // due to internal caching/filtering. We poll for a while, but if not found,
+        // we proceed anyway since the device IS registered with Spotify Connect.
         try {
-          return await waitForDevice(deviceName, onStatus);
+          const foundId = await waitForDevice(deviceName, onStatus);
+          console.log(`[resolveDevice] Found device in API with id=${foundId}`);
+          return foundId;
         } catch (e) {
-          // Device didn't appear after wake - try authenticating it
-          console.log(`[resolveDevice] Device not in API after wake, trying Cast auth...`);
-          onStatus?.("Authenticating with Spotify...");
-          await authenticateCastDevice(deviceIp, device?.name ?? "");
-          console.log(`[resolveDevice] Auth done, polling again...`);
-          return await waitForDevice(deviceName, onStatus);
+          // Device not found in API - this is common due to Spotify API limitations
+          // The device IS registered with Spotify Connect (auth succeeded)
+          // We return the local deviceId and let selectDevice try direct transfer
+          console.warn(`[resolveDevice] Device not in Spotify API, but auth succeeded. Will attempt direct transfer.`);
+          onStatus?.("Device ready. Attempting to transfer playback...");
+          
+          // Refresh devices one more time to see if it's registered now
+          await refreshSpotifyDevices();
+          const match = availableDevices.value.find(d =>
+            d.name?.toLowerCase() === deviceName ||
+            (deviceName && d.name?.toLowerCase()?.includes(deviceName))
+          );
+          
+          if (match?.id) {
+            console.log(`[resolveDevice] Found match after auth: ${match.id}`);
+            return match.id;
+          }
+          
+          // Return the local deviceId - selectDevice will try direct transfer
+          console.log(`[resolveDevice] Returning local deviceId=${deviceId} for direct transfer attempt`);
+          return deviceId;
         }
       })(),
       new Promise<never>((_, reject) =>
@@ -448,6 +490,8 @@ async function transferPlaybackWithRetry(
         onStatus?.(`Retrying transfer (${attempt}/${maxAttempts})...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
+      
+      // Direct transfer to the target device
       await transferPlayback(deviceId, play);
       return;
     } catch (e: any) {
@@ -473,16 +517,17 @@ async function transferPlaybackWithRetry(
 }
 
 /**
- * Verify that the target device became active after transfer.
- * Returns true if the device is now the active device, false otherwise.
+ * Verify that the target device is available after transfer.
+ * Returns true if the device is in the available devices list.
+ * Note: We check available devices, NOT playback state, because getPlaybackState()
+ * returns null when nothing is playing even if the transfer was successful.
  * This is a health check pattern used by spotcast and other mature Spotify projects.
  */
 async function verifyDeviceHealth(
   targetDeviceId: string,
-  onStatus?: (msg: string) => void,
   maxAttempts = 3
 ): Promise<boolean> {
-  console.log(`[verifyDeviceHealth] Checking if device ${targetDeviceId} is active...`);
+  console.log(`[verifyDeviceHealth] Checking if device ${targetDeviceId} is available...`);
   
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (attempt > 0) {
@@ -490,21 +535,23 @@ async function verifyDeviceHealth(
     }
     
     try {
-      const state = await getPlaybackState();
-      const activeId = state?.device?.id;
+      // Refresh device list to get latest state
+      await refreshSpotifyDevices();
       
-      if (activeId === targetDeviceId) {
-        console.log(`[verifyDeviceHealth] ✓ Device ${targetDeviceId} is active`);
+      // Check if target device is in the available devices list
+      const device = availableDevices.value.find(d => d.id === targetDeviceId);
+      if (device) {
+        console.log(`[verifyDeviceHealth] ✓ Device ${targetDeviceId} (${device.name}) is available`);
         return true;
       }
       
-      console.log(`[verifyDeviceHealth] Attempt ${attempt + 1}/${maxAttempts}: device=${activeId ?? 'none'} (waiting for ${targetDeviceId})`);
+      console.log(`[verifyDeviceHealth] Attempt ${attempt + 1}/${maxAttempts}: device ${targetDeviceId} not in available devices (${availableDevices.value.length} devices)`);
     } catch (e) {
       console.warn(`[verifyDeviceHealth] Attempt ${attempt + 1} failed:`, e);
     }
   }
   
-  console.warn(`[verifyDeviceHealth] ✗ Device ${targetDeviceId} did not become active after ${maxAttempts} attempts`);
+  console.warn(`[verifyDeviceHealth] ✗ Device ${targetDeviceId} not found after ${maxAttempts} attempts`);
   return false;
 }
 
@@ -626,15 +673,25 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
     // Resolve Cast devices to Spotify Connect IDs (40s timeout inside)
     const resolvedId = await resolveDevice(deviceId, deviceIp, onStatus);
     console.log(`[selectDevice] Resolved to id=${resolvedId}`);
-    selectedDeviceId.value = resolvedId;
+    
+    // Determine if this is a Cast device that was authenticated
+    const device = allDevices.value.find(d => d.id === deviceId);
+    const isAuthenticatedCastDevice = device?.isLocal && device?.needsWakeUp === true;
 
     // Re-fetch devices before transfer
     await refreshSpotifyDevices();
 
-    // Verify device still exists
+    // Try to find the resolved device in the API
     let currentDevices = availableDevices.value;
     console.log(`[selectDevice] Current API devices: ${currentDevices.length}`);
+    
+    // Check if the target device is already the active device - skip transfer if so
+    const currentlyActiveDevice = currentDevices.find(d => d.is_active);
+    const isAlreadyActive = currentlyActiveDevice?.id === resolvedId || currentlyActiveDevice?.id === deviceId;
+    
+    let targetId = resolvedId;
     if (!currentDevices.some(d => d.id === resolvedId)) {
+      // Device not found by ID - try to find by name
       const name = allDevices.value.find(d => d.id === resolvedId)?.name?.toLowerCase();
       const match = currentDevices.find(d =>
         d.name?.toLowerCase() === name ||
@@ -642,21 +699,35 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
       );
       if (match?.id) {
         console.log(`[selectDevice] Found match by name: ${match.id}`);
-        selectedDeviceId.value = match.id;
-      } else if (resolvedId !== currentDeviceId) {
+        targetId = match.id;
+      } else if (!isAuthenticatedCastDevice) {
+        // For non-Cast devices, return error if not found
         console.log(`[selectDevice] Device ${resolvedId} not found in API after refresh`);
         return { success: false, error: "Device went offline. Select SPX Player or another available device." };
+      } else {
+        // For Cast devices that were authenticated, try direct transfer with the local ID
+        // The device IS registered with Spotify Connect after auth, just not visible via API
+        console.log(`[selectDevice] Cast device not in API, will try direct transfer with id=${resolvedId}`);
       }
     }
-
-    const targetId = selectedDeviceId.value!;
+    
+    // Skip transfer if device is already active
+    if (isAlreadyActive) {
+      console.log(`[selectDevice] Device ${targetId} is already active, skipping transfer`);
+      selectedDeviceId.value = targetId;
+      const deviceName = currentDevices.find(d => d.id === targetId)?.name || "this device";
+      showInfo("Already Playing", `Playback is already active on ${deviceName}.`);
+      return { success: true };
+    }
+    
+    selectedDeviceId.value = targetId;
     console.log(`[selectDevice] Calling transferPlayback(${targetId})...`);
 
     try {
       await transferPlaybackWithRetry(targetId, true, onStatus);
       
       // Health check: verify device became active (pattern from spotcast/spotifyd)
-      const isHealthy = await verifyDeviceHealth(targetId, onStatus);
+      const isHealthy = await verifyDeviceHealth(targetId);
       if (!isHealthy && targetId !== currentDeviceId) {
         console.warn("[selectDevice] Device health check failed, trying fallback...");
         onStatus?.("Device not responding, trying SPX Connect...");
@@ -682,6 +753,8 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
     selectedDeviceId.value = activeDevice.value?.id ?? null;
 
     const msg = error?.message || String(error);
+    const status = error?.statusCode || error?.status;
+    
     if (statusMessage && !msg.includes("didn't respond") && !msg.includes("didn't appear") && !msg.includes("isn't visible") && !msg.includes("Failed to authenticate")) {
       // Return the staged status message if set (e.g. "Waiting for Spotify to register...")
       return { success: false, error: statusMessage };
@@ -689,13 +762,21 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
     if (msg.includes("isn't visible") || msg.includes("Spotify is not running")) {
       return { success: false, error: "This speaker needs to be activated. Select SPX Connect to play on this Mac, or start playback on the speaker from the official Spotify app." };
     }
-    if (msg.includes("403") || msg.includes("Premium")) {
-      return { success: false, error: "Spotify Premium required to control playback remotely." };
+    if (status === 429 || msg.includes("rate limit")) {
+      // Rate limited - Spotify API throttling
+      return { success: false, error: "Too many requests. Please wait a moment and try again." };
     }
-    if (msg.includes("404") || msg.includes("Not Found") || msg.includes("Device not found")) {
-      return { success: false, error: "Device not found. It may have gone offline." };
+    if (msg.includes("403") || msg.includes("Premium") || msg.includes("premium") || status === 403) {
+      // 403 during transferPlayback can mean:
+      // 1. User has free account (no Premium)
+      // 2. Token missing 'streaming' scope (need to re-authenticate)
+      return { success: false, error: "Can't control playback. This may be due to a missing streaming permission — try signing out and signing in again to refresh your permissions." };
     }
-    if (msg.includes("401") || msg.includes("Unauthorized")) {
+    if (msg.includes("404") || msg.includes("Not Found") || msg.includes("Device not found") || msg.includes("no active device") || status === 404) {
+      // Research shows: Include device_id in the request to avoid this error
+      return { success: false, error: "No active playback session. Try playing something first, then transfer to this device." };
+    }
+    if (msg.includes("401") || msg.includes("Unauthorized") || status === 401) {
       return { success: false, error: "Session expired. Please sign in again." };
     }
     if (msg.includes("Network") || msg.includes("fetch") || msg.includes("Failed to wake") || msg.includes("timed out")) {
@@ -726,23 +807,6 @@ export function clearDeviceSelection() {
 }
 
 // ─── Device Switching ────────────────────────────────────────────────────────
-
-/**
- * Graceful device switching: pauses current playback before transferring
- * to ensure clean state transition.
- */
-export async function switchDevice(deviceId: string, deviceIp?: string): Promise<{ success: boolean; error?: string; usedFallback?: boolean }> {
-  try {
-    // Pause current playback first (graceful switch per spotify-player pattern)
-    await pause(effectiveDeviceId.value ?? undefined);
-    // Small delay to let the pause propagate
-    await new Promise(resolve => setTimeout(resolve, 100));
-  } catch {
-    // Ignore pause errors - device might not be playing
-  }
-  // Transfer to new device
-  return selectDevice(deviceId, deviceIp);
-}
 
 // ─── Refresh Functions ───────────────────────────────────────────────────────
 
