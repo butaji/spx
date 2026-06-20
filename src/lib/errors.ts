@@ -1518,7 +1518,9 @@ export async function checkSpotifyAPI(): Promise<DiagnosticResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     
-    const response = await fetch("https://api.spotify.com/v1", {
+    const isBrowser = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__?.__is_spx_shim__ === true;
+    const apiUrl = isBrowser ? "/spotify-api/v1" : "https://api.spotify.com/v1";
+    const response = await fetch(apiUrl, {
       method: "HEAD",
       signal: controller.signal,
     });
@@ -1593,6 +1595,12 @@ export async function runDiagnostics(): Promise<DiagnosticResult[]> {
   results.push(checkWebSocket());
   results.push(await checkInternetConnection());
   results.push(await checkSpotifyAPI());
+
+  updateSystemHealth({
+    internet: results.find(r => r.name.includes('Internet'))?.passed ?? false,
+    spotifyApi: results.find(r => r.name.includes('Spotify API'))?.passed ?? false,
+    websocket: results.find(r => r.name.includes('WebSocket'))?.passed ?? false,
+  });
   
   return results;
 }
@@ -1606,6 +1614,7 @@ import {
   showWarning as showNotifWarning,
   showInfo as showNotifInfo,
   showSuccess as showNotifSuccess,
+  updateSystemHealth,
 } from "../stores/notifications";
 
 /**

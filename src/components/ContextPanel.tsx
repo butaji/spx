@@ -98,11 +98,11 @@ export default function ContextPanel({ onClose, onPlayUris, onNavigate }: Props)
         )}
 
         {!loading && data && item.type === "album" && (
-          <AlbumContext data={data} />
+          <AlbumContext data={data} onPlayUris={onPlayUris} />
         )}
 
         {!loading && data && item.type === "playlist" && (
-          <PlaylistContext data={data} />
+          <PlaylistContext data={data} onPlayUris={onPlayUris} />
         )}
 
         {!loading && !data && (
@@ -194,7 +194,7 @@ function ArtistContext({ data, topTracks, relatedArtists, onNavigate, onPlayUris
   );
 }
 
-function AlbumContext({ data }: { data: any }) {
+function AlbumContext({ data, onPlayUris }: { data: any; onPlayUris?: Props["onPlayUris"] }) {
   const image = data.images?.[0]?.url;
   const year = data.release_date?.split("-")[0] ?? "";
   const tracks = data.tracks?.items?.filter(Boolean) ?? [];
@@ -217,7 +217,11 @@ function AlbumContext({ data }: { data: any }) {
         <div className="context-section-title">{tracks.length} Tracks</div>
         <div>
           {tracks.slice(0, 8).map((t: any, i: number) => (
-            <div key={t.id} className="context-mini-track">
+            <div
+              key={t.id}
+              className="context-mini-track"
+              onClick={() => t.uri && onPlayUris?.([t.uri], i)}
+            >
               <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontFamily: "var(--font-mono)" }}>
                 {i + 1}
               </span>
@@ -238,10 +242,11 @@ function AlbumContext({ data }: { data: any }) {
   );
 }
 
-function PlaylistContext({ data }: { data: any }) {
+function PlaylistContext({ data, onPlayUris }: { data: any; onPlayUris?: Props["onPlayUris"] }) {
   const image = data.images?.[0]?.url;
   const trackCount = data.tracks?.total ?? 0;
   const owner = data.owner?.display_name ?? "Unknown";
+  const tracks = data.tracks?.items?.filter(Boolean).map((i: any) => i.track).filter(Boolean) ?? [];
 
   return (
     <>
@@ -266,6 +271,30 @@ function PlaylistContext({ data }: { data: any }) {
 
       <div>
         <div className="context-section-title">{trackCount} Tracks</div>
+        {tracks.length > 0 && (
+          <div>
+            {tracks.slice(0, 8).map((t: any, i: number) => (
+              <div
+                key={t.id}
+                className="context-mini-track"
+                onClick={() => t.uri && onPlayUris?.([t.uri], i)}
+              >
+                <span style={{ fontSize: "11px", color: "var(--fg-faint)", fontFamily: "var(--font-mono)" }}>
+                  {i + 1}
+                </span>
+                <span className="context-mini-track-name">{t.name}</span>
+                <span style={{ fontSize: "10px", color: "var(--fg-faint)", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>
+                  {formatDuration(t.duration_ms)}
+                </span>
+              </div>
+            ))}
+            {trackCount > 8 && (
+              <div style={{ fontSize: "11px", color: "var(--fg-muted)", padding: "4px 0", textAlign: "center" }}>
+                +{trackCount - 8} more tracks
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

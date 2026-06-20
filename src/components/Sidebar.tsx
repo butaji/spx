@@ -12,7 +12,6 @@ interface SidebarProps {
   history: View[];
   setHistory: (update: View[] | ((prev: View[]) => View[])) => void;
   user: { name: string; image?: string } | null;
-  showDiagnostics?: boolean;
 }
 
 const baseNavItems: { view: View; label: string; icon: (active: boolean) => preact.JSX.Element }[] = [
@@ -22,14 +21,13 @@ const baseNavItems: { view: View; label: string; icon: (active: boolean) => prea
   { view: { type: "queue" }, label: "Queue", icon: () => <IconQueue /> },
 ];
 
-export function Sidebar({ view, history, setHistory, user, showDiagnostics }: SidebarProps) {
-  const diagnosticsEnabled = showDiagnostics ?? import.meta.env.VITE_SPX_DIAGNOSTICS === "1";
+export function Sidebar({ view, history, setHistory, user }: SidebarProps) {
   const diagnosticsItem: { view: View; label: string; icon: (active: boolean) => preact.JSX.Element } = {
     view: { type: "diagnostics" },
     label: "Diagnostics",
     icon: () => <IconStethoscope />,
   };
-  const navItems = diagnosticsEnabled ? [...baseNavItems, diagnosticsItem] : baseNavItems;
+  const navItems = [...baseNavItems, diagnosticsItem];
   const handleNavClick = (itemView: View) => {
     if (view.type !== itemView.type) {
       setHistory([itemView]);

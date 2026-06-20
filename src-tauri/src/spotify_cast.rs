@@ -2,14 +2,16 @@
 //!
 //! Implements the modern Cast auth flow used by Spotcast / pychromecast:
 //! 1. Connect to the Cast device and launch Spotify app `CC32E753`.
-//! 2. Send `getInfo` on the Spotify secure namespace.
-//! 3. Use the returned `deviceID` + `clientID` to call
+//! 2. Send `getInfo` on the Spotify secure namespace (with `deviceID = md5(device_name)`).
+//! 3. Use the returned `clientID` + multizone `deviceID` to call
 //!    `spclient.wg.spotify.com/device-auth/v1/refresh` with a Web Player token.
 //! 4. Send `addUser` with the refreshed `accessToken` (`tokenType: "accesstoken"`).
-//! 5. The device registers with Spotify and appears in the Web API device list.
+//!
+//! After successful auth, the Cast device appears in `GET /me/player/devices` with
+//! `id = md5(device_name)` (the Spotify Connect "device ID" that the Web API uses).
 //!
 //! References:
-//! - Spotcast spotify_controller.py
+//! - Spotcast spotify_controller.py  (getInfo sends md5(device_name) as deviceID)
 //! - Kopiro's reverse-engineering of the Cast protocol
 
 use rust_cast::message_manager::CastMessagePayload;
@@ -17,7 +19,10 @@ use serde_json::json;
 use std::str::FromStr;
 use std::time::Duration;
 
-fn spotify_device_id(name: &str) -> String {
+/// Compute the Spotify device ID from a Cast device name.
+/// This is the md5 hash of the device name — Spotify Cast apps use this
+/// as the "Spotify device ID" that appears in `GET /me/player/devices`.
+fn cast_device_id(name: &str) -> String {
     let digest = md5::compute(name.as_bytes());
     format!("{:x}", digest)
 }
@@ -31,6 +36,8 @@ const DEVICE_AUTH_URL: &str = "https://spclient.wg.spotify.com/device-auth/v1/re
 /// `access_token` must be a **Spotify Web Player token**. A normal Web API token
 /// is rejected by the Cast receiver. SPX resolves the token in
 /// `commands::resolve_cast_token` (env var or stored `sp_dc` → Web Player token).
+///
+/// Returns the Spotify device ID (`md5(device_name)`) that the Web API uses.
 pub fn authenticate_cast_device(
     ip: &str,
     access_token: &str,
@@ -71,14 +78,17 @@ pub fn authenticate_cast_device(
     // Give the receiver a moment to initialize.
     std::thread::sleep(Duration::from_millis(500));
 
-    // Step 1: getInfo with local device metadata.
-    let local_device_id = spotify_device_id(device_name);
-    println!("[cast] Sending getInfo to {} (local device_id={})...", transport_id, local_device_id);
+    // Step 1: getInfo — tell the Cast device the Spotify device ID it should use.
+    // CRITICAL: deviceID must be md5(device_name). This is the ID the Spotify Cast
+    // app uses as its "Spotify device ID", and it's what appears in GET /me/player/devices.
+    // This matches exactly what Spotcast/pychromecast do.
+    let spotify_device_id = cast_device_id(device_name);
+    println!("[cast] Sending getInfo (deviceID={})...", spotify_device_id);
     let get_info_msg = json!({
         "type": "getInfo",
         "payload": {
             "remoteName": device_name,
-            "deviceID": local_device_id,
+            "deviceID": spotify_device_id,
             "deviceAPI_isGroup": false,
         }
     });
@@ -90,15 +100,18 @@ pub fn authenticate_cast_device(
         .map_err(|e| format!("getInfoResponse timeout: {}", e))?;
     println!("[cast] Received getInfoResponse: {}", info_response);
 
-    let client_id = parse_get_info_response(&info_response)?;
-    println!("[cast] Got client_id={}", client_id);
+    let (client_id, multizone_device_id) = parse_get_info_response(&info_response)?;
+    println!("[cast] Got client_id={}, multizone_id={}", client_id, multizone_device_id);
 
     // Step 2: Exchange Web Player token for a device-bound access token.
+    // Use the multizone device ID from getInfoResponse for Spotify's internal auth.
     println!("[cast] Exchanging Web Player token for device-bound token...");
-    let device_access_token = refresh_device_auth(access_token, &local_device_id, &client_id)?;
+    let device_access_token = refresh_device_auth(access_token, &multizone_device_id, &client_id)?;
     println!("[cast] Got device-bound token");
 
-    // Step 3: addUser with the refreshed token.
+    // Step 3: addUser — register the Cast device with Spotify using the device-bound token.
+    // Spotify's backend derives the device ID from the getInfo step (md5(device_name)),
+    // so we only need to send the refreshed token here.
     println!("[cast] Sending addUser to {}...", transport_id);
     let add_user_msg = json!({
         "type": "addUser",
@@ -111,16 +124,22 @@ pub fn authenticate_cast_device(
         .map_err(|e| format!("Failed to send addUser: {}", e))?;
     println!("[cast] addUser sent; waiting for response...");
 
-    // Step 5: Wait for addUserResponse.
     let add_user_response = wait_for_message(&cast_device, SPOTIFY_NAMESPACE, "addUserResponse", 20)
         .map_err(|e| format!("addUserResponse timeout: {}", e))?;
     println!("[cast] addUserResponse: {}", add_user_response);
 
-    Ok("Cast device authenticated successfully".to_string())
+    // Device is now authenticated. It will appear in GET /me/player/devices with
+    // id = spotify_device_id (md5(device_name)).
+    println!("[cast] Auth complete. Device should appear in Spotify API as id={}", spotify_device_id);
+
+    Ok(spotify_device_id)
 }
 
-/// Parse `clientID` from the Cast `getInfoResponse`.
-fn parse_get_info_response(payload: &str) -> Result<String, String> {
+/// Parse `clientID` and the Spotify multizone device ID from the Cast `getInfoResponse`.
+/// The `deviceID` in getInfoResponse is Spotify's internal multizone device ID.
+/// Used only for the `refresh_device_auth` step to exchange the Web Player token
+/// for a device-bound token. The Cast protocol itself uses `md5(device_name)`.
+fn parse_get_info_response(payload: &str) -> Result<(String, String), String> {
     let value: serde_json::Value = serde_json::from_str(payload)
         .map_err(|e| format!("Invalid getInfoResponse JSON: {e}"))?;
 
@@ -135,7 +154,13 @@ fn parse_get_info_response(payload: &str) -> Result<String, String> {
         .ok_or("getInfoResponse missing clientID")?
         .to_string();
 
-    Ok(client_id)
+    let spotify_multizone_id = payload_obj
+        .get("deviceID")
+        .and_then(|v| v.as_str())
+        .ok_or("getInfoResponse missing deviceID")?
+        .to_string();
+
+    Ok((client_id, spotify_multizone_id))
 }
 
 /// Exchange a Web Player token for a device-bound access token.

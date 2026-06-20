@@ -16,7 +16,6 @@ import {
   appError,
   loadRecentActivity,
   loadUserProfile,
-  loadUserPlaylists,
   refreshPlayback,
   startPlaybackPolling,
 } from "../stores/spotify";
@@ -91,14 +90,15 @@ export function useAuth() {
         isAuthSignal.value = true;
 
         try {
+          // Await critical data before showing Home screen
           await Promise.all([
             loadUserProfile(),
+            loadRecentActivity(),
             refreshPlayback(),
             refreshSpotifyDevices().catch((e) => console.error("[Auth] Mock device refresh failed:", e)),
-            loadUserPlaylists(),
+            refreshLocalDevices(true).catch((e) => console.error("[Auth] Mock local device scan failed:", e)),
             initPlayer().catch((e) => console.error("[Auth] Mock player init failed:", e)),
           ]);
-          loadRecentActivity().catch((e) => console.warn("[Auth] Mock recent activity failed:", e));
           startPlaybackPolling();
           startDevicePolling();
         } catch (e: any) {
@@ -160,12 +160,13 @@ export function useAuth() {
               // can be its own playback target without another Spotify app.
               initPlayer().catch(e => console.error("[Auth] Player init failed:", e));
 
-              loadRecentActivity();
-              refreshPlayback();
-              refreshSpotifyDevices().catch(e => {
-                console.error("[Auth] Device refresh failed:", e);
-              });
-              setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
+              // Await critical data before showing Home screen
+              await Promise.all([
+                loadRecentActivity(),
+                refreshPlayback(),
+                refreshSpotifyDevices().catch(e => console.error("[Auth] Device refresh failed:", e)),
+                refreshLocalDevices(true).catch(e => console.error("[Auth] Local device scan failed:", e)),
+              ]);
               startDevicePolling();
             } catch (e: any) {
               console.error("[Auth] OAuth callback failed:", e);
@@ -198,12 +199,13 @@ export function useAuth() {
             // can be its own playback target without another Spotify app.
             initPlayer().catch(e => console.error("[Auth] Player init failed:", e));
 
-            loadRecentActivity();
-            refreshPlayback();
-            refreshSpotifyDevices().catch(e => {
-              console.error("[Auth] Device refresh failed:", e);
-            });
-            setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
+            // Await critical data before showing Home screen
+            await Promise.all([
+              loadRecentActivity(),
+              refreshPlayback(),
+              refreshSpotifyDevices().catch(e => console.error("[Auth] Device refresh failed:", e)),
+              refreshLocalDevices(true).catch(e => console.error("[Auth] Local device scan failed:", e)),
+            ]);
             startDevicePolling();
 
             clearTimeout(safetyTimeout);
@@ -249,12 +251,13 @@ export function useAuth() {
           // can be its own playback target without another Spotify app.
           initPlayer().catch(e => console.error("[Auth] Player init failed:", e));
 
-          loadRecentActivity();
-          refreshPlayback();
-          refreshSpotifyDevices().catch(e => {
-            console.error("[Auth] Device refresh failed:", e);
-          });
-          setTimeout(() => refreshLocalDevices(true).catch(console.error), 500);
+          // Await critical data before showing Home screen
+          await Promise.all([
+            loadRecentActivity(),
+            refreshPlayback(),
+            refreshSpotifyDevices().catch(e => console.error("[Auth] Device refresh failed:", e)),
+            refreshLocalDevices(true).catch(e => console.error("[Auth] Local device scan failed:", e)),
+          ]);
           startDevicePolling();
 
           clearTimeout(safetyTimeout);

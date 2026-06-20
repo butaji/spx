@@ -84,10 +84,44 @@ async function getPlaybackState(page: Page) {
   });
 }
 
+const BACKEND_URL = 'http://127.0.0.1:1422';
+
+async function authenticateCastDevice(page: any, ip: string, deviceName: string, token: string) {
+  try {
+    // Wake the device first
+    await page.evaluate(async ({ backend, ip }: { backend: string; ip: string }) => {
+      await fetch(`${backend}/invoke/wake_cast_device`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip }),
+      });
+    }, { backend: BACKEND_URL, ip });
+
+    // Authenticate via backend (uses sp_dc from backend env)
+    await page.evaluate(async ({ backend, ip, deviceName, accessToken }: {
+      backend: string; ip: string; deviceName: string; accessToken: string;
+    }) => {
+      await fetch(`${backend}/invoke/authenticate_cast_device_command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, deviceName, accessToken }),
+      });
+    }, { backend: BACKEND_URL, ip, deviceName, accessToken: token });
+
+    // Wait for Spotify to register the device
+    await page.waitForTimeout(10_000);
+    return true;
+  } catch (e) {
+    console.log('Cast auth failed:', e);
+    return false;
+  }
+}
+
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Cast Transfer — Audio plays on target device', () => {
   test('transfer to Cast device and verify audio IS playing on it', async ({ page }) => {
+    const token = loadToken()!;
     await authenticatePage(page);
 
     // ── 1. Start playback on current device first ───────────────────────────────
@@ -102,38 +136,66 @@ test.describe('Cast Transfer — Audio plays on target device', () => {
     expect(beforeTransfer.title).not.toBe('No track');
     expect(beforeTransfer.title.length).toBeGreaterThan(0);
 
-    // ── 2. Open device selector ────────────────────────────────────────────────
+    // ── 2. Get Cast devices from mDNS ─────────────────────────────────────────
+    console.log('\n=== Fetching Cast device list from mDNS ===');
+    let castDevices: { name: string; ip: string }[] = [];
+    try {
+      const mdnsResp = await page.evaluate(async (backend: string) => {
+        const r = await fetch(`${backend}/local-devices`);
+        return r.json();
+      }, BACKEND_URL);
+      castDevices = (mdnsResp.devices || []).filter((d: { service_type?: string }) =>
+        d.service_type === 'googlecast'
+      );
+    } catch (e) {
+      console.log('mDNS scan failed:', e);
+    }
+    console.log('Found Cast devices:', castDevices.map(d => d.name).join(', '));
+
+    // Pick a target Cast device
+    const EXCLUDE = /SPX|Local|This Mac|Group|All @|Bedroom display/i;
+    const target = castDevices.find(d => !EXCLUDE.test(d.name)) || castDevices[0];
+
+    if (!target) {
+      test.skip(true, 'No Cast devices found to test transfer');
+      return;
+    }
+
+    console.log(`\n=== Target: "${target.name}" @ ${target.ip} ===\n`);
+
+    // ── 3. Authenticate the Cast device ───────────────────────────────────────
+    console.log('Authenticating Cast device via backend...');
+    const authOk = await authenticateCastDevice(page, target.ip, target.name, token);
+    if (!authOk) {
+      test.skip(true, 'Cast device authentication failed');
+      return;
+    }
+    console.log('Cast device authenticated ✅');
+
+    // ── 4. Open device selector ────────────────────────────────────────────────
     await openDeviceSelector(page);
     await waitForDevices(page, 45000);
 
     const deviceItems = page.locator('.device-item');
     const deviceNames = await page.locator('.device-name').allTextContents();
-    console.log('\n=== Available devices ===');
+    console.log('\n=== Available devices after auth ===');
     deviceNames.forEach((name, i) => console.log(`  [${i}] ${name}`));
 
-    expect(deviceNames.length).toBeGreaterThan(0);
-
-    // ── 3. Pick a target Cast device (not SPX, not This Mac, not a grouping) ───
-    // Candidates: Living Room speaker, Mini2, Bedroom display, Office
-    const EXCLUDE = /SPX|Local|This Mac|this mac|Group|all groups|Active/i;
+    // Find the index of our target device
     let targetIdx = -1;
-    let targetName = '';
-
     for (let i = 0; i < deviceNames.length; i++) {
-      const name = deviceNames[i] ?? '';
-      if (!EXCLUDE.test(name)) {
+      if (deviceNames[i]?.trim() === target.name.trim()) {
         targetIdx = i;
-        targetName = name;
         break;
       }
     }
 
     if (targetIdx === -1) {
-      test.skip(true, 'No Cast devices found to test transfer');
+      test.skip(true, 'Target Cast device not found in dropdown after auth');
       return;
     }
 
-    console.log(`\n=== Transferring to: "${targetName}" (index ${targetIdx}) ===\n`);
+    console.log(`\n=== Transferring to: "${target.name}" (index ${targetIdx}) ===\n`);
 
     // ── 4. Click the target device ────────────────────────────────────────────
     await deviceItems.nth(targetIdx).click();
@@ -171,7 +233,7 @@ test.describe('Cast Transfer — Audio plays on target device', () => {
       const dropdownClosed = !(await page.locator('.device-dropdown').isVisible().catch(() => true));
 
       if (targetActive) {
-        console.log(`✅ Target device "${targetName}" is ACTIVE — transfer SUCCESS`);
+        console.log(`✅ Target device "${target.name}" is ACTIVE — transfer SUCCESS`);
         transferSucceeded = true;
         break;
       }
@@ -238,7 +300,7 @@ test.describe('Cast Transfer — Audio plays on target device', () => {
         .catch(() => false);
 
       console.log(`\n${'='.repeat(50)}`);
-      console.log(`RESULT: Audio transferred to "${targetName}"`);
+      console.log(`RESULT: Audio transferred to "${target.name}"`);
       console.log(`  • Target device active badge: ${targetIsActive}`);
       console.log(`  • Track playing: "${afterTransfer.title}"`);
       console.log(`  • Time after 5s: ${afterWait.time} (progress: ${afterWait.progress})`);
@@ -250,7 +312,7 @@ test.describe('Cast Transfer — Audio plays on target device', () => {
     } else if (fallbackTriggered) {
       // ACCEPTABLE: Cast unavailable, fallback to SPX Player
       console.log(`\n${'='.repeat(50)}`);
-      console.log(`RESULT: Cast device "${targetName}" unavailable`);
+      console.log(`RESULT: Cast device "${target.name}" unavailable`);
       console.log(`  • Fallback triggered — playback on SPX Player`);
       console.log(`  • Track: "${afterTransfer.title}"`);
       console.log(`${'='.repeat(50)}\n`);

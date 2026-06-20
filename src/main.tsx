@@ -16,6 +16,28 @@ if (!("__TAURI_INTERNALS__" in window)) {
     metadata: { currentWindow: { label: "" }, currentWebview: { label: "" } },
     plugins: { path: { sep: "/", delimiter: ":" } },
   };
+
+  // Tell tauriInvoke / scanLocalDevices to call the backend directly at 127.0.0.1:1422.
+  // This bypasses the Vite http-proxy which has a hard 5s socket timeout — too short
+  // for the 20s mDNS device scan. The backend supports CORS with Access-Control-Allow-Origin: *.
+  (window as any).SPX_BROWSER_BACKEND_URL = 'http://127.0.0.1:1422';
+
+  // Patch global fetch to route Spotify API calls through the Vite proxy in browser mode.
+  const originalFetch = window.fetch;
+  window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+    let url = typeof input === 'string' ? input : input.toString();
+    if (url.startsWith('https://api.spotify.com/')) {
+      const proxied = url.replace('https://api.spotify.com', '/spotify-api');
+      console.log(`[fetch proxy] ${url} -> ${proxied}`);
+      return originalFetch(proxied, init);
+    }
+    if (url.startsWith('https://accounts.spotify.com/')) {
+      const proxied = url.replace('https://accounts.spotify.com', '/spotify-accounts');
+      console.log(`[fetch proxy] ${url} -> ${proxied}`);
+      return originalFetch(proxied, init);
+    }
+    return originalFetch(input, init);
+  };
 }
 
 import { render } from "preact";
@@ -51,7 +73,9 @@ if (import.meta.env.VITE_SPX_MOCK === "1") {
     const result = await tauriInvoke('authenticate_cast_device_raw_command', { ip, accessToken });
     console.log('[Test] Result:', result);
     console.log('[Test] Checking devices API...');
-    const resp = await fetch('https://api.spotify.com/v1/me/player/devices', {
+    const isBrowser = (window as any).__TAURI_INTERNALS__?.__is_spx_shim__ === true;
+    const apiUrl = isBrowser ? '/spotify-api/v1/me/player/devices' : 'https://api.spotify.com/v1/me/player/devices';
+    const resp = await fetch(apiUrl, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
     const data = await resp.json();

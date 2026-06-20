@@ -6,6 +6,7 @@ import { SpotifyTrack, SpotifyAlbum, SpotifyArtist, SpotifyPlaylist, SpotifySear
 import { IconPlay, IconClock, IconX } from "../components/icons";
 import { TrackRow } from "../components/TrackRow";
 import { playbackTrack, isPlaying } from "../stores/spotify";
+import { showError } from "../stores/notifications";
 
 type Filter = "all" | "tracks" | "albums" | "artists" | "playlists";
 
@@ -76,6 +77,7 @@ export default function Search({ onPlayUris, onNavigate, initialQuery }: Props) 
       saveRecentSearch(q);
     } catch (e) {
       console.error("Failed to search:", e);
+      showError("Search Failed", "Unable to search. Check your connection and try again.");
     }
     setLoading(false);
   }, [saveRecentSearch]);

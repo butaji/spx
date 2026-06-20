@@ -1,5 +1,5 @@
 import { signal, computed } from "@preact/signals";
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
+import { getAvailableDevices, getMyDevicesDirect, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
 import { playbackVolume } from "../stores/playback";
@@ -289,13 +289,28 @@ async function authenticateCastDevice(ip: string, deviceName: string): Promise<s
           setTimeout(() => reject(new Error("Raw Cast auth timed out after 45 seconds")), 45000)
         )
       ]);
-      console.log(`[authenticateCastDevice] Raw auth succeeded: ${result}`);
-      return result;
+      
+      // Treat error-indicator strings as failures (raw auth may return error messages as strings)
+      const isRawFailure = !result || 
+        result.toLowerCase().includes('error') || 
+        result.toLowerCase().includes('failed') ||
+        result.toLowerCase().includes('send error') ||
+        result.toLowerCase().includes('timeout') ||
+        result.toLowerCase().includes('timed out');
+      
+      if (isRawFailure) {
+        console.log(`[authenticateCastDevice] Raw auth returned error indicator: "${result}" — falling back to standard method`);
+      } else {
+        console.log(`[authenticateCastDevice] Raw auth succeeded: ${result}`);
+        return result;
+      }
     } catch (rawError) {
-      console.log(`[authenticateCastDevice] Raw auth failed: ${rawError}, falling back to old method`);
+      console.log(`[authenticateCastDevice] Raw auth threw: ${rawError} — falling back to standard method`);
     }
     
-    // Fallback to old method
+    // Fallback to standard Cast auth (full Spotify API exchange flow)
+    // Allow up to 60s since it involves multiple network round-trips
+    console.log(`[authenticateCastDevice] Using standard Cast auth...`);
     const result = await Promise.race([
       tauriInvoke<string>("authenticate_cast_device_command", { 
         ip, 
@@ -303,7 +318,7 @@ async function authenticateCastDevice(ip: string, deviceName: string): Promise<s
         deviceName
       }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Cast auth timed out after 30 seconds")), 30000)
+        setTimeout(() => reject(new Error("Standard Cast auth timed out after 60 seconds")), 60000)
       )
     ]);
 
@@ -332,7 +347,9 @@ async function waitForDevice(
     
     let data: any;
     try {
-      data = await getAvailableDevices();
+      // Use direct API (not SDK) — SDK's getAvailableDevices can return stale results
+      // in headless environments or when the WebPlayback SDK hasn't synced yet
+      data = await getMyDevicesDirect();
     } catch (apiError) {
       // Network error or token issue - continue polling
       console.warn(`[waitForDevice] Poll ${i + 1}/15: API call failed, retrying: ${apiError}`);
@@ -397,28 +414,36 @@ async function resolveDevice(
   console.log(`[resolveDevice] deviceId=${deviceId}, isCastOnly=${isCastOnly}, deviceIp=${deviceIp}, name="${device?.name}"`);
 
   if (isCastOnly && deviceIp) {
+    // Use the device name from the UI/device list, NOT from mDNS.
+    // mDNS entries can be stale (e.g., same IP:port resolves to "All" instead of "Mini2").
+    // Spotify registered the device under its UI name - trust that.
     const deviceName = device?.name?.toLowerCase() ?? "";
 
     // Pre-check: skip wake if device already exists in Spotify's device list
-    const alreadyExists = availableDevices.value.some(d =>
-      d.name?.toLowerCase() === deviceName ||
-      (deviceName && d.name?.toLowerCase()?.includes(deviceName))
-    );
+    // Use bidirectional fuzzy matching (Cast name may differ from Spotify name)
+    const alreadyExists = availableDevices.value.some(d => {
+      const spotifyName = d.name?.toLowerCase() || "";
+      return spotifyName === deviceName ||           // exact match
+             spotifyName.includes(deviceName) ||     // Spotify name contains Cast name
+             deviceName.includes(spotifyName);       // Cast name contains Spotify name
+    });
     console.log(`[resolveDevice] Pre-check: alreadyExists=${alreadyExists}, availableDevices=${availableDevices.value.length}`);
     if (availableDevices.value.length) {
       console.log(`[resolveDevice] Available: ${availableDevices.value.map(d => `"${d.name}"`).join(', ')}`);
     }
 
     if (alreadyExists) {
-      const match = availableDevices.value.find(d =>
-        d.name?.toLowerCase() === deviceName ||
-        (deviceName && d.name?.toLowerCase()?.includes(deviceName))
-      );
+      const match = availableDevices.value.find(d => {
+        const spotifyName = d.name?.toLowerCase() || "";
+        return spotifyName === deviceName ||
+               spotifyName.includes(deviceName) ||
+               deviceName.includes(spotifyName);
+      });
       console.log(`[resolveDevice] Pre-check MATCH: using Spotify id=${match?.id}`);
       return match?.id ?? deviceId;
     }
 
-    // Wrap in 60s timeout (wake takes ~3-5s + auth ~10s + polling up to 15s)
+    // Wrap in 90s timeout (wake ~5s + auth up to 60s + polling 15s)
     return await Promise.race([
       (async () => {
         onStatus?.("Device is starting up...");
@@ -464,7 +489,7 @@ async function resolveDevice(
         }
       })(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Device didn't appear in Spotify. Select the SPX Player or another available device.")), 60_000)
+        setTimeout(() => reject(new Error("Device didn't appear in Spotify. Select the SPX Player or another available device.")), 90_000)
       )
     ]);
   }
@@ -713,12 +738,31 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
   let usedFallback = false;
 
   try {
+    // For Cast devices, look up the FRESH mDNS entry by device name (not from allDevices cache).
+    // allDevices is a computed property that snapshots localDevices at access time — its
+    // deviceIp may be stale (e.g., multiple devices on same IP, one overwrites the other).
+    const device = allDevices.value.find(d => d.id === deviceId);
+    const isCastOnlyDevice = device?.isLocal && device?.needsWakeUp === true;
+    let resolvedDeviceIp = deviceIp;
+    if (isCastOnlyDevice) {
+      const freshMdnsEntry = localDevices.value.find(ld => {
+        const mdnsName = (ld.friendly_name || ld.name || "").toLowerCase();
+        const deviceName = (device?.name || "").toLowerCase();
+        return mdnsName === deviceName ||
+               mdnsName.includes(deviceName) ||
+               deviceName.includes(mdnsName);
+      });
+      if (freshMdnsEntry?.ip) {
+        resolvedDeviceIp = freshMdnsEntry.ip;
+        console.log(`[selectDevice] Fresh mDNS lookup: "${device?.name}" @ ${resolvedDeviceIp} (was ${deviceIp})`);
+      }
+    }
+
     // Resolve Cast devices to Spotify Connect IDs (40s timeout inside)
-    const resolvedId = await resolveDevice(deviceId, deviceIp, onStatus);
+    const resolvedId = await resolveDevice(deviceId, resolvedDeviceIp, onStatus);
     console.log(`[selectDevice] Resolved to id=${resolvedId}`);
     
     // Determine if this is a Cast device that was authenticated
-    const device = allDevices.value.find(d => d.id === deviceId);
     const isAuthenticatedCastDevice = device?.isLocal && device?.needsWakeUp === true;
 
     // Re-fetch devices before transfer
@@ -770,12 +814,18 @@ export async function selectDevice(deviceId: string, deviceIp?: string): Promise
       await transferPlaybackWithRetry(targetId, true, onStatus);
       
       // Health check: verify device became active (pattern from spotcast/spotifyd)
-      const isHealthy = await verifyDeviceHealth(targetId);
-      if (!isHealthy && targetId !== currentDeviceId) {
+      // Skip health check for Cast devices that were just authenticated - they may not
+      // appear in Spotify's API device list immediately, but the transfer API call succeeds
+      const isAuthenticatedCastNotInApi = isAuthenticatedCastDevice && !currentDevices.some(d => d.id === targetId);
+      const isHealthy = !isAuthenticatedCastNotInApi && await verifyDeviceHealth(targetId);
+      
+      if (!isHealthy && targetId !== currentDeviceId && !isAuthenticatedCastNotInApi) {
         console.warn("[selectDevice] Device health check failed, trying fallback...");
         onStatus?.("Device not responding, trying SPX Connect...");
         await fallbackToSpxConnect(onStatus);
         usedFallback = true;
+      } else if (isAuthenticatedCastNotInApi) {
+        console.log("[selectDevice] Cast device transfer succeeded (skipping health check - device may not be in API list yet)");
       }
     } catch (transferError: any) {
       // Don't fall back to SPX Player if the user explicitly selected SPX Player.
@@ -895,7 +945,8 @@ export async function refreshDevices(options: RefreshDevicesOptions = {}): Promi
     try {
       // Fetch Spotify devices (always) — but don't let auth failures block local scanning
       try {
-        const spotifyData = await getAvailableDevices();
+        // Use direct API for reliability — SDK can return stale/empty in headless
+        const spotifyData = await getMyDevicesDirect();
         spotifyDevices = spotifyData.devices ?? [];
         console.log(`[refreshDevices] Spotify API returned ${spotifyDevices.length} devices:`, spotifyDevices.map(d => ({ name: d.name, id: d.id?.slice(0, 8), type: d.type })));
 

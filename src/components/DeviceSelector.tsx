@@ -12,6 +12,8 @@ import {
   selectedDeviceId,
   scanError,
   lastTransferUsedFallback,
+  refreshSpotifyDevices,
+  refreshLocalDevices,
 } from "../stores/devices";
 import type { SpotifyDevice } from "../types";
 import {
@@ -123,6 +125,15 @@ function DeviceSelector({ onRefreshLocal }: Props) {
     }, 4000);
     return () => clearTimeout(timer);
   }, [lastTransferUsedFallback.value]);
+
+  // Refresh devices when opening the dropdown if the list looks empty/stale
+  useEffect(() => {
+    if (!isOpen) return;
+    if (unifiedDevices.length === 0 && !isScanning.value) {
+      refreshSpotifyDevices().catch(console.warn);
+      refreshLocalDevices(true).catch(console.warn);
+    }
+  }, [isOpen]);
 
   const handleSelectDevice = async (deviceId: string, deviceIp?: string) => {
     if (transferring) return;

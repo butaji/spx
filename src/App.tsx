@@ -114,7 +114,7 @@ function App() {
   const track = useMemo(() => getDerivedTrack(), [
     playbackTrack.value?.id,
     isPlaying.value,
-    lastPlayedTrack.value?.id,
+    lastPlayedTrack.value?.uri,
   ]);
   const volume = playbackVolume.value;
   const shuffle = playbackShuffle.value;

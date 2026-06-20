@@ -6,7 +6,7 @@ import type { SpotifyArtist } from "../types";
 
 import NowPlayingHero from "../components/NowPlayingHero";
 import ArtistTopSongs from "../components/ArtistTopSongs";
-import RecentGrid from "../components/RecentGrid";
+import RecentlyPlayedSection from "../components/RecentlyPlayedSection";
 import {
   syncWithSpotifyCounts,
   getSpotifyArtistCount,
@@ -27,7 +27,7 @@ interface Props {
 
 export default function Home({
   track,
-  onPlayContext: _unused,
+  onPlayContext,
   onPlayUris,
   onNavigate,
   liked,
@@ -140,7 +140,7 @@ export default function Home({
         </div>
       )}
 
-      <RecentGrid onNavigate={onNavigate} />
+      <RecentlyPlayedSection onPlayContext={onPlayContext} onNavigate={onNavigate} />
     </div>
   );
 }

@@ -5,8 +5,8 @@
  * so users can see track info and control playback from the system UI.
  */
 
-import { invoke } from "@tauri-apps/api/core";
 import type { SpotifyTrack } from "../types";
+import { tauriInvoke } from "./spotify";
 
 /**
  * Update the Now Playing info with current track details.
@@ -20,11 +20,11 @@ export async function updateNowPlaying(
   try {
     if (!track) {
       // No track playing, clear Now Playing
-      await invoke("clear_now_playing");
+      await tauriInvoke("clear_now_playing");
       return;
     }
 
-    await invoke("update_now_playing", {
+    await tauriInvoke("update_now_playing", {
       title: track.name,
       artist: track.artists?.map((a) => a.name).join(", ") ?? null,
       album: track.album?.name ?? null,
@@ -43,7 +43,7 @@ export async function updateNowPlaying(
  */
 export async function clearNowPlaying(): Promise<void> {
   try {
-    await invoke("clear_now_playing");
+    await tauriInvoke("clear_now_playing");
   } catch (e) {
     console.debug("Failed to clear Now Playing:", e);
   }

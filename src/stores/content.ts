@@ -77,7 +77,7 @@ const CACHE_TTL = {
 const RECENT_CACHE_KEY = "recent_containers_v4";
 
 export async function loadUserPlaylists(): Promise<void> {
-  const cached = await getCached("user_playlists");
+  const cached = await getCached<SpotifyPlaylist[]>("user_playlists");
   if (cached && cached.length > 0) {
     userPlaylists.value = cached;
     if (await isCacheFresh("user_playlists")) return;
@@ -119,15 +119,16 @@ export async function loadArtist(artistId: string): Promise<void> {
 }
 
 export async function loadRecentContainers(): Promise<void> {
-  const cached = await getCached(RECENT_CACHE_KEY);
+  const cached = await getCached<RecentContainer[]>(RECENT_CACHE_KEY);
   if (cached && cached.length > 0) {
     recentContainers.value = cached;
     if (await isCacheFresh(RECENT_CACHE_KEY)) {
-      const data = await getRecentlyPlayedTracks(1);
+      const data = await getRecentlyPlayedTracks();
       const items = (data as { items?: Array<{ track?: SpotifyTrack }> }).items ?? [];
       if (items[0]?.track) {
         const track = items[0].track;
         lastPlayedTrack.value = {
+          id: track.id,
           name: track.name,
           artistName: track.artists?.filter(Boolean).map((a) => a.name).filter(Boolean).join(", ") || "",
           artistId: track.artists?.[0]?.id,
@@ -142,12 +143,13 @@ export async function loadRecentContainers(): Promise<void> {
   }
 
   try {
-    const data = await withRetry(() => getRecentlyPlayedTracks(50));
+    const data = await withRetry(() => getRecentlyPlayedTracks());
     const items = (data as { items?: any[] }).items ?? [];
 
     if (items[0]?.track) {
       const track = items[0].track;
       lastPlayedTrack.value = {
+        id: track.id,
         name: track.name,
         artistName: track.artists?.[0]?.name || "",
         artistId: track.artists?.[0]?.id,
@@ -327,6 +329,7 @@ export async function loadRecentContainers(): Promise<void> {
     if (result.length > 0 && items[0]?.track) {
       const track = items[0].track;
       lastPlayedTrack.value = {
+        id: track.id,
         name: track.name,
         artistName: track.artists?.[0]?.name || "",
         artistId: track.artists?.[0]?.id,
@@ -403,7 +406,7 @@ export async function buildHomeFeed(): Promise<void> {
 
   try {
     const existingIds = new Set(items.map((i) => i.id));
-    const recent = await withRetry(() => getRecentlyPlayedTracks(50));
+    const recent = await withRetry(() => getRecentlyPlayedTracks());
     const rItems = (recent as { items?: any[] }).items ?? [];
     const playlistMap = new Map<string, { count: number }>();
 

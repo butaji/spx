@@ -709,6 +709,20 @@ export async function getMyDevices(): Promise<SpotifyDeviceList> {
   return apiCall(() => getSdk().player.getAvailableDevices());
 }
 
+/** Direct API fallback — bypasses the Web Playback SDK which may return stale
+ *  results in headless environments. Uses fetch + Bearer token directly. */
+export async function getMyDevicesDirect(): Promise<SpotifyDeviceList> {
+  if (isMockActive()) return mock.mock.getMyDevices();
+  const token = loadToken();
+  if (!token) throw new Error('Not authenticated');
+  const response = await fetch(
+    spotifyApiUrl('https://api.spotify.com/v1/me/player/devices'),
+    { headers: { Authorization: `Bearer ${token.accessToken}` } }
+  );
+  if (!response.ok) throw new Error(`getMyDevices failed: ${response.status}`);
+  return response.json();
+}
+
 // Queue
 export async function getMyQueue(): Promise<SpotifyQueueResponse> {
   if (isMockActive()) return mock.mock.getMyQueue();

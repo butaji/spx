@@ -860,6 +860,10 @@
   color: var(--warning, #f59e0b);
 }
 
+.diagnostics-value.error {
+  color: var(--error, #ef4444);
+}
+
 .diagnostics-token {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
@@ -897,6 +901,127 @@
   white-space: pre-wrap;
   max-height: 300px;
   overflow-y: auto;
+}
+
+.diagnostics-subheading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  font-weight: 600;
+  margin: 12px 0 4px 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--edge);
+}
+
+.diagnostics-device-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.diagnostics-device-row.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.diagnostics-device-name {
+  flex: 1;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostics-device-meta {
+  color: var(--fg-muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.diagnostics-device-id {
+  color: var(--fg-faint);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.diagnostics-error-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 11px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.diagnostics-error-time {
+  color: var(--fg-faint);
+  flex-shrink: 0;
+}
+
+.diagnostics-error-cat {
+  color: var(--warning, #f59e0b);
+  flex-shrink: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.diagnostics-error-msg {
+  color: var(--error, #ef4444);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diagnostics-logs {
+  background: var(--bg-elevated);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.diagnostics-log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.diagnostics-log-ts {
+  color: var(--fg-faint);
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+.diagnostics-log-level {
+  flex-shrink: 0;
+  font-weight: 600;
+  width: 44px;
+}
+
+.diagnostics-log-row.diagnostics-log-log .diagnostics-log-level { color: var(--fg-secondary); }
+.diagnostics-log-row.diagnostics-log-warn .diagnostics-log-level { color: var(--warning, #f59e0b); }
+.diagnostics-log-row.diagnostics-log-error .diagnostics-log-level { color: var(--error, #ef4444); }
+
+.diagnostics-log-msg {
+  color: var(--fg-secondary);
+  word-break: break-all;
+  font-size: 11px;
+}
+
+.diagnostics-log-row.diagnostics-log-error .diagnostics-log-msg {
+  color: var(--error, #ef4444);
+}
+
+.diagnostics-log-row.diagnostics-log-warn .diagnostics-log-msg {
+  color: var(--warning, #f59e0b);
 }
 
 .btn-secondary {

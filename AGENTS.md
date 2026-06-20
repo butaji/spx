@@ -181,11 +181,34 @@ Tests are in `src/**/*.test.ts` files.
 npx playwright test                        # All E2E tests
 npx playwright test src/tests/e2e-transfer-verify.spec.ts  # Transfer tests only
 npx playwright test src/tests/e2e-authenticated.spec.ts    # Playback tests
+npx playwright test src/tests/e2e-all-devices.spec.ts      # All-device transfer test
 ```
 
 Key test files:
-- `src/tests/e2e-transfer-verify.spec.ts` — 5 tests: SPX Player transfer, mDNS Cast devices, Cast graceful fallback, backend SPX Connect, round-trip transfer (4 passing, 1 skipped on macOS 26)
+- `src/tests/e2e-transfer-verify.spec.ts` — 5 tests: SPX Player transfer, mDNS Cast devices, Cast graceful fallback, backend SPX Connect, round-trip transfer
 - `src/tests/e2e-authenticated.spec.ts` — 8 playback tests (3.2m)
+- `src/tests/e2e-all-devices.spec.ts` — transfers to every Cast device in the UI dropdown, reports pass/fail per device
+
+**Token acquisition for E2E tests:** E2E tests read the Spotify token from `/tmp/spx_token.json` (saved by the SPX app or `scripts/oauth-get-token.mjs`). To get a fresh token:
+
+1. **Recommended — use the SPX app:**
+   - Open http://192.168.1.32:1420 in a browser
+   - Click "Login with Spotify" and complete OAuth (you click Agree once)
+   - The backend saves the token to `/tmp/spx_token.json` automatically
+   - Run: `npx playwright test src/tests/e2e-all-devices.spec.ts`
+
+2. **With credentials (automated):**
+   ```
+   SPOTIFY_EMAIL=you@example.com SPOTIFY_PASSWORD=secret \
+   npx playwright test src/tests/e2e-all-devices.spec.ts
+   ```
+
+3. **Via script (if Spotify OAuth in browser works):**
+   ```
+   node scripts/oauth-get-token.mjs
+   ```
+
+**Note:** Token must be for client ID `e1c9ee463a394fee84e031daa1665db2` (the app's ID). Tokens from other client IDs will fail with 401.
 
 **Dropdown cleanup in E2E tests:** The device dropdown does not auto-close after clicking a device. Use `closeDropdown(page)` with iterative 5-attempt approach (Escape → wait → click outside), not recursion.
 

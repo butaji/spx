@@ -104,8 +104,8 @@ export function usePlaybackControls({ ensureActiveDevice }: UsePlaybackControlsO
       prevVolumeRef.current = currentVol;
       newVol = 0;
     } else {
-      // Unmute: restore previous volume (or 50% if no previous)
-      newVol = prevVolumeRef.current ?? 50;
+      // Unmute: restore previous volume (or 74% if no previous)
+      newVol = prevVolumeRef.current ?? 74;
     }
 
     try {

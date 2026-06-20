@@ -24,7 +24,8 @@
         "transparent": false,
         "backgroundColor": "#0a0a0a",
         "center": true,
-        "visible": true
+        "visible": true,
+        "devtools": true
       }
     ],
     "security": {
@@ -46,7 +47,8 @@
       "infoPlist": "./Info.plist"
     },
     "resources": [
-      "spx_client_id.txt"
+      "spx_client_id.txt",
+      "../.env"
     ]
   },
   "plugins": {

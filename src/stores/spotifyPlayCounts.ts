@@ -22,7 +22,7 @@ function normalizeKey(name: string): string {
 }
 
 async function fetchAndCountFromAPI(): Promise<SpotifyPlayCounts> {
-  const data = await getRecentlyPlayedTracks(50);
+  const data = await getRecentlyPlayedTracks();
   const artists: Record<string, number> = {};
   const tracks: Record<string, number> = {};
 
@@ -50,7 +50,7 @@ async function fetchAndCountFromAPI(): Promise<SpotifyPlayCounts> {
 
 async function loadCachedCounts(): Promise<SpotifyPlayCounts | null> {
   try {
-    const cached = await getCached(RECENT_COUNTS_KEY);
+    const cached = await getCached<SpotifyPlayCounts>(RECENT_COUNTS_KEY);
     return cached ?? null;
   } catch {
     return null;

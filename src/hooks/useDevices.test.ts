@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, h } from 'preact';
+import { act } from 'preact/test-utils';
 import { useDevices } from './useDevices';
 import type { SpotifyDevice } from '../types';
 
@@ -28,11 +29,18 @@ function renderUseDevices() {
   }
 
   // @ts-ignore — preact render types are strict in this environment but runtime works
-  render(h(Wrapper), document.createElement('div'));
+  act(() => {
+    render(h(Wrapper), document.createElement('div'));
+  });
 
   if (!result) {
     throw new Error('useDevices did not render');
   }
+
+  // Clear mount-effect calls so individual tests only assert on behavior
+  // triggered by ensureActiveDevice or user actions.
+  (refreshSpotifyDevices as ReturnType<typeof vi.fn>).mockClear();
+  (refreshLocalDevices as ReturnType<typeof vi.fn>).mockClear();
 
   return result;
 }
@@ -48,8 +56,8 @@ const mockSelectedDeviceId = vi.hoisted(() => createMockSignal<string | null>(nu
 const mockIsTransferring = vi.hoisted(() => createMockSignal<boolean>(false));
 
 vi.mock('../stores/devices', () => ({
-  refreshSpotifyDevices: vi.fn(),
-  refreshLocalDevices: vi.fn(),
+  refreshSpotifyDevices: vi.fn(() => Promise.resolve()),
+  refreshLocalDevices: vi.fn(() => Promise.resolve()),
   availableDevices: mockAvailableDevices,
   allDevices: mockAllDevices,
   selectedDeviceId: mockSelectedDeviceId,
@@ -116,6 +124,20 @@ describe('useDevices', () => {
       expect(refreshSpotifyDevices).toHaveBeenCalledTimes(1);
       expect(setDeviceStatus).toHaveBeenCalledWith('available');
       expect(result).toBe('active-device');
+    });
+
+    it('preloads both Spotify and local devices immediately on mount', () => {
+      function Wrapper() {
+        useDevices();
+        return null;
+      }
+
+      act(() => {
+        render(h(Wrapper), document.createElement('div'));
+      });
+
+      expect(refreshSpotifyDevices).toHaveBeenCalledTimes(1);
+      expect(refreshLocalDevices).toHaveBeenCalledWith(true);
     });
 
     it('returns null only after waiting for the SPX Player when there are no devices', async () => {

@@ -13,7 +13,9 @@ export async function validateToken(): Promise<boolean> {
   if (!accessToken) return false;
 
   try {
-    const response = await fetch("https://api.spotify.com/v1/me", {
+    const isBrowser = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__?.__is_spx_shim__ === true;
+    const apiUrl = isBrowser ? "/spotify-api/v1/me" : "https://api.spotify.com/v1/me";
+    const response = await fetch(apiUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 

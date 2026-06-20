@@ -168,8 +168,8 @@ pub async fn get_web_player_token(sp_dc: Option<&str>) -> Result<WebPlayerToken,
         *cache = Some(cached);
     }
 
-    info!(
-        "Got Web Player token (expires in {}s, anonymous={})",
+    println!(
+        "[web-player-token] Got Web Player token (expires in {}s, anonymous={})",
         token.expires_in_secs(),
         token.is_anonymous
     );

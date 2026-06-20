@@ -19,6 +19,7 @@ mod menu;
 pub mod macos_permission;
 
 use tauri::Manager;
+use tracing::debug;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -51,6 +52,11 @@ pub fn run() {
     // Initialize tracing subscriber so backend logs are captured
     let _ = tracing_subscriber::fmt::try_init();
 
+    // Global panic handler to count panics for diagnostics
+    std::panic::set_hook(Box::new(|_| {
+        commands::increment_panic_count();
+    }));
+
     // Try to install aws_lc_rs crypto provider, but don't panic if it fails
     if let Err(e) = std::panic::catch_unwind(|| {
         use rustls::crypto::aws_lc_rs;
@@ -60,6 +66,24 @@ pub fn run() {
     }
 
     dotenvy::dotenv().ok();
+
+    // When the app runs from a bundle (Desktop), dotenvy::dotenv() looks in the
+    // working directory (/), which won't have .env. Load it from the bundle's
+    // Resources directory explicitly.
+    if std::env::var("SPOTIFY_CLIENT_ID").is_err() {
+        if let Ok(exe_path) = std::env::current_exe() {
+            // macOS bundle: Contents/MacOS/spx → Contents/Resources/.env
+            let resources_env = exe_path
+                .parent()
+                .and_then(|p| p.parent())
+                .map(|p| p.join("Resources/.env"))
+                .unwrap_or_default();
+            if resources_env.exists() {
+                debug!("Loading .env from bundle: {:?}", resources_env);
+                let _ = dotenvy::from_filename(&resources_env).ok();
+            }
+        }
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
