@@ -1,12 +1,45 @@
 use crate::mdns::browse_service;
 use std::collections::HashSet;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::OnceLock;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::timeout;
 use tracing::{info, debug, warn};
 use std::process::Command;
+
+// ─── Global state ───────────────────────────────────────────────────────────────
+
+/// Tracks the device ID of the currently-running librespot SPX Connect device.
+static LOCAL_CONNECT_DEVICE_ID: OnceLock<String> = OnceLock::new();
+
+/// Counts how many times the Rust backend has panicked.
+static PANIC_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+/// Stores the last N lines of Rust log output for diagnostics.
+static RUST_LOG_LINES: OnceLock<std::sync::Mutex<Vec<String>>> = OnceLock::new();
+
+pub fn get_rust_log_lines() -> &'static std::sync::Mutex<Vec<String>> {
+    RUST_LOG_LINES.get_or_init(|| std::sync::Mutex::new(Vec::with_capacity(200)))
+}
+
+pub fn set_local_connect_device_id(id: String) {
+    let _ = LOCAL_CONNECT_DEVICE_ID.set(id);
+}
+
+pub fn get_local_connect_device_id() -> Option<String> {
+    LOCAL_CONNECT_DEVICE_ID.get().cloned()
+}
+
+pub fn increment_panic_count() {
+    PANIC_COUNT.fetch_add(1, Ordering::SeqCst);
+}
+
+pub fn get_panic_count() -> usize {
+    PANIC_COUNT.load(Ordering::SeqCst)
+}
 
 use librespot_oauth::OAuthClientBuilder;
 use librespot_core::{authentication::Credentials, Session};
@@ -286,6 +319,8 @@ pub async fn start_local_connect_device(
     
     match result {
         Ok(device) => {
+            // Track device ID for diagnostics
+            set_local_connect_device_id(device.device_id.clone());
             // Emit event: local connect completed
             event::local_connect_completed(device.device_id.clone()).await;
             Ok(device.device_id)
@@ -421,8 +456,11 @@ pub async fn start_callback_server(expected_state: Option<String>) -> Result<Opt
 #[derive(serde::Serialize, Clone, Debug)]
 pub struct LocalDevice {
     pub name: String,
+    pub friendly_name: Option<String>,
     pub ip: String,
     pub port: u16,
+    pub service_type: Option<String>,
+    pub id: Option<String>,
 }
 
 #[tauri::command]
@@ -621,21 +659,23 @@ async fn resolve_cast_token(
     Ok(access_token)
 }
 
-#[tauri::command]
-pub async fn authenticate_cast_device_command(
-    app: tauri::AppHandle,
+/// Authenticate a Cast device. `app` may be `None` when called from the browser
+/// backend, in which case stored `sp_dc` is not available and the env-var fallback
+/// is used instead.
+pub async fn authenticate_cast_device_common(
+    app: Option<tauri::AppHandle>,
     ip: String,
     access_token: String,
     device_name: String,
 ) -> Result<String, String> {
     use crate::events::helpers as event;
-    
+
     info!("Authenticating Cast device {} at {}", device_name, ip);
-    
+
     // Emit event: auth started
     event::cast_auth_started(device_name.clone()).await;
 
-    let token_to_use = resolve_cast_token(access_token, Some(app)).await?;
+    let token_to_use = resolve_cast_token(access_token, app).await?;
 
     let ip_owned = ip;
     let token_owned = token_to_use;
@@ -676,15 +716,15 @@ pub async fn authenticate_cast_device_command(
     }
 }
 
-#[tauri::command]
-pub async fn authenticate_cast_device_raw_command(
-    app: tauri::AppHandle,
+/// Raw Cast authentication. `app` may be `None` for the browser backend.
+pub async fn authenticate_cast_device_raw_common(
+    app: Option<tauri::AppHandle>,
     ip: String,
     access_token: String,
 ) -> Result<String, String> {
     info!("Authenticating Cast device at {} using raw protocol", ip);
 
-    let token_to_use = resolve_cast_token(access_token, Some(app)).await?;
+    let token_to_use = resolve_cast_token(access_token, app).await?;
 
     let ip_owned = ip;
     let token_owned = token_to_use;
@@ -703,6 +743,25 @@ pub async fn authenticate_cast_device_raw_command(
         Ok(Err(_)) => Err("Raw Cast auth task panicked".to_string()),
         Err(_) => Err("Raw Cast auth timed out after 45 seconds".to_string()),
     }
+}
+
+#[tauri::command]
+pub async fn authenticate_cast_device_command(
+    app: tauri::AppHandle,
+    ip: String,
+    access_token: String,
+    device_name: String,
+) -> Result<String, String> {
+    authenticate_cast_device_common(Some(app), ip, access_token, device_name).await
+}
+
+#[tauri::command]
+pub async fn authenticate_cast_device_raw_command(
+    app: tauri::AppHandle,
+    ip: String,
+    access_token: String,
+) -> Result<String, String> {
+    authenticate_cast_device_raw_common(Some(app), ip, access_token).await
 }
 
 #[tauri::command]
@@ -734,11 +793,21 @@ pub fn get_callback_server_status() -> Result<serde_json::Value, String> {
     }))
 }
 
-#[tauri::command]
-pub async fn get_diagnostics(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+/// Shared diagnostics payload builder. `app` is required in the Tauri desktop app so
+/// we can read the persisted `sp_dc` cookie; in the browser backend it is `None` and
+/// we fall back to the `SPOTIFY_SP_DC` environment variable.
+pub async fn get_diagnostics_common(
+    app: Option<&tauri::AppHandle>,
+    app_version: String,
+    tauri_version: String,
+) -> Result<serde_json::Value, String> {
     use serde_json::json;
 
-    let has_sp_dc = crate::cookie_capture::has_stored_sp_dc(&app).await.unwrap_or(false);
+    let has_sp_dc = if let Some(app) = app {
+        crate::cookie_capture::has_stored_sp_dc(app).await.unwrap_or(false)
+    } else {
+        std::env::var("SPOTIFY_SP_DC").map(|s| !s.trim().is_empty()).unwrap_or(false)
+    };
 
     let credentials = check_credentials_status().unwrap_or_else(|_| {
         json!({
@@ -758,14 +827,55 @@ pub async fn get_diagnostics(app: tauri::AppHandle) -> Result<serde_json::Value,
     #[cfg(not(target_os = "macos"))]
     let (macos_version, spx_force_librespot) = (None::<String>, false);
 
+    let librespot_id = get_local_connect_device_id();
+    let librespot_status = if librespot_id.is_some() { "Running" } else { "Stopped" };
+
+    let rust_panic_count = get_panic_count();
+
+    // Rust log lines
+    let rust_log_lines = get_rust_log_lines()
+        .lock()
+        .map(|g| g.clone())
+        .unwrap_or_default();
+
+    // Local IP
+    #[cfg(target_os = "macos")]
+    let local_ip: Option<String> = std::process::Command::new("ipconfig")
+        .arg("getifaddr")
+        .arg("en0")
+        .output()
+        .ok()
+        .and_then(|o| {
+            let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            if s.is_empty() || s.starts_with("Not") {
+                None
+            } else {
+                Some(s)
+            }
+        });
+
+    #[cfg(not(target_os = "macos"))]
+    let local_ip: Option<String> = None;
+
     Ok(json!({
         "credentials": credentials,
         "has_stored_sp_dc": has_sp_dc,
         "macos_version": macos_version,
         "spx_force_librespot": spx_force_librespot,
-        "app_version": app.package_info().version.to_string(),
-        "tauri_version": tauri::VERSION,
+        "app_version": app_version,
+        "tauri_version": tauri_version,
+        "librespot_status": librespot_status,
+        "librespot_device_id": librespot_id,
+        "rust_panic_count": rust_panic_count,
+        "rust_log_lines": rust_log_lines,
+        "local_ip": local_ip,
     }))
+}
+
+#[tauri::command]
+pub async fn get_diagnostics(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let app_version = app.package_info().version.to_string();
+    get_diagnostics_common(Some(&app), app_version, tauri::VERSION.to_string()).await
 }
 
 #[tauri::command]
@@ -1427,5 +1537,202 @@ mod integration_tests {
         let active_device = state["device"]["id"].as_str().expect("No active device in playback state");
         assert_eq!(active_device, spotify_device_id, "Active device does not match target");
         println!("✅ Playback transferred to local device successfully (audio not started)");
+    }
+}
+
+// ─── Unit tests ────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod credential_tests {
+    use super::*;
+
+    /// RAII guard: saves original env vars, sets test values, restores on drop.
+    /// Drop runs even during panic unwinding, so env vars are always cleaned up.
+    struct EnvSetter {
+        saved: Vec<(String, Option<String>)>,
+    }
+
+    impl EnvSetter {
+        fn new(vars: &[(&str, &str)]) -> Self {
+            let saved: Vec<_> = vars
+                .iter()
+                .map(|(k, _)| (k.to_string(), std::env::var(*k).ok()))
+                .collect();
+            for (k, v) in vars {
+                std::env::set_var(*k, *v);
+            }
+            EnvSetter { saved }
+        }
+    }
+
+    impl Drop for EnvSetter {
+        fn drop(&mut self) {
+            for (k, opt_v) in &self.saved {
+                match opt_v {
+                    Some(v) => std::env::set_var(k, v),
+                    None => std::env::remove_var(k),
+                }
+            }
+        }
+    }
+
+    /// Temporarily set env vars for a test, restoring original values when done.
+    /// Panics propagate normally — EnvSetter::drop cleans up during unwinding.
+    fn with_env_vars<F>(vars: &[(&str, &str)], f: F)
+    where
+        F: FnOnce(),
+    {
+        let _guard = EnvSetter::new(vars);
+        f();
+    }
+
+    // ── is_mock_mode ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn is_mock_mode_false_by_default() {
+        with_env_vars(&[], || {
+            std::env::remove_var("SPX_MOCK");
+            std::env::remove_var("VITE_SPX_MOCK");
+            assert!(!is_mock_mode());
+        });
+    }
+
+    #[test]
+    fn is_mock_mode_true_with_spx_mock_1() {
+        with_env_vars(&[("SPX_MOCK", "1")], || {
+            assert!(is_mock_mode());
+        });
+    }
+
+    #[test]
+    fn is_mock_mode_true_with_vite_spx_mock_1() {
+        with_env_vars(&[("VITE_SPX_MOCK", "1")], || {
+            assert!(is_mock_mode());
+        });
+    }
+
+    #[test]
+    fn is_mock_mode_false_with_spx_mock_0() {
+        with_env_vars(&[("SPX_MOCK", "0")], || {
+            assert!(!is_mock_mode());
+        });
+    }
+
+    #[test]
+    fn is_mock_mode_false_with_spx_mock_anything_else() {
+        with_env_vars(&[("SPX_MOCK", "true")], || {
+            assert!(!is_mock_mode());
+        });
+    }
+
+    // ── check_credentials_status ────────────────────────────────────────────────
+    //
+    // These are integration tests: they need a clean environment (no .env loaded).
+    // dotenvy::dotenv() is called at library init time, so env vars from .env
+    // are already present when these tests run. Run with a fresh env to exercise:
+    //   SPOTIFY_CLIENT_ID= SPOTIFY_CLIENT_SECRET= cargo test check_credentials_status_all_missing --ignored
+    //
+    // Run all at once:
+    //   SPOTIFY_CLIENT_ID= SPOTIFY_CLIENT_SECRET= cargo test credential_tests --ignored
+
+    #[test]
+    #[ignore = "requires clean env (no .env loaded); run with: SPOTIFY_CLIENT_ID= SPOTIFY_CLIENT_SECRET= cargo test check_credentials_status_all_missing --ignored"]
+    fn check_credentials_status_all_missing() {
+        with_env_vars(&[], || {
+            std::env::remove_var("SPOTIFY_CLIENT_ID");
+            std::env::remove_var("VITE_SPOTIFY_CLIENT_ID");
+            std::env::remove_var("SPOTIFY_CLIENT_SECRET");
+
+            let result = check_credentials_status().expect("should not fail");
+            assert!(!result["configured"].as_bool().unwrap());
+            assert_eq!(result["clientId"]["status"].as_str().unwrap(), "missing");
+            assert_eq!(result["clientSecret"]["status"].as_str().unwrap(), "missing");
+            // instructions is a String when !configured, null otherwise
+            assert!(!result["instructions"].is_null());
+        });
+    }
+
+    #[test]
+    #[ignore = "requires clean env; run with: SPOTIFY_CLIENT_ID= SPOTIFY_CLIENT_SECRET= cargo test check_credentials_status_placeholder_values --ignored"]
+    fn check_credentials_status_placeholder_values() {
+        with_env_vars(
+            &[
+                ("SPOTIFY_CLIENT_ID", "your_client_id_here"),
+                ("SPOTIFY_CLIENT_SECRET", "your_client_secret_here"),
+            ],
+            || {
+                let result = check_credentials_status().expect("should not fail");
+                assert!(!result["configured"].as_bool().unwrap());
+                assert_eq!(result["clientId"]["status"].as_str().unwrap(), "placeholder");
+                assert_eq!(result["clientSecret"]["status"].as_str().unwrap(), "placeholder");
+            },
+        );
+    }
+
+    #[test]
+    #[ignore = "requires clean env; run with: SPOTIFY_CLIENT_ID= SPOTIFY_CLIENT_SECRET= cargo test check_credentials_status_fully_configured --ignored"]
+    fn check_credentials_status_fully_configured() {
+        with_env_vars(
+            &[
+                ("SPOTIFY_CLIENT_ID", "abc123def456"),
+                ("SPOTIFY_CLIENT_SECRET", "xyz789"),
+            ],
+            || {
+                let result = check_credentials_status().expect("should not fail");
+                assert!(result["configured"].as_bool().unwrap());
+                assert_eq!(result["clientId"]["status"].as_str().unwrap(), "ok");
+                assert_eq!(result["clientSecret"]["status"].as_str().unwrap(), "ok");
+                // instructions is null when configured
+                assert!(result["instructions"].is_null());
+            },
+        );
+    }
+
+    #[test]
+    #[ignore = "requires clean env; run with: SPOTIFY_CLIENT_ID= SPOTIFY_CLIENT_SECRET= cargo test check_credentials_status_client_id_only --ignored"]
+    fn check_credentials_status_client_id_only() {
+        with_env_vars(
+            &[
+                ("SPOTIFY_CLIENT_ID", "abc123def456"),
+                ("SPOTIFY_CLIENT_SECRET", "your_client_secret_here"),
+            ],
+            || {
+                let result = check_credentials_status().expect("should not fail");
+                assert!(!result["configured"].as_bool().unwrap());
+                assert_eq!(result["clientId"]["status"].as_str().unwrap(), "ok");
+                assert_eq!(result["clientSecret"]["status"].as_str().unwrap(), "placeholder");
+            },
+        );
+    }
+
+    #[test]
+    #[ignore = "requires clean env; run with: SPOTIFY_CLIENT_ID= SPOTIFY_CLIENT_SECRET= cargo test check_credentials_status_vite_env_fallback --ignored"]
+    fn check_credentials_status_vite_env_fallback() {
+        with_env_vars(
+            &[
+                ("VITE_SPOTIFY_CLIENT_ID", "vite_client_abc"),
+                ("SPOTIFY_CLIENT_SECRET", "secret_xyz"),
+            ],
+            || {
+                let result = check_credentials_status().expect("should not fail");
+                assert!(result["configured"].as_bool().unwrap());
+                assert_eq!(result["clientId"]["status"].as_str().unwrap(), "ok");
+            },
+        );
+    }
+
+    #[test]
+    #[ignore = "requires clean env; run with: SPOTIFY_CLIENT_ID= SPOTIFY_CLIENT_SECRET= cargo test check_credentials_status_whitespace_trimmed --ignored"]
+    fn check_credentials_status_whitespace_trimmed() {
+        with_env_vars(
+            &[
+                ("SPOTIFY_CLIENT_ID", "  abc123def456  "),
+                ("SPOTIFY_CLIENT_SECRET", "  xyz789  "),
+            ],
+            || {
+                let result = check_credentials_status().expect("should not fail");
+                assert!(result["configured"].as_bool().unwrap());
+            },
+        );
     }
 }

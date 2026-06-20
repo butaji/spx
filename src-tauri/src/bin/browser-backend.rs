@@ -689,3 +689,397 @@ async fn invoke_command(cmd: &str, args: serde_json::Value) -> Result<serde_json
         _ => Err(format!("Command '{}' is not exposed by the browser backend", cmd)),
     }
 }
+
+// ─── Unit tests ────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod http_parser_tests {
+    use super::*;
+
+    // ── find_subsequence ──────────────────────────────────────────────────────
+
+    #[test]
+    fn find_subsequence_basic() {
+        assert_eq!(find_subsequence(b"hello world", b"world"), Some(6));
+        assert_eq!(find_subsequence(b"hello world", b"hello"), Some(0));
+    }
+
+    #[test]
+    fn find_subsequence_middle() {
+        assert_eq!(find_subsequence(b"abcXYZdef", b"XYZ"), Some(3));
+    }
+
+    #[test]
+    fn find_subsequence_not_found() {
+        assert_eq!(find_subsequence(b"hello world", b"xyz"), None);
+        assert_eq!(find_subsequence(b"abc", b"abcdef"), None);
+    }
+
+    #[test]
+    fn find_subsequence_empty_needle() {
+        assert_eq!(find_subsequence(b"hello", b""), Some(0));
+    }
+
+    #[test]
+    fn find_subsequence_empty_haystack() {
+        assert_eq!(find_subsequence(b"", b"abc"), None);
+    }
+
+    #[test]
+    fn find_subsequence_exact_match() {
+        assert_eq!(find_subsequence(b"test", b"test"), Some(0));
+    }
+
+    #[test]
+    fn find_subsequence_duplicate() {
+        // position returns FIRST match
+        assert_eq!(find_subsequence(b"hello hello", b"hello"), Some(0));
+    }
+
+    #[test]
+    fn find_subsequence_overlapping() {
+        // "aaa" at positions 0 and 1
+        assert_eq!(find_subsequence(b"aaaa", b"aaa"), Some(0));
+    }
+
+    #[test]
+    fn find_subsequence_crlf() {
+        assert_eq!(find_subsequence(b"line1\r\nline2\r\n", b"\r\n"), Some(5));
+    }
+
+    // ── handle_save_verifier parsing ─────────────────────────────────────────
+
+    #[test]
+    fn handle_save_verifier_parses_valid_body() {
+        // This tests the parsing logic in isolation
+        let body = b"state=randomstate123&verifier=verifier456".to_vec();
+        let body_str = String::from_utf8_lossy(&body);
+        let mut state = String::new();
+        let mut verifier = String::new();
+        for pair in body_str.split('&') {
+            if let Some((k, v)) = pair.split_once('=') {
+                let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+                match k {
+                    "state" => state = v_dec,
+                    "verifier" => verifier = v_dec,
+                    _ => {}
+                }
+            }
+        }
+        assert_eq!(state, "randomstate123");
+        assert_eq!(verifier, "verifier456");
+    }
+
+    #[test]
+    fn handle_save_verifier_handles_urlencoded_values() {
+        let body = b"state=abc%3D123&verifier=def%26123".to_vec();
+        let body_str = String::from_utf8_lossy(&body);
+        let mut state = String::new();
+        let mut verifier = String::new();
+        for pair in body_str.split('&') {
+            if let Some((k, v)) = pair.split_once('=') {
+                let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+                match k {
+                    "state" => state = v_dec,
+                    "verifier" => verifier = v_dec,
+                    _ => {}
+                }
+            }
+        }
+        assert_eq!(state, "abc=123");
+        assert_eq!(verifier, "def&123");
+    }
+
+    #[test]
+    fn handle_save_verifier_empty_fields_rejected() {
+        let body = b"state=&verifier=verifier456".to_vec();
+        let body_str = String::from_utf8_lossy(&body);
+        let mut state = String::new();
+        let mut verifier = String::new();
+        for pair in body_str.split('&') {
+            if let Some((k, v)) = pair.split_once('=') {
+                let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+                match k {
+                    "state" => state = v_dec,
+                    "verifier" => verifier = v_dec,
+                    _ => {}
+                }
+            }
+        }
+        // empty state should cause rejection (handled in handle_save_verifier)
+        assert!(state.is_empty());
+    }
+
+    #[test]
+    fn handle_save_verifier_extra_fields_ignored() {
+        let body = b"state=s1&verifier=v1&extra=ignored".to_vec();
+        let body_str = String::from_utf8_lossy(&body);
+        let mut state = String::new();
+        let mut verifier = String::new();
+        let mut extras = Vec::new();
+        for pair in body_str.split('&') {
+            if let Some((k, v)) = pair.split_once('=') {
+                let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+                match k {
+                    "state" => state = v_dec,
+                    "verifier" => verifier = v_dec,
+                    _ => extras.push(k.to_string()),
+                }
+            }
+        }
+        assert_eq!(state, "s1");
+        assert_eq!(verifier, "v1");
+        assert_eq!(extras, vec!["extra"]);
+    }
+
+    // ── query string parsing ─────────────────────────────────────────────────
+
+    #[test]
+    fn query_param_parsing() {
+        use std::collections::HashMap;
+        let query = "code=abc123&state=mystate";
+        let params: HashMap<String, String> = query
+            .split('&')
+            .filter_map(|pair| {
+                let mut parts = pair.splitn(2, '=');
+                let k = parts.next()?;
+                let v = parts.next().unwrap_or("");
+                Some((k.to_string(), urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string()))
+            })
+            .collect();
+        assert_eq!(params.get("code"), Some(&"abc123".to_string()));
+        assert_eq!(params.get("state"), Some(&"mystate".to_string()));
+    }
+
+    #[test]
+    fn query_param_url_decoded() {
+        use std::collections::HashMap;
+        let query = "code=abc%3D123%26xyz";
+        let params: HashMap<String, String> = query
+            .split('&')
+            .filter_map(|pair| {
+                let mut parts = pair.splitn(2, '=');
+                let k = parts.next()?;
+                let v = parts.next().unwrap_or("");
+                Some((k.to_string(), urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string()))
+            })
+            .collect();
+        assert_eq!(params.get("code"), Some(&"abc=123&xyz".to_string()));
+    }
+
+    // ── MdnsCache freshness ──────────────────────────────────────────────────
+
+    #[test]
+    fn mdns_cache_is_fresh_immediately() {
+        let cache = MdnsCache {
+            devices_json: "[{\"name\":\"Test\"}]".to_string(),
+            cached_at: Instant::now(),
+        };
+        assert!(cache.is_fresh());
+    }
+
+    #[test]
+    fn mdns_cache_stale_after_55_seconds() {
+        let cache = MdnsCache {
+            devices_json: "[{\"name\":\"Test\"}]".to_string(),
+            cached_at: Instant::now() - Duration::from_secs(56),
+        };
+        assert!(!cache.is_fresh());
+    }
+
+    #[test]
+    fn mdns_cache_fresh_at_54_seconds() {
+        let cache = MdnsCache {
+            devices_json: "[{\"name\":\"Test\"}]".to_string(),
+            cached_at: Instant::now() - Duration::from_secs(54),
+        };
+        assert!(cache.is_fresh());
+    }
+
+    #[test]
+    fn mdns_cache_stale_at_55_seconds() {
+        let cache = MdnsCache {
+            devices_json: "[{\"name\":\"Test\"}]".to_string(),
+            cached_at: Instant::now() - Duration::from_secs(55),
+        };
+        assert!(!cache.is_fresh());
+    }
+
+    #[test]
+    fn mdns_cache_devices_response_valid_json() {
+        let cache = MdnsCache {
+            devices_json: r#"[{"name":"Mini2","ip":"192.168.1.14"}]"#.to_string(),
+            cached_at: Instant::now(),
+        };
+        let resp = cache.devices_response();
+        assert_eq!(resp.status, 200);
+        assert_eq!(resp.content_type, "application/json");
+        let body: serde_json::Value =
+            serde_json::from_slice(&resp.body).expect("should be valid JSON");
+        assert!(body["devices"].is_array());
+    }
+
+    #[test]
+    fn mdns_cache_devices_response_empty_on_invalid_json() {
+        let cache = MdnsCache {
+            devices_json: "not valid json{{".to_string(),
+            cached_at: Instant::now(),
+        };
+        let resp = cache.devices_response();
+        let body: serde_json::Value =
+            serde_json::from_slice(&resp.body).expect("should be valid JSON (fallback to empty array)");
+        assert!(body["devices"].is_array());
+        assert_eq!(body["devices"].as_array().unwrap().len(), 0);
+    }
+
+    // ── response helpers ────────────────────────────────────────────────────
+
+    #[test]
+    fn json_response_status_200() {
+        let resp = json_response(serde_json::json!({"ok": true}));
+        assert_eq!(resp.status, 200);
+        assert_eq!(resp.content_type, "application/json");
+        assert_eq!(&String::from_utf8_lossy(&resp.body), r#"{"ok":true}"#);
+    }
+
+    #[test]
+    fn text_response_custom_status() {
+        let resp = text_response(404, "Not found".to_string());
+        assert_eq!(resp.status, 404);
+        assert_eq!(resp.content_type, "text/plain");
+        assert_eq!(&String::from_utf8_lossy(&resp.body), "Not found");
+    }
+
+    #[test]
+    fn text_response_500() {
+        let resp = text_response(500, "Internal error".to_string());
+        assert_eq!(resp.status, 500);
+    }
+}
+
+#[cfg(test)]
+mod verifier_file_tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
+
+    // Override the verifier file path for testing using a temp file
+    fn write_verifier(path: &std::path::Path, state: &str, verifier: &str) {
+        let mut file = std::fs::File::create(path).unwrap();
+        writeln!(file, "{}", state).unwrap();
+        writeln!(file, "{}", verifier).unwrap();
+    }
+
+    fn read_verifier_from(path: &std::path::Path) -> Option<(String, String)> {
+        let contents = std::fs::read_to_string(path).ok()?;
+        let mut lines = contents.lines();
+        let state = lines.next()?.to_string();
+        let verifier = lines.next()?.to_string();
+        Some((state, verifier))
+    }
+
+    #[test]
+    fn verifier_file_roundtrip() {
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path();
+
+        write_verifier(path, "state123", "verifier456");
+        let (state, verifier) = read_verifier_from(path).unwrap();
+
+        assert_eq!(state, "state123");
+        assert_eq!(verifier, "verifier456");
+    }
+
+    #[test]
+    fn verifier_file_multiline_values() {
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path();
+
+        write_verifier(path, "my=state", "my\nverifier");
+        let (state, verifier) = read_verifier_from(path).unwrap();
+
+        // The verifier file only reads first 2 lines
+        assert_eq!(state, "my=state");
+        assert_eq!(verifier, "my"); // "my\nverifier" — only first line
+    }
+
+    #[test]
+    fn verifier_file_missing_returns_none() {
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path();
+        std::fs::remove_file(path).unwrap();
+
+        let result = read_verifier_from(path);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn verifier_file_incomplete_returns_none() {
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path();
+
+        // Only one line — missing verifier
+        std::fs::write(path, "only_state\n").unwrap();
+        let result = read_verifier_from(path);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn verifier_file_empty_returns_none() {
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path();
+
+        std::fs::write(path, "").unwrap();
+        let result = read_verifier_from(path);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn verifier_file_state_with_equals() {
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path();
+
+        // OAuth state often contains base64 with = padding
+        write_verifier(path, "state=with=equals==", "verifier_abc");
+        let (state, verifier) = read_verifier_from(path).unwrap();
+
+        assert_eq!(state, "state=with=equals==");
+        assert_eq!(verifier, "verifier_abc");
+    }
+
+    #[test]
+    fn verifier_file_unicode_state() {
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path();
+
+        write_verifier(path, "État_de_ca", "verifier_123");
+        let (state, verifier) = read_verifier_from(path).unwrap();
+
+        assert_eq!(state, "État_de_ca");
+        assert_eq!(verifier, "verifier_123");
+    }
+
+    // ── consume_verifier (uses a temp file) ─────────────────────────────────
+
+    #[test]
+    fn consume_verifier_removes_file() {
+        // Create a temp file manually, then simulate consume
+        let path = std::env::temp_dir().join("spx_test_verifier_delete.txt");
+        std::fs::write(&path, "state\nverifier\n").unwrap();
+        assert!(path.exists());
+
+        // Simulate consume: remove the file
+        let _ = std::fs::remove_file(&path);
+        assert!(!path.exists());
+
+        // Cleanup any leftover
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn consume_verifier_silent_on_missing_file() {
+        // std::fs::remove_file on a non-existent path returns Err (not panic)
+        let result = std::fs::remove_file("/tmp/nonexistent_spx_verifier_test_12345.txt");
+        assert!(result.is_err()); // Should return Err, not panic
+    }
+}

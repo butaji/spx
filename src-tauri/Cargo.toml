@@ -15,6 +15,13 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 name = "spx"
 path = "src/main.rs"
 
+[[bin]]
+name = "spx-browser-backend"
+path = "src/bin/browser-backend.rs"
+
+[dev-dependencies]
+tempfile = "3"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -43,7 +50,7 @@ chrono = "0.4"
 dirs = "5"
 thiserror = "2"
 futures = "0.3"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "rustls-tls-webpki-roots"] }
 data-encoding = "2.8"
 hmac = "0.12"
 sha1 = "0.10"
