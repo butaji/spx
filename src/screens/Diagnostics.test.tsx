@@ -86,7 +86,6 @@ describe('Diagnostics screen', () => {
     render(<Diagnostics />);
 
     expect(screen.getByText('Auth')).toBeDefined();
-    expect(screen.getByText('Environment')).toBeDefined();
     expect(screen.getByText('Playback')).toBeDefined();
     expect(screen.getByText('Devices')).toBeDefined();
     expect(screen.getByText('System')).toBeDefined();

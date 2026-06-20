@@ -10,12 +10,12 @@ vi.mock('../lib/spotify', () => ({
   getAvailableDevices: vi.fn(),
   scanLocalDevices: vi.fn(),
   transferPlayback: vi.fn(),
+  play: vi.fn(),
   getAccessToken: vi.fn(() => 'mock-token'),
   ensureValidToken: vi.fn(() => Promise.resolve(true)),
   setVolume: vi.fn(),
   pause: vi.fn(),
   tauriInvoke: vi.fn(),
-  getPlaybackState: vi.fn(() => Promise.resolve(null)),
 }));
 
 const mockCurrentDeviceId = vi.hoisted(() => ({ value: 'web-sdk-device-id' as string | null }));
@@ -34,7 +34,7 @@ vi.mock('../lib/utils', () => ({
 
 // ─── Import after mocks ────────────────────────────────────────────────────────
 
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, setVolume, pause, tauriInvoke, ensureValidToken, getPlaybackState } from '../lib/spotify';
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, setVolume, pause, tauriInvoke, ensureValidToken } from '../lib/spotify';
 import { playbackVolume } from '../stores/playback';
 import {
   availableDevices,
@@ -252,11 +252,11 @@ describe('Cast-only devices', () => {
       expect(device.isLocal).toBe(true);
     }
 
-    // Assert — each has a unique IP-based ID
+    // Assert — each has a unique IP:port-based ID
     const ids = allDevices.value.map(d => d.id);
-    expect(ids).toContain('192.168.1.50');
-    expect(ids).toContain('192.168.1.51');
-    expect(ids).toContain('192.168.1.52');
+    expect(ids).toContain('192.168.1.50:8009');
+    expect(ids).toContain('192.168.1.51:8009');
+    expect(ids).toContain('192.168.1.52:8009');
   });
 });
 
@@ -468,20 +468,32 @@ describe('selectDevice timeout handling', () => {
     await refreshDevices({ includeLocal: true });
     await vi.advanceTimersByTimeAsync(0);
 
-    // Mock wakeDevice succeeds
+    // Mock Tauri commands - need to mock both the invoke from @tauri-apps/api/core
+    // AND tauriInvoke from spotify.ts since devices.ts uses tauriInvoke
     const { invoke } = await import('@tauri-apps/api/core');
-    (invoke as ReturnType<typeof vi.fn>).mockResolvedValue('Chromecast woken');
-
-    // Mock getAvailableDevices to always return empty (device never appears)
-    (getAvailableDevices as ReturnType<typeof vi.fn>).mockResolvedValue({ devices: [] });
-    
-    // Mock authenticate_cast_device_command to also fail
-    (invoke as ReturnType<typeof vi.fn>).mockImplementation((cmd: string) => {
+    const mockInvokeImpl = (cmd: string) => {
+      // Both Cast auth methods fail
+      if (cmd === 'authenticate_cast_device_raw_command') {
+        return Promise.reject(new Error("Raw Cast auth timed out"));
+      }
       if (cmd === 'authenticate_cast_device_command') {
         return Promise.reject(new Error("isn't visible"));
       }
+      // SPX Connect fallback also fails
+      if (cmd === 'start_local_connect_device') {
+        return Promise.reject(new Error("Failed to start SPX Connect"));
+      }
+      // Default: wake succeeds
       return Promise.resolve('Chromecast woken');
-    });
+    };
+    
+    (invoke as ReturnType<typeof vi.fn>).mockImplementation(mockInvokeImpl);
+    
+    // Also mock tauriInvoke from spotify.ts since that's what devices.ts uses
+    (tauriInvoke as ReturnType<typeof vi.fn>).mockImplementation(mockInvokeImpl);
+
+    // Mock getAvailableDevices to always return empty (device never appears)
+    (getAvailableDevices as ReturnType<typeof vi.fn>).mockResolvedValue({ devices: [] });
 
     const castDevice = allDevices.value.find(d => d.name === 'Chromecast');
 
@@ -543,6 +555,29 @@ describe('selectDevice Cast auth token handling', () => {
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/token|authenticate|sign in/i);
   }, 20000);
+
+  it('skips transfer when the device is already active', async () => {
+    // Arrange - device is already active
+    mockGetAvailableDevices([
+      {
+        id: 'active-device-id',
+        name: 'Active Speaker',
+        type: 'speaker',
+        is_active: true,
+        is_restricted: false,
+      },
+    ]);
+
+    await refreshDevices();
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Act - select the already active device
+    const result = await selectDevice('active-device-id');
+
+    // Assert - should succeed without calling transfer
+    expect(result.success).toBe(true);
+    expect(transferPlayback).not.toHaveBeenCalled();
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -886,7 +921,6 @@ describe('switchDevice', () => {
     mockSetVolume();
     mockPause();
     (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-    (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue({ device: { id: 'dev2' } });
   });
 
   it('calls pause before transferring playback', async () => {
@@ -964,7 +998,6 @@ describe('isTransferring flag', () => {
   beforeEach(() => {
     mockSetVolume();
     (transferPlayback as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
-    (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue({ device: { id: 'dev1' } });
   });
 
   it('is set to true during device selection', async () => {
@@ -1041,9 +1074,6 @@ describe('isTransferring flag', () => {
     (transferPlayback as ReturnType<typeof vi.fn>).mockImplementation(() => 
       new Promise(resolve => setTimeout(resolve, 120_000))
     );
-
-    // Make health check return null immediately (so it doesn't block)
-    (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
     // tauriInvoke is already mocked to return 'spx-connect-device-id' in beforeEach
     // But we need to also make it resolve quickly

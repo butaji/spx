@@ -1,5 +1,5 @@
 import { signal, computed } from "@preact/signals";
-import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume } from "../lib/spotify";
+import { getAvailableDevices, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
 import { playbackVolume } from "../stores/playback";
@@ -145,8 +145,9 @@ export const allDevices = computed(() => {
         continue;
       }
       // Cast-only device - can wake up and transfer
+      const localId = `${ld.ip}:${ld.port}`;
       merged.push({
-        id: ld.ip, // Use IP as ID for local-only devices
+        id: localId,
         name: displayName,
         type: ld.service_type?.includes("googlecast") ? "cast_video" : "speaker",
         is_active: false,
@@ -579,6 +580,17 @@ async function fallbackToSpxConnect(onStatus?: (msg: string) => void): Promise<s
         selectedDeviceId.value = currentDeviceId;
         return currentDeviceId;
       }
+      // No previous device — try to fall back to SPX Player (Web Playback SDK device)
+      const spxPlayer = availableDevices.value.find(d =>
+        d.type?.toLowerCase() === 'computer' ||
+        d.name?.toLowerCase().includes('spx player')
+      );
+      if (spxPlayer?.id) {
+        console.log("[selectDevice] Falling back to SPX Player device:", spxPlayer.id);
+        await transferPlayback(spxPlayer.id, true);
+        selectedDeviceId.value = spxPlayer.id;
+        return spxPlayer.id;
+      }
       throw new Error(result.error || "SPX Connect could not be started.");
     }
     spxId = result.deviceId;
@@ -642,6 +654,37 @@ export async function startSpotifyCookieCapture(): Promise<{ success: boolean; e
     return { success: false, error: msg };
   } finally {
     isCapturingSpDc.value = false;
+  }
+}
+
+/**
+ * Gracefully switch playback to another Spotify Connect device.
+ * Pauses the current session, waits briefly for Spotify to settle,
+ * then transfers playback to the target device.
+ */
+export async function switchDevice(deviceId: string): Promise<{ success: boolean; error?: string }> {
+  if (isTransferring.value) return { success: false, error: "Transfer already in progress" };
+
+  isTransferring.value = true;
+  selectedDeviceId.value = deviceId;
+
+  try {
+    await pause().catch(() => {
+      // Ignore pause errors; continue with transfer regardless
+    });
+
+    // Small delay lets Spotify register the pause before transferring
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    await transferPlayback(deviceId, true);
+    await refreshSpotifyDevices();
+    return { success: true };
+  } catch (error: any) {
+    console.error("[switchDevice] Failed:", error);
+    selectedDeviceId.value = activeDevice.value?.id ?? null;
+    return { success: false, error: error?.message || String(error) };
+  } finally {
+    isTransferring.value = false;
   }
 }
 

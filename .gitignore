@@ -52,3 +52,21 @@ Carthage/Build/
 
 # Secrets / app-specific config files
 spx_client_id.txt
+
+# Local test tokens / cookies (never commit)
+/tmp/spx_*.json
+/tmp/spx_*.txt
+
+# Debug scripts (one-off dev tooling)
+live-test*.mjs
+playlist-debug*.png
+*.mjs
+!vite.config.mjs
+!playwright.config.mjs
+
+# Test results / Playwright artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+*.playwright.png
+*.playwright.jpeg

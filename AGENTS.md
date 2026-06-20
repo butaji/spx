@@ -175,6 +175,20 @@ npm run test:watch  # Watch mode
 
 Tests are in `src/**/*.test.ts` files.
 
+### E2E Tests (Playwright)
+
+```bash
+npx playwright test                        # All E2E tests
+npx playwright test src/tests/e2e-transfer-verify.spec.ts  # Transfer tests only
+npx playwright test src/tests/e2e-authenticated.spec.ts    # Playback tests
+```
+
+Key test files:
+- `src/tests/e2e-transfer-verify.spec.ts` — 5 tests: SPX Player transfer, mDNS Cast devices, Cast graceful fallback, backend SPX Connect, round-trip transfer (4 passing, 1 skipped on macOS 26)
+- `src/tests/e2e-authenticated.spec.ts` — 8 playback tests (3.2m)
+
+**Dropdown cleanup in E2E tests:** The device dropdown does not auto-close after clicking a device. Use `closeDropdown(page)` with iterative 5-attempt approach (Escape → wait → click outside), not recursion.
+
 ### Rust Tests
 
 ```bash
@@ -299,6 +313,9 @@ See `docs/CROSS_REFERENCE.md` and `docs/ARCHITECTURE.md` for details.
 - mDNS/Cast device discovery requires local network permission
 - Global media keys require Accessibility permission on first use
 - Token refresh happens automatically but may require re-auth on expiry
+- Cast device transfer requires `sp_dc` cookie (set via `SPOTIFY_SP_DC` env or app's cookie capture feature); without it, Cast transfer returns 403 and app falls back to SPX Player gracefully
+- SPX Connect (librespot) is disabled on macOS 26 due to CoreAudio issue; set `SPX_FORCE_LIBRESPOT=1` to override when testing
+- Spotify Web Playback SDK in headless Chromium: `is_active=true` immediately after transfer but may flip to `false` after ~5s (no real audio output); audio still plays correctly, confirmed via `recently-played`
 
 ## Version
 

@@ -13,7 +13,8 @@
  * 6. Device Selection
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 // ─── Test Configuration ────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ test.describe('Onboarding & Setup', () => {
     await expect(logo).toBeVisible({ timeout: 5000 });
     
     // Check title
-    const title = page.locator('h1:has-text("SPX"), text=/^SPX$/').first();
+    const title = page.locator('h1:has-text("SPX")').first();
     await expect(title).toBeVisible();
   });
 
