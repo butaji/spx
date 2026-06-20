@@ -215,6 +215,7 @@ fn text_response(status: u16, text: String) -> Response {
     }
 }
 
+#[allow(dead_code)]
 fn redirect_response(location: String) -> Response {
     Response {
         status: 302,
@@ -351,7 +352,7 @@ async fn handle_save_verifier(body: Vec<u8>) -> Response {
     }
 }
 
-async fn handle_callback(query: &str, frontend_url: &str) -> Response {
+async fn handle_callback(query: &str, _frontend_url: &str) -> Response {
     let params: HashMap<String, String> = query
         .split('&')
         .filter_map(|pair| {
