@@ -135,7 +135,8 @@ function buildFullReport(
   backend: BackendDiagnostics | null,
   callbackStatus: CallbackServerStatus | null,
   logEntries: LogEntry[],
-  revealTokens: boolean
+  revealTokens: boolean,
+  diagnosticsError: string | null
 ): string {
   const tokenInfo = getTokenInfo();
   const accessToken = getAccessToken();
@@ -252,6 +253,10 @@ function buildFullReport(
   if (!backend?.rust_log_lines?.length) sections.push("  (none)");
   sections.push(sep);
 
+  sections.push("## DIAGNOSTICS ERROR");
+  sections.push(`  ${diagnosticsError || "(none)"}`);
+  sections.push(sep);
+
   sections.push("## JS CONSOLE LOGS (last 50)");
   for (const l of logs.slice(-50)) {
     const ts = new Date(l.ts).toISOString().split("T")[1].replace("Z", "");
@@ -274,20 +279,23 @@ export default function Diagnostics() {
   const [copiedType, setCopiedType] = useState<"full" | "json" | null>(null);
   const [logEntries, setLogEntries] = useState<LogEntry[]>(capturedLogs.slice());
   const [spDcCaptureResult, setSpDcCaptureResult] = useState<string | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
     try {
       await refreshDevices({ includeLocal: true, force: true });
       runDiagnostics().catch(e => console.error("[Diagnostics] Health check failed:", e));
-      const [data, status] = await Promise.all([
-        tauriInvoke<BackendDiagnostics>("get_diagnostics"),
-        tauriInvoke<CallbackServerStatus>("get_callback_server_status"),
-      ]);
+      console.log("[Diagnostics] Calling get_diagnostics...");
+      const data = await tauriInvoke<BackendDiagnostics>("get_diagnostics");
+      console.log("[Diagnostics] get_diagnostics result:", JSON.stringify(data)?.slice(0, 500));
       setBackend(data);
+      const status = await tauriInvoke<CallbackServerStatus>("get_callback_server_status");
       setCallbackStatus(status);
     } catch (e) {
       console.error("[Diagnostics] Failed to load backend diagnostics:", e);
+      console.error("[Diagnostics] Error details:", String(e));
+      setDiagnosticsError(String(e));
       setBackend(null);
       setCallbackStatus(null);
     } finally {
@@ -331,7 +339,7 @@ export default function Diagnostics() {
   };
 
   const handleCopyReport = async () => {
-    const text = buildFullReport(backend, callbackStatus, capturedLogs.slice(-200), revealTokens);
+    const text = buildFullReport(backend, callbackStatus, capturedLogs.slice(-200), revealTokens, diagnosticsError);
     await navigator.clipboard.writeText(text);
     setCopiedType("full");
     setTimeout(() => setCopiedType(null), 3000);
@@ -599,6 +607,16 @@ export default function Diagnostics() {
           <div className="diagnostics-actions">
             <button className="btn-secondary" onClick={() => refreshDevices({ includeLocal: true, force: true })}>
               Refresh devices
+            </button>
+            <button className="btn-secondary" onClick={async () => {
+              try {
+                const result = await tauriInvoke<string>("ping");
+                setDiagnosticsError("ping: " + result);
+              } catch (e) {
+                setDiagnosticsError("ping error: " + e);
+              }
+            }}>
+              Test ping
             </button>
           </div>
 

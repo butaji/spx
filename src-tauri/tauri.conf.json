@@ -25,7 +25,8 @@
         "backgroundColor": "#0a0a0a",
         "center": true,
         "visible": true,
-        "devtools": true
+        "devtools": true,
+        "url": "index.html"
       }
     ],
     "security": {
@@ -48,7 +49,8 @@
     },
     "resources": [
       "spx_client_id.txt",
-      "../.env"
+      "../dist/*",
+      "../dist/assets/*"
     ]
   },
   "plugins": {

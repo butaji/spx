@@ -1,5 +1,6 @@
 use crate::mdns::browse_service;
 use std::collections::HashSet;
+use std::process::Command;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::OnceLock;
@@ -7,8 +8,7 @@ use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::timeout;
-use tracing::{info, debug, warn};
-use std::process::Command;
+use tracing::{debug, info, warn};
 
 // ─── Global state ───────────────────────────────────────────────────────────────
 
@@ -41,10 +41,10 @@ pub fn get_panic_count() -> usize {
     PANIC_COUNT.load(Ordering::SeqCst)
 }
 
-use librespot_oauth::OAuthClientBuilder;
-use librespot_core::{authentication::Credentials, Session};
-use librespot_core::config::SessionConfig;
 use librespot_core::cache::Cache;
+use librespot_core::config::SessionConfig;
+use librespot_core::{authentication::Credentials, Session};
+use librespot_oauth::OAuthClientBuilder;
 
 #[tauri::command]
 pub fn is_mock_mode() -> bool {
@@ -145,7 +145,8 @@ pub fn get_spotify_client_id() -> Result<String, String> {
             return Err(
                 "SPOTIFY_CLIENT_ID contains placeholder 'your_client_id_here'.\n\n\
                 Get your real Client ID from https://developer.spotify.com/dashboard\n\
-                and update the .env file.".to_string()
+                and update the .env file."
+                    .to_string(),
             );
         }
     }
@@ -182,14 +183,13 @@ pub fn get_spotify_client_id() -> Result<String, String> {
         }
     }
 
-    Err(
-        "Spotify Client ID not configured.\n\n\
+    Err("Spotify Client ID not configured.\n\n\
         Go to https://developer.spotify.com/dashboard to get your Client ID,\n\
         then add it to the .env file:\n\n\
         SPOTIFY_CLIENT_ID=YOUR_CLIENT_ID\n\
         SPOTIFY_CLIENT_SECRET=YOUR_CLIENT_SECRET\n\n\
-        Then restart the app.".to_string()
-    )
+        Then restart the app."
+        .to_string())
 }
 
 /// Spotify Connect-compatible OAuth token obtained via librespot-oauth.
@@ -307,16 +307,14 @@ pub async fn start_local_connect_device(
     volume_percent: u16,
 ) -> Result<String, String> {
     use crate::events::helpers as event;
-    
+
     // Emit event: local connect started
     event::local_connect_started().await;
-    
-    let result = crate::librespot_player::start_connect_device(
-        access_token, 
-        name.clone(), 
-        volume_percent
-    ).await;
-    
+
+    let result =
+        crate::librespot_player::start_connect_device(access_token, name.clone(), volume_percent)
+            .await;
+
     match result {
         Ok(device) => {
             // Track device ID for diagnostics
@@ -334,9 +332,12 @@ pub async fn start_local_connect_device(
 }
 
 #[tauri::command]
-pub async fn start_callback_server(expected_state: Option<String>) -> Result<Option<(String, String)>, String> {
+pub async fn start_callback_server(
+    expected_state: Option<String>,
+) -> Result<Option<(String, String)>, String> {
     info!("Starting OAuth callback server on 127.0.0.1:1422");
-    let listener = TcpListener::bind("127.0.0.1:1422").await
+    let listener = TcpListener::bind("127.0.0.1:1422")
+        .await
         .map_err(|e| e.to_string())?;
     debug!("Callback server bound successfully");
 
@@ -494,7 +495,10 @@ pub async fn scan_spotify_devices() -> Result<Vec<LocalDevice>, String> {
 
     match spotify_result {
         Ok(spotify_devices) => {
-            tracing::info!("Spotify Connect scan found {} device(s)", spotify_devices.len());
+            tracing::info!(
+                "Spotify Connect scan found {} device(s)",
+                spotify_devices.len()
+            );
             for device in spotify_devices {
                 let key = (device.name.clone(), device.ip.clone());
                 if !seen.contains(&key) {
@@ -516,7 +520,10 @@ pub async fn wake_cast_device(ip: String) -> Result<String, String> {
 
     // Validate IP
     if ip.ends_with(".local") || ip.ends_with(".local.") {
-        return Err(format!("Cannot wake device: hostname '{}' must be resolved to an IP first.", ip));
+        return Err(format!(
+            "Cannot wake device: hostname '{}' must be resolved to an IP first.",
+            ip
+        ));
     }
 
     // Step 1: Pre-check — is port 8009 reachable?
@@ -559,16 +566,21 @@ async fn wake_cast_v2(ip: &str) -> Result<String, String> {
             .map_err(|e| format!("Cast V2 connect failed: {}", e))?;
 
         // Step 1: Send CONNECT message (required before any other commands)
-        cast_device.connection.connect("receiver-0")
+        cast_device
+            .connection
+            .connect("receiver-0")
             .map_err(|e| format!("Cast V2 CONNECT failed: {}", e))?;
 
         // Step 2: Check if Spotify is already running
-        let status = cast_device.receiver.get_status()
+        let status = cast_device
+            .receiver
+            .get_status()
             .map_err(|e| format!("Cast V2 get_status failed: {}", e))?;
 
         let spotify_app_ids = ["CC32E753", "705D30C6", "531A4F84", "CC320225"];
         let spotify_running = status.applications.iter().any(|app| {
-            spotify_app_ids.contains(&app.app_id.as_str()) || app.display_name.to_lowercase().contains("spotify")
+            spotify_app_ids.contains(&app.app_id.as_str())
+                || app.display_name.to_lowercase().contains("spotify")
         });
 
         if spotify_running {
@@ -684,11 +696,7 @@ pub async fn authenticate_cast_device_common(
     let result = tokio::task::spawn_blocking(move || {
         // Emit progress events during authentication
         tracing::info!("[CastAuth] Starting authentication for {}", name_owned);
-        crate::spotify_cast::authenticate_cast_device(
-            &ip_owned,
-            &token_owned,
-            &name_owned,
-        )
+        crate::spotify_cast::authenticate_cast_device(&ip_owned, &token_owned, &name_owned)
     });
 
     // Wrap in a 70-second timeout (internal waits can sum to ~50s)
@@ -730,10 +738,7 @@ pub async fn authenticate_cast_device_raw_common(
     let token_owned = token_to_use;
 
     let result = tokio::task::spawn_blocking(move || {
-        crate::cast_raw_auth::authenticate_cast_device_raw(
-            &ip_owned,
-            &token_owned,
-        )
+        crate::cast_raw_auth::authenticate_cast_device_raw(&ip_owned, &token_owned)
     });
 
     // Wrap in a 45-second timeout
@@ -765,7 +770,9 @@ pub async fn authenticate_cast_device_raw_command(
 }
 
 #[tauri::command]
-pub async fn get_web_player_token_command(sp_dc: Option<String>) -> Result<crate::web_player_token::WebPlayerToken, String> {
+pub async fn get_web_player_token_command(
+    sp_dc: Option<String>,
+) -> Result<crate::web_player_token::WebPlayerToken, String> {
     crate::web_player_token::get_web_player_token(sp_dc.as_deref()).await
 }
 
@@ -804,9 +811,13 @@ pub async fn get_diagnostics_common(
     use serde_json::json;
 
     let has_sp_dc = if let Some(app) = app {
-        crate::cookie_capture::has_stored_sp_dc(app).await.unwrap_or(false)
+        crate::cookie_capture::has_stored_sp_dc(app)
+            .await
+            .unwrap_or(false)
     } else {
-        std::env::var("SPOTIFY_SP_DC").map(|s| !s.trim().is_empty()).unwrap_or(false)
+        std::env::var("SPOTIFY_SP_DC")
+            .map(|s| !s.trim().is_empty())
+            .unwrap_or(false)
     };
 
     let credentials = check_credentials_status().unwrap_or_else(|_| {
@@ -828,7 +839,11 @@ pub async fn get_diagnostics_common(
     let (macos_version, spx_force_librespot) = (None::<String>, false);
 
     let librespot_id = get_local_connect_device_id();
-    let librespot_status = if librespot_id.is_some() { "Running" } else { "Stopped" };
+    let librespot_status = if librespot_id.is_some() {
+        "Running"
+    } else {
+        "Stopped"
+    };
 
     let rust_panic_count = get_panic_count();
 
@@ -879,12 +894,22 @@ pub async fn get_diagnostics(app: tauri::AppHandle) -> Result<serde_json::Value,
 }
 
 #[tauri::command]
+pub async fn ping() -> String {
+    "pong".to_string()
+}
+
+#[tauri::command]
 pub async fn diagnose_network(ip: String) -> Result<String, String> {
     let mut results = vec![format!("Network diagnostics for {}\n", ip)];
 
     // Test 1: Basic TCP connection from Rust
     results.push("Test 1: Rust TCP connection".to_string());
-    match timeout(Duration::from_secs(5), TcpStream::connect(format!("{}:8009", ip))).await {
+    match timeout(
+        Duration::from_secs(5),
+        TcpStream::connect(format!("{}:8009", ip)),
+    )
+    .await
+    {
         Ok(Ok(_)) => results.push("  ✅ TCP connect succeeded".to_string()),
         Ok(Err(e)) => results.push(format!("  ❌ TCP connect failed: {}", e)),
         Err(_) => results.push("  ❌ TCP connect timed out".to_string()),
@@ -892,7 +917,10 @@ pub async fn diagnose_network(ip: String) -> Result<String, String> {
 
     // Test 2: Ping via system command
     results.push("\nTest 2: System ping".to_string());
-    match Command::new("ping").args(["-c", "2", "-W", "2", &ip]).output() {
+    match Command::new("ping")
+        .args(["-c", "2", "-W", "2", &ip])
+        .output()
+    {
         Ok(output) => {
             let stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -964,11 +992,13 @@ pub fn request_macos_local_network_permission() -> String {
 pub async fn get_event_history(limit: Option<usize>) -> Result<Vec<serde_json::Value>, String> {
     let bus = crate::events::EVENT_BUS.read().await;
     let events = bus.history(limit.unwrap_or(50)).await;
-    
+
     // Convert to JSON-serializable format
     Ok(events
         .into_iter()
-        .map(|e| serde_json::to_value(&e).unwrap_or_else(|_| serde_json::json!({"type": "unknown"})))
+        .map(|e| {
+            serde_json::to_value(&e).unwrap_or_else(|_| serde_json::json!({"type": "unknown"}))
+        })
         .collect())
 }
 
@@ -977,19 +1007,25 @@ pub async fn get_event_history(limit: Option<usize>) -> Result<Vec<serde_json::V
 #[tauri::command]
 pub async fn emit_spx_event(event: serde_json::Value) -> Result<(), String> {
     use crate::events::SpxEvent;
-    
-    let spx_event: SpxEvent = serde_json::from_value(event)
-        .map_err(|e| format!("Invalid event format: {}", e))?;
-    
-    crate::events::EVENT_BUS.read().await.publish(spx_event).await;
+
+    let spx_event: SpxEvent =
+        serde_json::from_value(event).map_err(|e| format!("Invalid event format: {}", e))?;
+
+    crate::events::EVENT_BUS
+        .read()
+        .await
+        .publish(spx_event)
+        .await;
     Ok(())
 }
 
 #[cfg(test)]
 mod integration_tests {
     use super::*;
+    use librespot_core::{
+        authentication::Credentials, cache::Cache, config::SessionConfig, Session,
+    };
     use librespot_oauth::OAuthClientBuilder;
-    use librespot_core::{authentication::Credentials, cache::Cache, config::SessionConfig, Session};
 
     /// Helper used by ignored real-network tests: resolve the Cast token (env var
     /// fallback only) and call the underlying Cast auth function directly.
@@ -999,9 +1035,12 @@ mod integration_tests {
         device_name: String,
     ) -> Result<String, String> {
         let token = resolve_cast_token(access_token, None).await?;
-        tokio::time::timeout(std::time::Duration::from_secs(70), tokio::task::spawn_blocking(move || {
-            crate::spotify_cast::authenticate_cast_device(&ip, &token, &device_name)
-        }))
+        tokio::time::timeout(
+            std::time::Duration::from_secs(70),
+            tokio::task::spawn_blocking(move || {
+                crate::spotify_cast::authenticate_cast_device(&ip, &token, &device_name)
+            }),
+        )
         .await
         .map_err(|_| "Cast auth timed out after 70s".to_string())?
         .map_err(|e| format!("Cast auth task panicked: {e}"))?
@@ -1014,21 +1053,23 @@ mod integration_tests {
     #[ignore]
     async fn test_local_connect_device_playback() {
         let token_path = std::path::PathBuf::from("/tmp/spx_refreshed_token.json");
-        let token_file = std::fs::read_to_string(&token_path)
-            .unwrap_or_else(|_| {
-                let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
-                std::fs::read_to_string(&fallback)
-                    .unwrap_or_else(|_| panic!("Could not read {:?} or {:?}", token_path, fallback))
-            });
-        let token_json: serde_json::Value = serde_json::from_str(&token_file)
-            .expect("Invalid token JSON");
+        let token_file = std::fs::read_to_string(&token_path).unwrap_or_else(|_| {
+            let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
+            std::fs::read_to_string(&fallback)
+                .unwrap_or_else(|_| panic!("Could not read {:?} or {:?}", token_path, fallback))
+        });
+        let token_json: serde_json::Value =
+            serde_json::from_str(&token_file).expect("Invalid token JSON");
         let access_token = token_json["access_token"]
             .as_str()
             .expect("Token missing access_token field")
             .to_string();
 
         let device_name = "SPX Playback Test".to_string();
-        println!("Starting local Connect device '{}' at 10% volume...", device_name);
+        println!(
+            "Starting local Connect device '{}' at 10% volume...",
+            device_name
+        );
         let device = crate::librespot_player::start_connect_device(
             access_token.clone(),
             device_name.clone(),
@@ -1036,7 +1077,10 @@ mod integration_tests {
         )
         .await
         .expect("failed to start local Connect device");
-        println!("  ✅ Local device started with device_id={}", device.device_id);
+        println!(
+            "  ✅ Local device started with device_id={}",
+            device.device_id
+        );
 
         // Wait for device to appear in Spotify.
         println!("Waiting for device to appear in Spotify Connect list...");
@@ -1044,8 +1088,10 @@ mod integration_tests {
             loop {
                 let output = tokio::process::Command::new("curl")
                     .args([
-                        "-s", "https://api.spotify.com/v1/me/player/devices",
-                        "-H", &format!("Authorization: Bearer {}", access_token),
+                        "-s",
+                        "https://api.spotify.com/v1/me/player/devices",
+                        "-H",
+                        &format!("Authorization: Bearer {}", access_token),
                     ])
                     .output()
                     .await
@@ -1067,18 +1113,29 @@ mod integration_tests {
         })
         .await
         .expect("Timed out waiting for local device to appear");
-        println!("  ✅ Found Spotify Connect device ID: {}", spotify_device_id);
+        println!(
+            "  ✅ Found Spotify Connect device ID: {}",
+            spotify_device_id
+        );
 
         // Start playback of a specific track on the local device.
         println!("Starting playback on local device (10% volume)...");
         let play_body = r#"{"uris":["spotify:track:0ltGRPI3PfhyCa3htMsDPT"],"position_ms":0}"#;
         let output = tokio::process::Command::new("curl")
             .args([
-                "-s", "-X", "PUT",
-                &format!("https://api.spotify.com/v1/me/player/play?device_id={}", spotify_device_id),
-                "-H", &format!("Authorization: Bearer {}", access_token),
-                "-H", "Content-Type: application/json",
-                "-d", play_body,
+                "-s",
+                "-X",
+                "PUT",
+                &format!(
+                    "https://api.spotify.com/v1/me/player/play?device_id={}",
+                    spotify_device_id
+                ),
+                "-H",
+                &format!("Authorization: Bearer {}", access_token),
+                "-H",
+                "Content-Type: application/json",
+                "-d",
+                play_body,
             ])
             .output()
             .await
@@ -1091,15 +1148,21 @@ mod integration_tests {
         // Verify it reports playing.
         let output = tokio::process::Command::new("curl")
             .args([
-                "-s", "https://api.spotify.com/v1/me/player",
-                "-H", &format!("Authorization: Bearer {}", access_token),
+                "-s",
+                "https://api.spotify.com/v1/me/player",
+                "-H",
+                &format!("Authorization: Bearer {}", access_token),
             ])
             .output()
             .await
             .expect("curl failed");
         let body = String::from_utf8_lossy(&output.stdout);
         let state: serde_json::Value = serde_json::from_str(&body).expect("Invalid playback state");
-        assert_eq!(state["device"]["id"].as_str(), Some(spotify_device_id.as_str()), "Active device mismatch");
+        assert_eq!(
+            state["device"]["id"].as_str(),
+            Some(spotify_device_id.as_str()),
+            "Active device mismatch"
+        );
         let was_playing = state["is_playing"].as_bool().unwrap_or(false);
         println!("  Playback state after start: is_playing={}", was_playing);
 
@@ -1107,8 +1170,12 @@ mod integration_tests {
         println!("Pausing playback...");
         let output = tokio::process::Command::new("curl")
             .args([
-                "-s", "-X", "PUT", "https://api.spotify.com/v1/me/player/pause",
-                "-H", &format!("Authorization: Bearer {}", access_token),
+                "-s",
+                "-X",
+                "PUT",
+                "https://api.spotify.com/v1/me/player/pause",
+                "-H",
+                &format!("Authorization: Bearer {}", access_token),
             ])
             .output()
             .await
@@ -1118,16 +1185,25 @@ mod integration_tests {
         tokio::time::sleep(Duration::from_secs(2)).await;
         let output = tokio::process::Command::new("curl")
             .args([
-                "-s", "https://api.spotify.com/v1/me/player",
-                "-H", &format!("Authorization: Bearer {}", access_token),
+                "-s",
+                "https://api.spotify.com/v1/me/player",
+                "-H",
+                &format!("Authorization: Bearer {}", access_token),
             ])
             .output()
             .await
             .expect("curl failed");
         let body = String::from_utf8_lossy(&output.stdout);
         let state: serde_json::Value = serde_json::from_str(&body).expect("Invalid playback state");
-        assert!(!state["is_playing"].as_bool().unwrap_or(true), "Playback should be paused");
-        assert_eq!(state["device"]["id"].as_str(), Some(spotify_device_id.as_str()), "Active device mismatch after pause");
+        assert!(
+            !state["is_playing"].as_bool().unwrap_or(true),
+            "Playback should be paused"
+        );
+        assert_eq!(
+            state["device"]["id"].as_str(),
+            Some(spotify_device_id.as_str()),
+            "Active device mismatch after pause"
+        );
 
         println!("✅ Local SPX Connect device can play and pause audio successfully");
 
@@ -1142,14 +1218,13 @@ mod integration_tests {
     #[ignore]
     async fn test_local_connect_device_transfer() {
         let token_path = std::path::PathBuf::from("/tmp/spx_refreshed_token.json");
-        let token_file = std::fs::read_to_string(&token_path)
-            .unwrap_or_else(|_| {
-                let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
-                std::fs::read_to_string(&fallback)
-                    .unwrap_or_else(|_| panic!("Could not read {:?} or {:?}", token_path, fallback))
-            });
-        let token_json: serde_json::Value = serde_json::from_str(&token_file)
-            .expect("Invalid token JSON");
+        let token_file = std::fs::read_to_string(&token_path).unwrap_or_else(|_| {
+            let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
+            std::fs::read_to_string(&fallback)
+                .unwrap_or_else(|_| panic!("Could not read {:?} or {:?}", token_path, fallback))
+        });
+        let token_json: serde_json::Value =
+            serde_json::from_str(&token_file).expect("Invalid token JSON");
         let access_token = token_json["access_token"]
             .as_str()
             .expect("Token missing access_token field")
@@ -1165,7 +1240,10 @@ mod integration_tests {
         )
         .await
         .expect("failed to start local Connect device");
-        println!("  ✅ Local device started with device_id={}", device.device_id);
+        println!(
+            "  ✅ Local device started with device_id={}",
+            device.device_id
+        );
 
         // Poll Spotify for the device to appear.
         println!("Waiting for device to appear in Spotify Connect list...");
@@ -1173,8 +1251,10 @@ mod integration_tests {
             loop {
                 let output = tokio::process::Command::new("curl")
                     .args([
-                        "-s", "https://api.spotify.com/v1/me/player/devices",
-                        "-H", &format!("Authorization: Bearer {}", access_token),
+                        "-s",
+                        "https://api.spotify.com/v1/me/player/devices",
+                        "-H",
+                        &format!("Authorization: Bearer {}", access_token),
                     ])
                     .output()
                     .await
@@ -1198,30 +1278,48 @@ mod integration_tests {
         .await
         .expect("Timed out waiting for local device to appear");
 
-        println!("  ✅ Found Spotify Connect device ID: {}", spotify_device_id);
+        println!(
+            "  ✅ Found Spotify Connect device ID: {}",
+            spotify_device_id
+        );
 
         // Transfer playback to the local device without starting audio.
         println!("Transferring playback to local device (play=false)...");
-        let transfer_body = format!("{{\"device_ids\":[\"{}\"],\"play\":false}}", spotify_device_id);
+        let transfer_body = format!(
+            "{{\"device_ids\":[\"{}\"],\"play\":false}}",
+            spotify_device_id
+        );
         let output = tokio::process::Command::new("curl")
             .args([
-                "-s", "-X", "PUT", "https://api.spotify.com/v1/me/player",
-                "-H", &format!("Authorization: Bearer {}", access_token),
-                "-H", "Content-Type: application/json",
-                "-d", &transfer_body,
+                "-s",
+                "-X",
+                "PUT",
+                "https://api.spotify.com/v1/me/player",
+                "-H",
+                &format!("Authorization: Bearer {}", access_token),
+                "-H",
+                "Content-Type: application/json",
+                "-d",
+                &transfer_body,
             ])
             .output()
             .await
             .expect("curl transfer failed");
-        println!("  Transfer response: {:?} {}", output.status, String::from_utf8_lossy(&output.stdout));
+        println!(
+            "  Transfer response: {:?} {}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout)
+        );
         assert!(output.status.success(), "transfer request failed");
 
         // Verify playback state shows our device as active.
         tokio::time::sleep(Duration::from_secs(2)).await;
         let output = tokio::process::Command::new("curl")
             .args([
-                "-s", "https://api.spotify.com/v1/me/player",
-                "-H", &format!("Authorization: Bearer {}", access_token),
+                "-s",
+                "https://api.spotify.com/v1/me/player",
+                "-H",
+                &format!("Authorization: Bearer {}", access_token),
             ])
             .output()
             .await
@@ -1229,9 +1327,16 @@ mod integration_tests {
         let body = String::from_utf8_lossy(&output.stdout);
         println!("  Playback state: {}", body);
         let state: serde_json::Value = serde_json::from_str(&body).expect("Invalid playback state");
-        let active_device = state["device"]["id"].as_str().expect("No active device in playback state");
-        assert_eq!(active_device, spotify_device_id, "Active device does not match local device");
-        println!("✅ Playback transferred to local SPX Connect device successfully (audio not started)");
+        let active_device = state["device"]["id"]
+            .as_str()
+            .expect("No active device in playback state");
+        assert_eq!(
+            active_device, spotify_device_id,
+            "Active device does not match local device"
+        );
+        println!(
+            "✅ Playback transferred to local SPX Connect device successfully (audio not started)"
+        );
 
         // Keep the device alive for a moment so the test is observable.
         tokio::time::sleep(Duration::from_secs(5)).await;
@@ -1245,14 +1350,17 @@ mod integration_tests {
     #[ignore]
     async fn test_existing_token_librespot_session() {
         let token_path = std::path::PathBuf::from("/tmp/spx_refreshed_token.json");
-        let token_file = std::fs::read_to_string(&token_path)
-            .unwrap_or_else(|_| {
-                let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
-                std::fs::read_to_string(&fallback)
-                    .unwrap_or_else(|_| panic!("Could not read {:?} or {:?}. Run browser auth first.", token_path, fallback))
-            });
-        let token_json: serde_json::Value = serde_json::from_str(&token_file)
-            .expect("Invalid token JSON");
+        let token_file = std::fs::read_to_string(&token_path).unwrap_or_else(|_| {
+            let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
+            std::fs::read_to_string(&fallback).unwrap_or_else(|_| {
+                panic!(
+                    "Could not read {:?} or {:?}. Run browser auth first.",
+                    token_path, fallback
+                )
+            })
+        });
+        let token_json: serde_json::Value =
+            serde_json::from_str(&token_file).expect("Invalid token JSON");
         let access_token = token_json["access_token"]
             .as_str()
             .expect("Token missing access_token field")
@@ -1265,20 +1373,29 @@ mod integration_tests {
         let session = Session::new(session_config, Some(cache));
         let credentials = Credentials::with_access_token(access_token.clone());
         match session.connect(credentials, true).await {
-            Ok(_) => println!("✅ Refreshed SPX token works with DEFAULT client_id as '{}'", session.username()),
+            Ok(_) => println!(
+                "✅ Refreshed SPX token works with DEFAULT client_id as '{}'",
+                session.username()
+            ),
             Err(e) => println!("❌ Refreshed SPX token failed with default client_id: {e}"),
         }
 
         // Test 2: SessionConfig with SPX client_id matching the OAuth token
         let client_id = get_spotify_client_id().expect("SPOTIFY_CLIENT_ID must be configured");
-        println!("Attempting librespot session with refreshed SPX token (SPX client_id={})...", client_id);
+        println!(
+            "Attempting librespot session with refreshed SPX token (SPX client_id={})...",
+            client_id
+        );
         let mut session_config = SessionConfig::default();
         session_config.client_id = client_id;
         let cache = Cache::new(None::<String>, None, None, None).expect("Failed to create cache");
         let session = Session::new(session_config, Some(cache));
         let credentials = Credentials::with_access_token(access_token);
         match session.connect(credentials, true).await {
-            Ok(_) => println!("✅ Refreshed SPX token works with SPX client_id as '{}'", session.username()),
+            Ok(_) => println!(
+                "✅ Refreshed SPX token works with SPX client_id as '{}'",
+                session.username()
+            ),
             Err(e) => println!("❌ Refreshed SPX token failed with SPX client_id: {e}"),
         }
     }
@@ -1324,7 +1441,10 @@ mod integration_tests {
         .await
         .expect("OAuth task panicked");
 
-        println!("Access token acquired: {}...", &token.access_token[..20.min(token.access_token.len())]);
+        println!(
+            "Access token acquired: {}...",
+            &token.access_token[..20.min(token.access_token.len())]
+        );
         println!("Scopes: {:?}", token.scopes);
 
         // Now prove the token works with librespot_core.
@@ -1338,7 +1458,10 @@ mod integration_tests {
             .await
             .expect("librespot session connection failed");
 
-        println!("✅ librespot session authenticated successfully as '{}'", session.username());
+        println!(
+            "✅ librespot session authenticated successfully as '{}'",
+            session.username()
+        );
     }
 
     /// Real network test: discover Cast devices and verify TCP reachability.
@@ -1351,10 +1474,16 @@ mod integration_tests {
         for d in &devices {
             println!("  {} at {}:{}", d.name, d.ip, d.port);
         }
-        assert!(!devices.is_empty(), "expected at least one device on the network");
+        assert!(
+            !devices.is_empty(),
+            "expected at least one device on the network"
+        );
 
         // Verify TCP port 8009 is reachable on the first Cast device
-        let first = devices.iter().find(|d| d.port == 8009).unwrap_or(&devices[0]);
+        let first = devices
+            .iter()
+            .find(|d| d.port == 8009)
+            .unwrap_or(&devices[0]);
         let addr = format!("{}:8009", first.ip);
         println!("Checking TCP reachability for {}...", addr);
         match timeout(Duration::from_secs(3), TcpStream::connect(&addr)).await {
@@ -1370,7 +1499,10 @@ mod integration_tests {
     #[ignore]
     async fn test_real_cast_wake() {
         let devices = scan_spotify_devices().await.expect("scan should succeed");
-        let first = devices.iter().find(|d| d.port == 8009).expect("expected a Cast device on port 8009");
+        let first = devices
+            .iter()
+            .find(|d| d.port == 8009)
+            .expect("expected a Cast device on port 8009");
         println!("Attempting to wake {} at {}...", first.name, first.ip);
         match wake_cast_device(first.ip.clone()).await {
             Ok(msg) => println!("  ✅ Wake succeeded: {}", msg),
@@ -1385,14 +1517,13 @@ mod integration_tests {
     #[ignore]
     async fn test_login5_token_cast_auth() {
         let token_path = std::path::PathBuf::from("/tmp/spx_refreshed_token.json");
-        let token_file = std::fs::read_to_string(&token_path)
-            .unwrap_or_else(|_| {
-                let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
-                std::fs::read_to_string(&fallback)
-                    .unwrap_or_else(|_| panic!("Could not read {:?} or {:?}", token_path, fallback))
-            });
-        let token_json: serde_json::Value = serde_json::from_str(&token_file)
-            .expect("Invalid token JSON");
+        let token_file = std::fs::read_to_string(&token_path).unwrap_or_else(|_| {
+            let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
+            std::fs::read_to_string(&fallback)
+                .unwrap_or_else(|_| panic!("Could not read {:?} or {:?}", token_path, fallback))
+        });
+        let token_json: serde_json::Value =
+            serde_json::from_str(&token_file).expect("Invalid token JSON");
         let access_token = token_json["access_token"]
             .as_str()
             .expect("Token missing access_token field")
@@ -1404,19 +1535,41 @@ mod integration_tests {
         let cache = Cache::new(None::<String>, None, None, None).expect("Failed to create cache");
         let session = Session::new(session_config, Some(cache));
         let credentials = Credentials::with_access_token(access_token);
-        session.connect(credentials, true).await.expect("librespot session connection failed");
+        session
+            .connect(credentials, true)
+            .await
+            .expect("librespot session connection failed");
         println!("  ✅ Session authenticated as '{}'", session.username());
 
         // Get a login5 access token.
-        let login5_token = session.login5().auth_token().await.expect("failed to get login5 token");
-        println!("  ✅ Got login5 token: {}...", &login5_token.access_token[..20.min(login5_token.access_token.len())]);
+        let login5_token = session
+            .login5()
+            .auth_token()
+            .await
+            .expect("failed to get login5 token");
+        println!(
+            "  ✅ Got login5 token: {}...",
+            &login5_token.access_token[..20.min(login5_token.access_token.len())]
+        );
 
         // Try Cast auth with the login5 token.
         let devices = scan_spotify_devices().await.expect("scan should succeed");
-        let target = devices.iter().find(|d| d.port == 8009).expect("expected a Cast device on port 8009");
-        println!("Trying Cast auth for {} at {} with login5 token...", target.name, target.ip);
+        let target = devices
+            .iter()
+            .find(|d| d.port == 8009)
+            .expect("expected a Cast device on port 8009");
+        println!(
+            "Trying Cast auth for {} at {} with login5 token...",
+            target.name, target.ip
+        );
 
-        match authenticate_cast_test(target.ip.clone(), login5_token.access_token, target.name.clone()).await {
+        match authenticate_cast_test(
+            target.ip.clone(),
+            login5_token.access_token,
+            target.name.clone(),
+        )
+        .await
+        {
             Ok(msg) => println!("✅ Cast auth with login5 token succeeded: {}", msg),
             Err(e) => println!("❌ Cast auth with login5 token failed: {}", e),
         }
@@ -1429,10 +1582,22 @@ mod integration_tests {
     #[ignore]
     async fn test_web_player_token_cast_auth() {
         let devices = scan_spotify_devices().await.expect("scan should succeed");
-        let target = devices.iter().find(|d| d.port == 8009).expect("expected a Cast device on port 8009");
-        println!("Trying Cast auth for {} at {} with Web Player token...", target.name, target.ip);
+        let target = devices
+            .iter()
+            .find(|d| d.port == 8009)
+            .expect("expected a Cast device on port 8009");
+        println!(
+            "Trying Cast auth for {} at {} with Web Player token...",
+            target.name, target.ip
+        );
 
-        match authenticate_cast_test(target.ip.clone(), "ignored-token".to_string(), target.name.clone()).await {
+        match authenticate_cast_test(
+            target.ip.clone(),
+            "ignored-token".to_string(),
+            target.name.clone(),
+        )
+        .await
+        {
             Ok(msg) => println!("✅ Cast auth with Web Player token succeeded: {}", msg),
             Err(e) => println!("❌ Cast auth with Web Player token failed: {}", e),
         }
@@ -1447,14 +1612,17 @@ mod integration_tests {
     async fn test_real_transfer_to_local_device() {
         // Prefer the refreshed token; fall back to the original browser token.
         let token_path = std::path::PathBuf::from("/tmp/spx_refreshed_token.json");
-        let token_file = std::fs::read_to_string(&token_path)
-            .unwrap_or_else(|_| {
-                let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
-                std::fs::read_to_string(&fallback)
-                    .unwrap_or_else(|_| panic!("Could not read {:?} or {:?}. Run browser auth first.", token_path, fallback))
-            });
-        let token_json: serde_json::Value = serde_json::from_str(&token_file)
-            .expect("Invalid token JSON");
+        let token_file = std::fs::read_to_string(&token_path).unwrap_or_else(|_| {
+            let fallback = std::path::PathBuf::from("/tmp/spx_token.json");
+            std::fs::read_to_string(&fallback).unwrap_or_else(|_| {
+                panic!(
+                    "Could not read {:?} or {:?}. Run browser auth first.",
+                    token_path, fallback
+                )
+            })
+        });
+        let token_json: serde_json::Value =
+            serde_json::from_str(&token_file).expect("Invalid token JSON");
         let access_token = token_json["access_token"]
             .as_str()
             .expect("Token missing access_token field");
@@ -1462,12 +1630,21 @@ mod integration_tests {
         // Discover local devices.
         let devices = scan_spotify_devices().await.expect("scan should succeed");
         assert!(!devices.is_empty(), "expected at least one local device");
-        let target = devices.iter().find(|d| d.port == 8009).unwrap_or(&devices[0]);
+        let target = devices
+            .iter()
+            .find(|d| d.port == 8009)
+            .unwrap_or(&devices[0]);
         println!("Target device: {} at {}", target.name, target.ip);
 
         // Authenticate the Cast device with Spotify so it appears as a Connect target.
         println!("Authenticating Cast device with Spotify...");
-        match authenticate_cast_test(target.ip.clone(), access_token.to_string(), target.name.clone()).await {
+        match authenticate_cast_test(
+            target.ip.clone(),
+            access_token.to_string(),
+            target.name.clone(),
+        )
+        .await
+        {
             Ok(msg) => println!("  ✅ Auth succeeded: {}", msg),
             Err(e) => println!("  ⚠️ Auth returned: {} (continuing)", e),
         }
@@ -1477,8 +1654,10 @@ mod integration_tests {
             loop {
                 let output = tokio::process::Command::new("curl")
                     .args([
-                        "-s", "https://api.spotify.com/v1/me/player/devices",
-                        "-H", &format!("Authorization: Bearer {}", access_token),
+                        "-s",
+                        "https://api.spotify.com/v1/me/player/devices",
+                        "-H",
+                        &format!("Authorization: Bearer {}", access_token),
                     ])
                     .output()
                     .await
@@ -1507,26 +1686,41 @@ mod integration_tests {
         println!("Found Spotify Connect device ID: {}", spotify_device_id);
 
         // Transfer playback to the device WITHOUT starting playback.
-        let transfer_body = format!("{{\"device_ids\":[\"{}\"],\"play\":false}}", spotify_device_id);
+        let transfer_body = format!(
+            "{{\"device_ids\":[\"{}\"],\"play\":false}}",
+            spotify_device_id
+        );
         let output = tokio::process::Command::new("curl")
             .args([
-                "-s", "-X", "PUT", "https://api.spotify.com/v1/me/player",
-                "-H", &format!("Authorization: Bearer {}", access_token),
-                "-H", "Content-Type: application/json",
-                "-d", &transfer_body,
+                "-s",
+                "-X",
+                "PUT",
+                "https://api.spotify.com/v1/me/player",
+                "-H",
+                &format!("Authorization: Bearer {}", access_token),
+                "-H",
+                "Content-Type: application/json",
+                "-d",
+                &transfer_body,
             ])
             .output()
             .await
             .expect("curl transfer failed");
-        println!("Transfer response status: {:?}, body: {}", output.status, String::from_utf8_lossy(&output.stdout));
+        println!(
+            "Transfer response status: {:?}, body: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout)
+        );
         assert!(output.status.success(), "curl command failed");
 
         // Verify playback state shows our device as active.
         tokio::time::sleep(Duration::from_secs(2)).await;
         let output = tokio::process::Command::new("curl")
             .args([
-                "-s", "https://api.spotify.com/v1/me/player",
-                "-H", &format!("Authorization: Bearer {}", access_token),
+                "-s",
+                "https://api.spotify.com/v1/me/player",
+                "-H",
+                &format!("Authorization: Bearer {}", access_token),
             ])
             .output()
             .await
@@ -1534,8 +1728,13 @@ mod integration_tests {
         let body = String::from_utf8_lossy(&output.stdout);
         println!("Playback state: {}", body);
         let state: serde_json::Value = serde_json::from_str(&body).expect("Invalid playback state");
-        let active_device = state["device"]["id"].as_str().expect("No active device in playback state");
-        assert_eq!(active_device, spotify_device_id, "Active device does not match target");
+        let active_device = state["device"]["id"]
+            .as_str()
+            .expect("No active device in playback state");
+        assert_eq!(
+            active_device, spotify_device_id,
+            "Active device does not match target"
+        );
         println!("✅ Playback transferred to local device successfully (audio not started)");
     }
 }
@@ -1646,7 +1845,10 @@ mod credential_tests {
             let result = check_credentials_status().expect("should not fail");
             assert!(!result["configured"].as_bool().unwrap());
             assert_eq!(result["clientId"]["status"].as_str().unwrap(), "missing");
-            assert_eq!(result["clientSecret"]["status"].as_str().unwrap(), "missing");
+            assert_eq!(
+                result["clientSecret"]["status"].as_str().unwrap(),
+                "missing"
+            );
             // instructions is a String when !configured, null otherwise
             assert!(!result["instructions"].is_null());
         });
@@ -1663,8 +1865,14 @@ mod credential_tests {
             || {
                 let result = check_credentials_status().expect("should not fail");
                 assert!(!result["configured"].as_bool().unwrap());
-                assert_eq!(result["clientId"]["status"].as_str().unwrap(), "placeholder");
-                assert_eq!(result["clientSecret"]["status"].as_str().unwrap(), "placeholder");
+                assert_eq!(
+                    result["clientId"]["status"].as_str().unwrap(),
+                    "placeholder"
+                );
+                assert_eq!(
+                    result["clientSecret"]["status"].as_str().unwrap(),
+                    "placeholder"
+                );
             },
         );
     }
@@ -1700,7 +1908,10 @@ mod credential_tests {
                 let result = check_credentials_status().expect("should not fail");
                 assert!(!result["configured"].as_bool().unwrap());
                 assert_eq!(result["clientId"]["status"].as_str().unwrap(), "ok");
-                assert_eq!(result["clientSecret"]["status"].as_str().unwrap(), "placeholder");
+                assert_eq!(
+                    result["clientSecret"]["status"].as_str().unwrap(),
+                    "placeholder"
+                );
             },
         );
     }
@@ -1734,5 +1945,54 @@ mod credential_tests {
                 assert!(result["configured"].as_bool().unwrap());
             },
         );
+    }
+
+    #[tokio::test]
+    async fn get_diagnostics_returns_valid_json() {
+        // Test that get_diagnostics_common returns valid JSON
+        let result =
+            get_diagnostics_common(None, "test-version".to_string(), "test-tauri".to_string())
+                .await;
+
+        // Should not error
+        assert!(
+            result.is_ok(),
+            "get_diagnostics should succeed: {:?}",
+            result.err()
+        );
+
+        let json = result.unwrap();
+
+        // Verify it can be serialized back to JSON (proves it's valid JSON)
+        let serialized = serde_json::to_string(&json);
+        assert!(
+            serialized.is_ok(),
+            "Result should be valid JSON: {:?}",
+            serialized.err()
+        );
+
+        // Verify key fields exist
+        assert!(
+            json.get("credentials").is_some(),
+            "Should have credentials field"
+        );
+        assert!(
+            json.get("has_stored_sp_dc").is_some(),
+            "Should have has_stored_sp_dc field"
+        );
+        assert!(
+            json.get("app_version").is_some(),
+            "Should have app_version field"
+        );
+        assert!(
+            json.get("rust_log_lines").is_some(),
+            "Should have rust_log_lines field"
+        );
+    }
+
+    #[tokio::test]
+    async fn ping_command_returns_string() {
+        let result = ping().await;
+        assert_eq!(result, "pong");
     }
 }

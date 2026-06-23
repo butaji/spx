@@ -31,40 +31,71 @@ pub enum SpxEvent {
     // Device events
     DeviceDiscovered(DeviceInfo),
     DeviceConnected(DeviceInfo),
-    DeviceDisconnected(String), // device_id
+    DeviceDisconnected(String),  // device_id
     DeviceWakeStarted(String),   // device_id
     DeviceWakeCompleted(String), // device_id
-    DeviceWakeFailed { id: String, error: String },
+    DeviceWakeFailed {
+        id: String,
+        error: String,
+    },
 
     // Auth events
     AuthStarted,
-    AuthCompleted { username: String },
-    AuthFailed { error: String },
+    AuthCompleted {
+        username: String,
+    },
+    AuthFailed {
+        error: String,
+    },
     TokenRefreshStarted,
     TokenRefreshCompleted,
-    TokenRefreshFailed { error: String },
+    TokenRefreshFailed {
+        error: String,
+    },
     LogoutCompleted,
 
     // Cast authentication events
-    CastAuthStarted { device_id: String },
-    CastAuthProgress { device_id: String, step: String },
-    CastAuthCompleted { device_id: String },
-    CastAuthFailed { device_id: String, error: String },
+    CastAuthStarted {
+        device_id: String,
+    },
+    CastAuthProgress {
+        device_id: String,
+        step: String,
+    },
+    CastAuthCompleted {
+        device_id: String,
+    },
+    CastAuthFailed {
+        device_id: String,
+        error: String,
+    },
 
     // Local Connect events
     LocalConnectStarted,
-    LocalConnectCompleted { device_id: String },
-    LocalConnectFailed { error: String },
+    LocalConnectCompleted {
+        device_id: String,
+    },
+    LocalConnectFailed {
+        error: String,
+    },
 
     // System events
-    NowPlayingUpdated { track: Option<String>, artist: Option<String> },
+    NowPlayingUpdated {
+        track: Option<String>,
+        artist: Option<String>,
+    },
     NowPlayingCleared,
     MediaKeyRegistered,
     DiagnosticsUpdated,
-    NetworkDiagCompleted { result: String },
+    NetworkDiagCompleted {
+        result: String,
+    },
 
     // Error events
-    Error { code: String, message: String },
+    Error {
+        code: String,
+        message: String,
+    },
 }
 
 /// Device information for device-related events.
@@ -185,7 +216,8 @@ use once_cell::sync::Lazy;
 use tokio::sync::RwLock as AsyncRwLock;
 
 /// The global event bus instance.
-pub static EVENT_BUS: Lazy<AsyncRwLock<EventBus>> = Lazy::new(|| AsyncRwLock::new(EventBus::default()));
+pub static EVENT_BUS: Lazy<AsyncRwLock<EventBus>> =
+    Lazy::new(|| AsyncRwLock::new(EventBus::default()));
 
 /// Publish an event to the global event bus.
 pub async fn publish(event: SpxEvent) {
@@ -256,6 +288,7 @@ pub mod helpers {
         publish(SpxEvent::Error {
             code: code.to_string(),
             message: message.to_string(),
-        }).await;
+        })
+        .await;
     }
 }

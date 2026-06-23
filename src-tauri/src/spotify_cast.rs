@@ -56,7 +56,9 @@ pub fn authenticate_cast_device(
 
     // CONNECT on the connection namespace.
     println!("[cast] Sending CONNECT to receiver-0...");
-    cast_device.connection.connect("receiver-0")
+    cast_device
+        .connection
+        .connect("receiver-0")
         .map_err(|e| format!("CONNECT failed: {}", e))?;
     println!("[cast] CONNECT sent");
 
@@ -64,14 +66,21 @@ pub fn authenticate_cast_device(
     println!("[cast] Launching Spotify app {}...", SPOTIFY_APP_ID);
     let app_id = rust_cast::channels::receiver::CastDeviceApp::from_str(SPOTIFY_APP_ID)
         .map_err(|_| "Invalid Spotify app ID".to_string())?;
-    let launched = cast_device.receiver.launch_app(&app_id)
+    let launched = cast_device
+        .receiver
+        .launch_app(&app_id)
         .map_err(|e| format!("Launch failed: {}", e))?;
     let transport_id = launched.transport_id;
     println!("[cast] Launched Spotify, transport_id={}", transport_id);
 
     // CONNECT to the Spotify app transport.
-    println!("[cast] Sending CONNECT to app transport {}...", transport_id);
-    cast_device.connection.connect(&transport_id)
+    println!(
+        "[cast] Sending CONNECT to app transport {}...",
+        transport_id
+    );
+    cast_device
+        .connection
+        .connect(&transport_id)
         .map_err(|e| format!("CONNECT to app failed: {}", e))?;
     println!("[cast] CONNECT to app sent");
 
@@ -92,7 +101,9 @@ pub fn authenticate_cast_device(
             "deviceAPI_isGroup": false,
         }
     });
-    cast_device.receiver.send_message(SPOTIFY_NAMESPACE, &transport_id, &get_info_msg)
+    cast_device
+        .receiver
+        .send_message(SPOTIFY_NAMESPACE, &transport_id, &get_info_msg)
         .map_err(|e| format!("Failed to send getInfo: {}", e))?;
     println!("[cast] getInfo sent; waiting for response...");
 
@@ -101,7 +112,10 @@ pub fn authenticate_cast_device(
     println!("[cast] Received getInfoResponse: {}", info_response);
 
     let (client_id, multizone_device_id) = parse_get_info_response(&info_response)?;
-    println!("[cast] Got client_id={}, multizone_id={}", client_id, multizone_device_id);
+    println!(
+        "[cast] Got client_id={}, multizone_id={}",
+        client_id, multizone_device_id
+    );
 
     // Step 2: Exchange Web Player token for a device-bound access token.
     // Use the multizone device ID from getInfoResponse for Spotify's internal auth.
@@ -120,17 +134,23 @@ pub fn authenticate_cast_device(
             "tokenType": "accesstoken",
         }
     });
-    cast_device.receiver.send_message(SPOTIFY_NAMESPACE, &transport_id, &add_user_msg)
+    cast_device
+        .receiver
+        .send_message(SPOTIFY_NAMESPACE, &transport_id, &add_user_msg)
         .map_err(|e| format!("Failed to send addUser: {}", e))?;
     println!("[cast] addUser sent; waiting for response...");
 
-    let add_user_response = wait_for_message(&cast_device, SPOTIFY_NAMESPACE, "addUserResponse", 20)
-        .map_err(|e| format!("addUserResponse timeout: {}", e))?;
+    let add_user_response =
+        wait_for_message(&cast_device, SPOTIFY_NAMESPACE, "addUserResponse", 20)
+            .map_err(|e| format!("addUserResponse timeout: {}", e))?;
     println!("[cast] addUserResponse: {}", add_user_response);
 
     // Device is now authenticated. It will appear in GET /me/player/devices with
     // id = spotify_device_id (md5(device_name)).
-    println!("[cast] Auth complete. Device should appear in Spotify API as id={}", spotify_device_id);
+    println!(
+        "[cast] Auth complete. Device should appear in Spotify API as id={}",
+        spotify_device_id
+    );
 
     Ok(spotify_device_id)
 }
@@ -140,8 +160,8 @@ pub fn authenticate_cast_device(
 /// Used only for the `refresh_device_auth` step to exchange the Web Player token
 /// for a device-bound token. The Cast protocol itself uses `md5(device_name)`.
 fn parse_get_info_response(payload: &str) -> Result<(String, String), String> {
-    let value: serde_json::Value = serde_json::from_str(payload)
-        .map_err(|e| format!("Invalid getInfoResponse JSON: {e}"))?;
+    let value: serde_json::Value =
+        serde_json::from_str(payload).map_err(|e| format!("Invalid getInfoResponse JSON: {e}"))?;
 
     let payload_obj = value
         .get("payload")
@@ -200,8 +220,9 @@ fn refresh_device_auth(
         ));
     }
 
-    let json: serde_json::Value = serde_json::from_str(&response_body)
-        .map_err(|e| format!("failed to parse device-auth response: {e} (body: {response_body})"))?;
+    let json: serde_json::Value = serde_json::from_str(&response_body).map_err(|e| {
+        format!("failed to parse device-auth response: {e} (body: {response_body})")
+    })?;
 
     let access_token = json
         .get("accessToken")
@@ -224,7 +245,11 @@ fn wait_for_message(
         match cast_device.receive() {
             Ok(rust_cast::ChannelMessage::Raw(msg)) => {
                 if let CastMessagePayload::String(payload) = &msg.payload {
-                    println!("[cast] recv ns={} type={}", msg.namespace, payload.get(..120).unwrap_or(payload));
+                    println!(
+                        "[cast] recv ns={} type={}",
+                        msg.namespace,
+                        payload.get(..120).unwrap_or(payload)
+                    );
                     if msg.namespace == namespace {
                         if payload.contains(expected_type) {
                             return Ok(payload.clone());

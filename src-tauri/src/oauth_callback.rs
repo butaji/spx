@@ -109,7 +109,8 @@ fn handle_connection(stream: &mut TcpStream, app_handle: AppHandle) {
     }
 
     // Default 404 for other routes
-    let response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nNot Found";
+    let response =
+        "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nNot Found";
     let _ = stream.write_all(response.as_bytes());
     let _ = stream.flush();
 }

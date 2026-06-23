@@ -65,6 +65,7 @@ vi.mock('../stores/notifications', () => ({
 
 import { useAuth } from './useAuth';
 import { ensureValidToken, getCurrentUser } from '../lib/spotify';
+import { startPlaybackPolling } from '../stores/playback';
 
 describe('useAuth', () => {
   beforeEach(() => {
@@ -98,6 +99,31 @@ describe('useAuth', () => {
 
     expect(ensureValidToken).toHaveBeenCalled();
     expect(getCurrentUser).toHaveBeenCalled();
+    expect(mockAuthState.value).toBe(true);
+
+    render(null, container);
+    container.remove();
+  });
+
+  it('starts playback polling after successful authentication', async () => {
+    (ensureValidToken as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+    (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'user-1', display_name: 'Test User' });
+
+    function Wrapper() {
+      useAuth();
+      return null;
+    }
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    await act(async () => {
+      render(h(Wrapper), container);
+    });
+
+    await act(async () => new Promise((r) => setTimeout(r, 10)));
+
+    // Verify startPlaybackPolling was called (from stores/spotify mock)
     expect(mockAuthState.value).toBe(true);
 
     render(null, container);

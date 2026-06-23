@@ -9,9 +9,7 @@
 use std::sync::Arc;
 
 use librespot_connect::{ConnectConfig, Spirc};
-use librespot_core::{
-    authentication::Credentials, cache::Cache, config::SessionConfig, Session,
-};
+use librespot_core::{authentication::Credentials, cache::Cache, config::SessionConfig, Session};
 use librespot_playback::{
     audio_backend::{self, Sink},
     config::{AudioFormat, PlayerConfig},
@@ -34,7 +32,7 @@ pub struct ConnectDevice {
 /// Query the user-visible macOS product version (e.g. "15.5.1" or "26.0").
 #[cfg(target_os = "macos")]
 pub fn macos_product_version() -> Option<String> {
-    use std::ffi::{CStr, c_char};
+    use std::ffi::{c_char, CStr};
     use std::ptr::null_mut;
 
     let mut len: libc::size_t = 0;
@@ -144,10 +142,14 @@ pub async fn start_connect_device(
     );
 
     // 4. Start Spirc.
-    info!("Starting local Spotify Connect device '{}'", connect_config.name);
-    let (spirc, spirc_task) = Spirc::new(connect_config, session.clone(), credentials, player, mixer)
-        .await
-        .map_err(|e| format!("failed to initialize Spirc: {e}"))?;
+    info!(
+        "Starting local Spotify Connect device '{}'",
+        connect_config.name
+    );
+    let (spirc, spirc_task) =
+        Spirc::new(connect_config, session.clone(), credentials, player, mixer)
+            .await
+            .map_err(|e| format!("failed to initialize Spirc: {e}"))?;
 
     let task = tokio::spawn(async move {
         spirc_task.await;

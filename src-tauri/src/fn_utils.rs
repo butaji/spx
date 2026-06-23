@@ -250,11 +250,7 @@ impl StringExt for String {
         if self.len() <= 8 {
             "*".repeat(self.len())
         } else {
-            format!(
-                "{}...{}",
-                &self[..3],
-                &self[self.len() - 3..]
-            )
+            format!("{}...{}", &self[..3], &self[self.len() - 3..])
         }
     }
 }
@@ -279,10 +275,10 @@ impl<T> Pipe<T> for T {
 pub trait DurationExt {
     /// Create a Duration from seconds.
     fn secs(s: u64) -> Duration;
-    
+
     /// Create a Duration from milliseconds.
     fn millis(ms: u64) -> Duration;
-    
+
     /// Create a Duration from minutes.
     fn mins(m: u64) -> Duration;
 }
@@ -291,11 +287,11 @@ impl DurationExt for Duration {
     fn secs(s: u64) -> Duration {
         Duration::from_secs(s)
     }
-    
+
     fn millis(ms: u64) -> Duration {
         Duration::from_millis(ms)
     }
-    
+
     fn mins(m: u64) -> Duration {
         Duration::from_secs(m * 60)
     }
@@ -409,10 +405,10 @@ mod tests {
     fn test_string_masked() {
         let short = String::from("short");
         assert_eq!(short.masked(), "*****");
-        
+
         let long = String::from("longpassword");
         assert_eq!(long.masked(), "lon...ord");
-        
+
         let verylong = String::from("verylongtoken12345");
         assert_eq!(verylong.masked(), "ver...345");
     }

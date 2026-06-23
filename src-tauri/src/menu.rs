@@ -12,7 +12,7 @@ pub fn build_menu(app: &tauri::AppHandle) -> Result<Menu<tauri::Wry>, Box<dyn st
             &MenuItem::with_id(app, "preferences", "Preferences...", true, Some("Cmd+,"))?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::quit(app, Some("Quit SPX"))?,
-        ]
+        ],
     )?;
 
     let playback_menu = Submenu::with_items(
@@ -29,7 +29,7 @@ pub fn build_menu(app: &tauri::AppHandle) -> Result<Menu<tauri::Wry>, Box<dyn st
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "shuffle", "Shuffle", true, Some("Cmd+S"))?,
             &MenuItem::with_id(app, "repeat", "Repeat", true, Some("Cmd+R"))?,
-        ]
+        ],
     )?;
 
     let view_menu = Submenu::with_items(
@@ -41,33 +41,51 @@ pub fn build_menu(app: &tauri::AppHandle) -> Result<Menu<tauri::Wry>, Box<dyn st
             &MenuItem::with_id(app, "search", "Search", true, Some("Cmd+2"))?,
             &MenuItem::with_id(app, "library", "Library", true, Some("Cmd+3"))?,
             &MenuItem::with_id(app, "queue", "Queue", true, Some("Cmd+4"))?,
-        ]
+        ],
     )?;
 
-    let menu = Menu::with_items(app, &[
-        &app_menu,
-        &playback_menu,
-        &view_menu,
-    ])?;
+    let menu = Menu::with_items(app, &[&app_menu, &playback_menu, &view_menu])?;
 
     app.set_menu(menu.clone())?;
 
-    app.on_menu_event(|app, event| {
-        match event.id().as_ref() {
-            "preferences" => { let _ = app.emit("menu:preferences", ()); }
-            "play_pause" => { let _ = app.emit("menu:play_pause", ()); }
-            "next_track" => { let _ = app.emit("menu:next_track", ()); }
-            "prev_track" => { let _ = app.emit("menu:prev_track", ()); }
-            "vol_up" => { let _ = app.emit("menu:vol_up", ()); }
-            "vol_down" => { let _ = app.emit("menu:vol_down", ()); }
-            "shuffle" => { let _ = app.emit("menu:shuffle", ()); }
-            "repeat" => { let _ = app.emit("menu:repeat", ()); }
-            "now_playing" => { let _ = app.emit("menu:now_playing", ()); }
-            "search" => { let _ = app.emit("menu:search", ()); }
-            "library" => { let _ = app.emit("menu:library", ()); }
-            "queue" => { let _ = app.emit("menu:queue", ()); }
-            _ => {}
+    app.on_menu_event(|app, event| match event.id().as_ref() {
+        "preferences" => {
+            let _ = app.emit("menu:preferences", ());
         }
+        "play_pause" => {
+            let _ = app.emit("menu:play_pause", ());
+        }
+        "next_track" => {
+            let _ = app.emit("menu:next_track", ());
+        }
+        "prev_track" => {
+            let _ = app.emit("menu:prev_track", ());
+        }
+        "vol_up" => {
+            let _ = app.emit("menu:vol_up", ());
+        }
+        "vol_down" => {
+            let _ = app.emit("menu:vol_down", ());
+        }
+        "shuffle" => {
+            let _ = app.emit("menu:shuffle", ());
+        }
+        "repeat" => {
+            let _ = app.emit("menu:repeat", ());
+        }
+        "now_playing" => {
+            let _ = app.emit("menu:now_playing", ());
+        }
+        "search" => {
+            let _ = app.emit("menu:search", ());
+        }
+        "library" => {
+            let _ = app.emit("menu:library", ());
+        }
+        "queue" => {
+            let _ = app.emit("menu:queue", ());
+        }
+        _ => {}
     });
 
     Ok(menu)

@@ -12,7 +12,7 @@ pub trait Message: Send + 'static {
 }
 
 /// Trait for types that can handle a specific message type.
-/// 
+///
 /// The handler receives a message with an attached reply channel.
 /// It should process the message and send the response through the channel.
 pub trait Handler<M: Message>: Send + 'static {
@@ -78,7 +78,9 @@ where
             tx.send(()).ok();
             self.run().await;
         });
-        ActorRef { _phantom: std::marker::PhantomData }
+        ActorRef {
+            _phantom: std::marker::PhantomData,
+        }
     }
 }
 
@@ -141,13 +143,13 @@ where
 pub enum ActorError {
     #[error("Actor mailbox is closed")]
     MailboxClosed,
-    
+
     #[error("Actor is not initialized")]
     NotInitialized,
-    
+
     #[error("Request timed out")]
     Timeout,
-    
+
     #[error("Actor panicked: {0}")]
     Panicked(String),
 }
@@ -162,11 +164,11 @@ pub trait WithReply<R> {
         let (tx, rx) = oneshot::channel();
         (self.with_reply(tx), rx)
     }
-    
+
     fn with_reply(self, reply: oneshot::Sender<R>) -> Self;
 }
 
-impl<M, R> WithReply<R> for M 
+impl<M, R> WithReply<R> for M
 where
     M: Message<Response = R>,
 {

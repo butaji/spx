@@ -1,9 +1,8 @@
 /**
  * Tauri invoke abstraction.
  *
- * In a real Tauri webview (`__is_spx_shim__` = true) this uses native Tauri IPC.
- * In browser/Vite dev-server mode it talks to the Rust browser backend over HTTP
- * on 127.0.0.1:1422 via POST /invoke/<cmd>.
+ * Uses the real @tauri-apps/api/core invoke in Tauri app mode.
+ * Falls back to HTTP fetch in browser dev-server mode (for the Rust browser backend).
  *
  * Extracted to its own module so it can be vi.mock'd in unit tests.
  */
@@ -12,16 +11,19 @@ export let __spxBackendUrl = '';
 export function setSpxBackendUrl(url: string) { __spxBackendUrl = url; }
 
 export async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  const isTauriShim =
-    typeof window !== 'undefined' &&
-    (window as any).__TAURI_INTERNALS__?.__is_spx_shim__ === true;
-
-  if (isTauriShim) {
+  // Try real Tauri invoke first
+  try {
     const { invoke } = await import('@tauri-apps/api/core');
-    return invoke<T>(cmd, args);
+    return await invoke<T>(cmd, args);
+  } catch (e) {
+    // If Tauri invoke fails (e.g., in browser dev mode), fall back to HTTP
+    const err = e as Error;
+    if (!err.message?.includes('invoke channel') && !err.message?.includes('tauri')) {
+      throw e; // Re-throw if it's not a Tauri-related error
+    }
   }
 
-  // Browser / Vite dev-server
+  // Browser / Vite dev-server - call Rust browser backend
   const base = __spxBackendUrl || '';
   const res = await fetch(`${base}/invoke/${cmd}`, {
     method: 'POST',
@@ -32,5 +34,10 @@ export async function tauriInvoke<T>(cmd: string, args?: Record<string, unknown>
     const text = await res.text().catch(() => `status ${res.status}`);
     throw new Error(text || `Command ${cmd} failed with status ${res.status}`);
   }
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch (e) {
+    throw new Error(`Invalid JSON from ${cmd}: ${text.slice(0, 200)}`);
+  }
 }

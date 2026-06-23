@@ -17,6 +17,7 @@ export async function updateNowPlaying(
   isPlaying: boolean,
   progressMs: number
 ): Promise<void> {
+  console.log("[NowPlaying] updateNowPlaying called:", track?.name, isPlaying);
   try {
     if (!track) {
       // No track playing, clear Now Playing
@@ -33,8 +34,7 @@ export async function updateNowPlaying(
       isPlaying,
     });
   } catch (e) {
-    // Silently fail - Now Playing is a nice-to-have feature
-    console.debug("Failed to update Now Playing:", e);
+    console.error("[NowPlaying] Failed to update:", e);
   }
 }
 
@@ -45,6 +45,6 @@ export async function clearNowPlaying(): Promise<void> {
   try {
     await tauriInvoke("clear_now_playing");
   } catch (e) {
-    console.debug("Failed to clear Now Playing:", e);
+    console.error("[NowPlaying] Failed to clear:", e);
   }
 }

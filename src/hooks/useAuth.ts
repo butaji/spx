@@ -167,6 +167,7 @@ export function useAuth() {
                 refreshSpotifyDevices().catch(e => console.error("[Auth] Device refresh failed:", e)),
                 refreshLocalDevices(true).catch(e => console.error("[Auth] Local device scan failed:", e)),
               ]);
+              startPlaybackPolling();
               startDevicePolling();
             } catch (e: any) {
               console.error("[Auth] OAuth callback failed:", e);

@@ -1,19 +1,19 @@
 #![allow(unexpected_cfgs)]
 
 pub mod actors;
+pub mod cast_raw_auth;
 pub mod commands;
+pub mod cookie_capture;
 pub mod events;
 pub mod fn_utils;
+pub mod librespot_player;
 pub mod mdns;
+pub mod media_keys;
+mod menu;
+pub mod now_playing;
 pub mod oauth_callback;
 pub mod spotify_cast;
-pub mod cast_raw_auth;
-pub mod media_keys;
-pub mod now_playing;
-pub mod librespot_player;
 pub mod web_player_token;
-pub mod cookie_capture;
-mod menu;
 
 #[cfg(target_os = "macos")]
 pub mod macos_permission;
@@ -38,7 +38,10 @@ pub fn run() {
         }
         #[link(name = "ApplicationServices", kind = "framework")]
         extern "C" {
-            fn TransformProcessType(psn: *const ProcessSerialNumber, transform_state: c_int) -> c_int;
+            fn TransformProcessType(
+                psn: *const ProcessSerialNumber,
+                transform_state: c_int,
+            ) -> c_int;
         }
         const K_CURRENT_PROCESS: u32 = 2;
         const K_PROCESS_TRANSFORM_TO_FOREGROUND_APPLICATION: c_int = 1;
@@ -92,13 +95,13 @@ pub fn run() {
         .setup(|app| {
             // Start OAuth callback server on port 1422
             oauth_callback::start_oauth_callback_server(app.handle().clone());
-            
+
             // Build the macOS menu bar.
             #[cfg(target_os = "macos")]
             {
                 let _ = menu::build_menu(app.app_handle());
             }
-            
+
             // Register media key shortcuts (play/pause, next, previous)
             if let Err(e) = media_keys::register_media_keys(app.app_handle()) {
                 tracing::warn!("Failed to register media key shortcuts: {}", e);
@@ -107,7 +110,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-
             commands::get_spotify_client_id,
             commands::check_credentials_status,
             commands::authenticate_librespot_oauth,
@@ -129,6 +131,7 @@ pub fn run() {
             commands::emit_spx_event,
             now_playing::update_now_playing,
             now_playing::clear_now_playing,
+            commands::ping,
         ])
         .on_window_event(|window, event| {
             #[cfg(target_os = "macos")]

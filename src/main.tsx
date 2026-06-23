@@ -3,9 +3,18 @@
 // set up a minimal shim to prevent crashes when Tauri API packages
 // are loaded dynamically.  The shim provides harmless stubs for every
 // property that the Tauri runtime would normally inject.
+//
+// NOTE: In Tauri 2, the real Tauri API is in @tauri-apps/api/core, not in
+// window.__TAURI_INTERNALS__. We always set __is_spx_shim__ to help tauri-invoke.ts
+// decide whether to use the Tauri API (in app) or fetch (in browser dev mode).
 if (!("__TAURI_INTERNALS__" in window)) {
-  console.log("[SPX] Running in browser mode (no Tauri IPC available)");
+  (window as any).__TAURI_INTERNALS__ = {};
+}
+const existingInternals = (window as any).__TAURI_INTERNALS__;
+if (!existingInternals.__is_spx_shim__) {
+  // Only set up browser-mode shim if not already in Tauri mode
   (window as any).__TAURI_INTERNALS__ = {
+    ...existingInternals,
     __is_spx_shim__: true,
     invoke: async () => { console.warn("[SPX] Tauri invoke called in browser mode"); },
     transformCallback: () => 0,

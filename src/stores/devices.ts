@@ -1,5 +1,5 @@
 import { signal, computed } from "@preact/signals";
-import { getAvailableDevices, getMyDevicesDirect, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
+import { getMyDevicesDirect, scanLocalDevices, transferPlayback, getAccessToken, ensureValidToken, tauriInvoke, setVolume, pause } from "../lib/spotify";
 import type { SpotifyDevice, LocalDevice } from "../types";
 import { currentDeviceId } from "../lib/playback";
 import { playbackVolume } from "../stores/playback";

@@ -27,9 +27,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 // Import the actor framework components
-use super::{Actor, ActorRef, Handler, Mailbox, Message};
-use super::state::SharedState;
 use super::mailbox::Sender;
+use super::state::SharedState;
+use super::{Actor, ActorRef, Handler, Mailbox, Message};
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TEST MESSAGES
@@ -134,7 +134,9 @@ struct ComplexHandler {
 
 impl ComplexHandler {
     fn new() -> Self {
-        Self { processed: Vec::new() }
+        Self {
+            processed: Vec::new(),
+        }
     }
 
     fn get_processed_count(&self) -> usize {
@@ -709,9 +711,21 @@ async fn test_complex_message_handling() {
 
     // Send messages with different priorities
     let messages = vec![
-        ComplexMessage { id: 1, data: "low".to_string(), priority: 1 },
-        ComplexMessage { id: 2, data: "medium".to_string(), priority: 5 },
-        ComplexMessage { id: 3, data: "high".to_string(), priority: 10 },
+        ComplexMessage {
+            id: 1,
+            data: "low".to_string(),
+            priority: 1,
+        },
+        ComplexMessage {
+            id: 2,
+            data: "medium".to_string(),
+            priority: 5,
+        },
+        ComplexMessage {
+            id: 3,
+            data: "high".to_string(),
+            priority: 10,
+        },
     ];
 
     for msg in messages {

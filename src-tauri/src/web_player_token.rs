@@ -21,7 +21,8 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36";
-const SECRETS_URL: &str = "https://raw.githubusercontent.com/xyloflake/spot-secrets-go/main/secrets/secretDict.json";
+const SECRETS_URL: &str =
+    "https://raw.githubusercontent.com/xyloflake/spot-secrets-go/main/secrets/secretDict.json";
 /// Refresh token 5 minutes before expiration to avoid edge-case failures.
 const TOKEN_REFRESH_BUFFER_SECS: u64 = 300;
 
@@ -112,7 +113,11 @@ pub async fn get_web_player_token(sp_dc: Option<&str>) -> Result<WebPlayerToken,
     let secrets = fetch_totp_secrets().await?;
 
     let (version, cipher) = latest_cipher(&secrets)?;
-    debug!("Using TOTP version {} with {} cipher digits", version, cipher.len());
+    debug!(
+        "Using TOTP version {} with {} cipher digits",
+        version,
+        cipher.len()
+    );
 
     let code = generate_totp(&cipher)?;
     debug!("Generated TOTP code");
@@ -204,11 +209,13 @@ async fn fetch_totp_secrets() -> Result<HashMap<String, Vec<i64>>, String> {
         .map_err(|e| format!("failed to read secrets response body: {e}"))?;
 
     if !status.is_success() {
-        return Err(format!("TOTP secrets request failed ({}): {}", status, body));
+        return Err(format!(
+            "TOTP secrets request failed ({}): {}",
+            status, body
+        ));
     }
 
-    serde_json::from_str(&body)
-        .map_err(|e| format!("failed to parse TOTP secrets: {e}"))
+    serde_json::from_str(&body).map_err(|e| format!("failed to parse TOTP secrets: {e}"))
 }
 
 /// Pick the highest-version cipher from the secrets dictionary.
@@ -258,8 +265,8 @@ fn generate_totp(cipher: &[i64]) -> Result<String, String> {
         .bytes()
         .map(|b| format!("{:02x}", b))
         .collect::<String>();
-    let hex_bytes = hex::decode(&hex_str)
-        .map_err(|e| format!("failed to decode hex TOTP secret: {e}"))?;
+    let hex_bytes =
+        hex::decode(&hex_str).map_err(|e| format!("failed to decode hex TOTP secret: {e}"))?;
 
     // 4. Base32 encode without padding → this is the TOTP secret.
     let secret = data_encoding::BASE32_NOPAD.encode(&hex_bytes);
@@ -363,7 +370,8 @@ mod tests {
     #[ignore]
     async fn test_real_web_player_token_fetch() {
         let token = get_web_player_token(None).await.expect("fetch token");
-        println!("client_id={} access_token={}... expires_in={}s anonymous={}",
+        println!(
+            "client_id={} access_token={}... expires_in={}s anonymous={}",
             token.client_id,
             &token.access_token[..40],
             token.expires_in_secs(),

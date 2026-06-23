@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 /// Trait for actor state that can be read and written atomically.
 pub trait ActorState: Send + Sync {
     type Snapshot;
-    
+
     /// Create a snapshot of the current state for monitoring/debugging.
     fn snapshot(&self) -> Self::Snapshot;
 }
@@ -46,7 +46,7 @@ impl<T> SharedState<T> {
 #[allow(dead_code)]
 impl<T: Clone> SharedState<T> {
     /// Get a cloned copy of the current state (non-await).
-    pub fn get_cloned(&self) -> T 
+    pub fn get_cloned(&self) -> T
     where
         T: Clone,
     {

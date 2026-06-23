@@ -36,7 +36,6 @@ import { useAuth } from "./hooks/useAuth";
 import { usePlayback } from "./hooks/usePlayback";
 import { useDevices } from "./hooks/useDevices";
 import { useKeyboard } from "./hooks/useKeyboard";
-import { listen } from "@tauri-apps/api/event";
 
 import type { View, TrackInfo } from "./types";
 export type { View, TrackInfo } from "./types";
@@ -204,33 +203,6 @@ function App() {
       navigator.mediaSession.playbackState = isPlaying.value ? 'playing' : 'paused';
     }
   }, [handlePlayPause, handlePrev, handleNext, playbackTrack.value?.id, isPlaying.value]);
-
-  // Tauri media-key events from the Rust backend (global shortcuts)
-  useEffect(() => {
-    if (typeof window === 'undefined' || !(window as any).__TAURI_INTERNALS__) return;
-
-    let unlisten: (() => void) | undefined;
-    const setup = async () => {
-      unlisten = await listen<{ action: string }>('media-key', (event) => {
-        switch (event.payload.action) {
-          case 'play_pause':
-            handlePlayPause();
-            break;
-          case 'next':
-            handleNext();
-            break;
-          case 'previous':
-            handlePrev();
-            break;
-        }
-      });
-    };
-    setup().catch(console.error);
-
-    return () => {
-      unlisten?.();
-    };
-  }, [handlePlayPause, handleNext, handlePrev]);
 
   // Show loading screen while restoring session
   if (isRestoring.value) {

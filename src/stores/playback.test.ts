@@ -14,8 +14,14 @@ vi.mock('../lib/playerController', () => ({
   controllerPause: vi.fn(),
 }));
 
+vi.mock('../lib/nowPlaying', () => ({
+  updateNowPlaying: vi.fn(),
+  clearNowPlaying: vi.fn(),
+}));
+
 import { getPlaybackState, checkSavedTracks } from '../lib/spotify';
 import { controllerPlay, controllerPause } from '../lib/playerController';
+import { updateNowPlaying, clearNowPlaying } from '../lib/nowPlaying';
 import {
   playbackTrack,
   playbackVolume,
@@ -566,6 +572,82 @@ describe('playback store', () => {
       (checkSavedTracks as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Network error'));
       await refreshLikedStatus('track-1');
       expect(likedTrack.value).toBe(false);
+    });
+  });
+
+  // ─── Now Playing Integration ─────────────────────────────────────────────────
+
+  describe('Now Playing integration', () => {
+    it('calls updateNowPlaying when refreshPlayback succeeds with a track', async () => {
+      const mockTrack = {
+        id: 'track-1',
+        name: 'Test Track',
+        uri: 'spotify:track:1',
+        duration_ms: 180000,
+        artists: [{ id: 'a1', name: 'Artist' }],
+        album: { id: 'al1', name: 'Album', images: [{ url: 'img.jpg' }] },
+      };
+
+      (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue({
+        item: mockTrack,
+        progress_ms: 5000,
+        is_playing: true,
+        shuffle_state: false,
+        repeat_state: 'off',
+        device: { volume_percent: 100 },
+      });
+
+      await refreshPlayback();
+
+      expect(updateNowPlaying).toHaveBeenCalledWith(
+        mockTrack,
+        true,
+        5000
+      );
+    });
+
+    it('calls updateNowPlaying with null when refreshPlayback returns no track', async () => {
+      (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue({
+        item: null,
+        progress_ms: 0,
+        is_playing: false,
+        shuffle_state: false,
+        repeat_state: 'off',
+        device: { volume_percent: 100 },
+      });
+
+      await refreshPlayback();
+
+      // updateNowPlaying is called with null to signal "clear now playing"
+      expect(updateNowPlaying).toHaveBeenCalledWith(null, false, 0);
+    });
+
+    it('calls updateNowPlaying with false when playback is paused', async () => {
+      const mockTrack = {
+        id: 'track-1',
+        name: 'Test Track',
+        uri: 'spotify:track:1',
+        duration_ms: 180000,
+        artists: [{ id: 'a1', name: 'Artist' }],
+        album: { id: 'al1', name: 'Album', images: [{ url: 'img.jpg' }] },
+      };
+
+      (getPlaybackState as ReturnType<typeof vi.fn>).mockResolvedValue({
+        item: mockTrack,
+        progress_ms: 10000,
+        is_playing: false, // Paused
+        shuffle_state: false,
+        repeat_state: 'off',
+        device: { volume_percent: 100 },
+      });
+
+      await refreshPlayback();
+
+      expect(updateNowPlaying).toHaveBeenCalledWith(
+        mockTrack,
+        false,
+        10000
+      );
     });
   });
 });

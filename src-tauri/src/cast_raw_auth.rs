@@ -1,12 +1,12 @@
 use rust_cast::message_manager::{CastMessage, CastMessagePayload, MessageManager};
-use rustls::{ClientConfig, ClientConnection};
 use rustls::pki_types::ServerName;
+use rustls::StreamOwned;
+use rustls::{ClientConfig, ClientConnection};
 use serde_json::json;
+use std::net::TcpStream;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use std::net::TcpStream;
-use rustls::StreamOwned;
-use tracing::{info, debug};
+use tracing::{debug, info};
 
 // NOTE: This verifier intentionally disables TLS certificate validation and is
 // used ONLY for connecting to local Google Cast devices on the LAN. Cast
@@ -57,10 +57,7 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
 }
 
 /// Authenticate a Cast device using multiple protocol approaches
-pub fn authenticate_cast_device_raw(
-    ip: &str,
-    token: &str,
-) -> Result<String, String> {
+pub fn authenticate_cast_device_raw(ip: &str, token: &str) -> Result<String, String> {
     info!("Starting raw Cast auth for {}", ip);
 
     // Install crypto provider
@@ -74,13 +71,12 @@ pub fn authenticate_cast_device_raw(
     let server_name = ServerName::try_from(ip)
         .map_err(|e| format!("Invalid IP: {}", e))?
         .to_owned();
-    
+
     let conn = ClientConnection::new(Arc::new(config), server_name)
         .map_err(|e| format!("TLS config error: {}", e))?;
-    
-    let stream = TcpStream::connect((ip, 8009))
-        .map_err(|e| format!("TCP connect error: {}", e))?;
-    
+
+    let stream = TcpStream::connect((ip, 8009)).map_err(|e| format!("TCP connect error: {}", e))?;
+
     let tls_stream = StreamOwned::new(conn, stream);
     let mm = MessageManager::new(tls_stream);
     let sender_id = "sender-0";
@@ -88,9 +84,9 @@ pub fn authenticate_cast_device_raw(
     // 1. CONNECT to receiver-0
     info!("Sending CONNECT to receiver-0");
     send_json(
-        &mm, 
-        "urn:x-cast:com.google.cast.tp.connection", 
-        sender_id, 
+        &mm,
+        "urn:x-cast:com.google.cast.tp.connection",
+        sender_id,
         "receiver-0",
         json!({
             "type": "CONNECT",
@@ -102,30 +98,30 @@ pub fn authenticate_cast_device_raw(
                 "platform": 4,
                 "connectionType": 1
             }
-        })
+        }),
     )?;
 
     // 2. Send initial PING
     send_json(
-        &mm, 
-        "urn:x-cast:com.google.cast.tp.heartbeat", 
-        sender_id, 
+        &mm,
+        "urn:x-cast:com.google.cast.tp.heartbeat",
+        sender_id,
         "receiver-0",
-        json!({"type": "PING"})
+        json!({"type": "PING"}),
     )?;
 
     // 3. LAUNCH Spotify
     info!("Launching Spotify app CC32E753");
     send_json(
-        &mm, 
-        "urn:x-cast:com.google.cast.receiver", 
-        sender_id, 
+        &mm,
+        "urn:x-cast:com.google.cast.receiver",
+        sender_id,
         "receiver-0",
         json!({
             "type": "LAUNCH",
             "appId": "CC32E753",
             "requestId": 1
-        })
+        }),
     )?;
 
     // 4. Wait for RECEIVER_STATUS with transportId
@@ -138,11 +134,14 @@ pub fn authenticate_cast_device_raw(
                 debug!("Received: {}", payload);
                 if payload.contains("RECEIVER_STATUS") {
                     if let Ok(status) = serde_json::from_str::<serde_json::Value>(payload) {
-                        if let Some(apps) = status.get("status").and_then(|s| s.get("applications")) {
+                        if let Some(apps) = status.get("status").and_then(|s| s.get("applications"))
+                        {
                             if let Some(app_array) = apps.as_array() {
                                 for app in app_array {
-                                    if app.get("appId").and_then(|a| a.as_str()) == Some("CC32E753") {
-                                        transport_id = app.get("transportId")
+                                    if app.get("appId").and_then(|a| a.as_str()) == Some("CC32E753")
+                                    {
+                                        transport_id = app
+                                            .get("transportId")
                                             .and_then(|t| t.as_str())
                                             .unwrap_or("")
                                             .to_string();
@@ -167,9 +166,9 @@ pub fn authenticate_cast_device_raw(
     // 5. CONNECT to app transport
     info!("Sending CONNECT to transport {}", transport_id);
     send_json(
-        &mm, 
-        "urn:x-cast:com.google.cast.tp.connection", 
-        sender_id, 
+        &mm,
+        "urn:x-cast:com.google.cast.tp.connection",
+        sender_id,
         &transport_id,
         json!({
             "type": "CONNECT",
@@ -181,7 +180,7 @@ pub fn authenticate_cast_device_raw(
                 "platform": 4,
                 "connectionType": 1
             }
-        })
+        }),
     )?;
 
     // 6. Try auth approaches
@@ -190,9 +189,9 @@ pub fn authenticate_cast_device_raw(
     // Approach 1: Send getInfo with payload wrapper
     info!("Approach 1: getInfo with payload wrapper");
     send_json(
-        &mm, 
-        "urn:x-cast:com.spotify.chromecast.secure.v1", 
-        sender_id, 
+        &mm,
+        "urn:x-cast:com.spotify.chromecast.secure.v1",
+        sender_id,
         &transport_id,
         json!({
             "type": "getInfo",
@@ -201,7 +200,7 @@ pub fn authenticate_cast_device_raw(
                 "deviceID": "spx-test-123",
                 "deviceAPI_isGroup": false,
             }
-        })
+        }),
     )?;
 
     let start = Instant::now();
@@ -213,8 +212,7 @@ pub fn authenticate_cast_device_raw(
                     if payload.contains("getInfoResponse") || payload.contains("status") {
                         info!("Got response: {}", payload);
                         // Send addUser
-                        return send_add_user(&mm, sender_id, &transport_id, token
-                        );
+                        return send_add_user(&mm, sender_id, &transport_id, token);
                     }
                 }
             }
@@ -224,9 +222,9 @@ pub fn authenticate_cast_device_raw(
     // Approach 2: Send flat getInfo
     info!("Approach 2: getInfo flat format");
     send_json(
-        &mm, 
-        "urn:x-cast:com.spotify.chromecast.secure.v1", 
-        sender_id, 
+        &mm,
+        "urn:x-cast:com.spotify.chromecast.secure.v1",
+        sender_id,
         &transport_id,
         json!({
             "type": "getInfo",
@@ -234,7 +232,7 @@ pub fn authenticate_cast_device_raw(
             "deviceID": "spx-test-123",
             "version": "2.1.0",
             "deviceAPI_isGroup": false,
-        })
+        }),
     )?;
 
     let start = Instant::now();
@@ -245,8 +243,7 @@ pub fn authenticate_cast_device_raw(
                     debug!("Spotify message: {}", payload);
                     if payload.contains("getInfoResponse") || payload.contains("status") {
                         info!("Got response: {}", payload);
-                        return send_add_user(&mm, sender_id, &transport_id, token
-                        );
+                        return send_add_user(&mm, sender_id, &transport_id, token);
                     }
                 }
             }
@@ -255,8 +252,7 @@ pub fn authenticate_cast_device_raw(
 
     // Approach 3: Send addUser directly
     info!("Approach 3: addUser directly");
-    send_add_user(&mm, sender_id, &transport_id, token
-    )
+    send_add_user(&mm, sender_id, &transport_id, token)
 }
 
 fn send_add_user(
@@ -267,9 +263,9 @@ fn send_add_user(
 ) -> Result<String, String> {
     info!("Sending addUser with token");
     send_json(
-        mm, 
-        "urn:x-cast:com.spotify.chromecast.secure.v1", 
-        sender_id, 
+        mm,
+        "urn:x-cast:com.spotify.chromecast.secure.v1",
+        sender_id,
         transport_id,
         json!({
             "type": "addUser",
@@ -277,7 +273,7 @@ fn send_add_user(
                 "blob": token,
                 "tokenType": "accesstoken",
             }
-        })
+        }),
     )?;
 
     // Wait for confirmation
@@ -288,7 +284,10 @@ fn send_add_user(
             if let CastMessagePayload::String(payload) = &msg.payload {
                 if msg.namespace.contains("spotify") {
                     info!("Auth response: {}", payload);
-                    if payload.contains("ok") || payload.contains("success") || payload.contains("status") {
+                    if payload.contains("ok")
+                        || payload.contains("success")
+                        || payload.contains("status")
+                    {
                         return Ok("Device authenticated successfully".to_string());
                     }
                     if payload.contains("error") {
@@ -305,16 +304,17 @@ fn send_add_user(
 }
 
 fn send_json(
-    mm: &MessageManager<StreamOwned<ClientConnection, TcpStream>>, 
-    namespace: &str, 
-    source: &str, 
-    dest: &str, 
-    payload: serde_json::Value
+    mm: &MessageManager<StreamOwned<ClientConnection, TcpStream>>,
+    namespace: &str,
+    source: &str,
+    dest: &str,
+    payload: serde_json::Value,
 ) -> Result<(), String> {
     mm.send(CastMessage {
         namespace: namespace.to_string(),
         source: source.to_string(),
         destination: dest.to_string(),
         payload: CastMessagePayload::String(payload.to_string()),
-    }).map_err(|e| format!("Send error: {}", e))
+    })
+    .map_err(|e| format!("Send error: {}", e))
 }

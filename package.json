@@ -23,7 +23,8 @@
     "@tauri-apps/plugin-shell": "^2.0.0",
     "@tauri-apps/plugin-store": "^2.4.3",
     "preact": "^10.24.0",
-    "spotify-web-api-js": "^1.5.2"
+    "spotify-web-api-js": "^1.5.2",
+    "tauri-plugin-media-api": "^0.1.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.1",

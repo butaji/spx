@@ -38,7 +38,9 @@ impl MdnsCache {
     }
 
     fn devices_response(&self) -> Response {
-        json_response(serde_json::json!({ "devices": serde_json::from_str::<serde_json::Value>(&self.devices_json).unwrap_or(serde_json::Value::Array(vec![])) }))
+        json_response(
+            serde_json::json!({ "devices": serde_json::from_str::<serde_json::Value>(&self.devices_json).unwrap_or(serde_json::Value::Array(vec![])) }),
+        )
     }
 }
 
@@ -64,8 +66,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .ok()
         .and_then(|p| p.parse().ok())
         .unwrap_or(DEFAULT_PORT);
-    let frontend_url = env::var("SPX_FRONTEND_URL")
-        .unwrap_or_else(|_| DEFAULT_FRONTEND_URL.to_string());
+    let frontend_url =
+        env::var("SPX_FRONTEND_URL").unwrap_or_else(|_| DEFAULT_FRONTEND_URL.to_string());
 
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(run_server(port, frontend_url))
@@ -87,7 +89,10 @@ async fn run_server(port: u16, frontend_url: String) -> Result<(), Box<dyn std::
         let state = Arc::clone(&state);
         tokio::spawn(async move {
             if let Err(e) = handle_connection(stream, peer, frontend, state).await {
-                warn!("[spx-browser-backend] connection error from {}: {}", peer, e);
+                warn!(
+                    "[spx-browser-backend] connection error from {}: {}",
+                    peer, e
+                );
             }
         });
     }
@@ -104,7 +109,13 @@ async fn handle_connection(
         None => return Ok(()),
     };
 
-    info!("[spx-browser-backend] {} {}{} from {}", method, path, if query.is_empty() { "" } else { "?" }, peer);
+    info!(
+        "[spx-browser-backend] {} {}{} from {}",
+        method,
+        path,
+        if query.is_empty() { "" } else { "?" },
+        peer
+    );
     let response = dispatch(&method, &path, &query, body, &frontend_url, state).await;
     send_response(&mut stream, response).await?;
     Ok(())
@@ -165,7 +176,10 @@ async fn read_request(
             let (method, target) = first.split_once(' ')?;
             let target = target.split_once(' ').map(|(t, _)| t).unwrap_or(target);
             let (path, query) = target.split_once('?').unwrap_or((target, ""));
-            info!("[parse] first={:?} target={:?} path={:?} query={:?}", first, target, path, query);
+            info!(
+                "[parse] first={:?} target={:?} path={:?} query={:?}",
+                first, target, path, query
+            );
 
             return Some((
                 method.to_string(),
@@ -183,6 +197,9 @@ async fn read_request(
 }
 
 fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    if needle.is_empty() {
+        return Some(0);
+    }
     haystack
         .windows(needle.len())
         .position(|window| window == needle)
@@ -335,7 +352,9 @@ async fn handle_save_verifier(body: Vec<u8>) -> Response {
     let mut verifier = String::new();
     for pair in body_str.split('&') {
         if let Some((k, v)) = pair.split_once('=') {
-            let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+            let v_dec = urlencoding::decode(v)
+                .unwrap_or_else(|_| v.into())
+                .to_string();
             match k {
                 "state" => state = v_dec,
                 "verifier" => verifier = v_dec,
@@ -344,7 +363,9 @@ async fn handle_save_verifier(body: Vec<u8>) -> Response {
         }
     }
     if state.is_empty() || verifier.is_empty() {
-        return json_response(serde_json::json!({"ok": false, "error": "missing state or verifier"}));
+        return json_response(
+            serde_json::json!({"ok": false, "error": "missing state or verifier"}),
+        );
     }
     match save_verifier(&state, &verifier) {
         Ok(_) => json_response(serde_json::json!({"ok": true})),
@@ -359,7 +380,12 @@ async fn handle_callback(query: &str, _frontend_url: &str) -> Response {
             let mut parts = pair.splitn(2, '=');
             let k = parts.next()?;
             let v = parts.next().unwrap_or("");
-            Some((k.to_string(), urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string()))
+            Some((
+                k.to_string(),
+                urlencoding::decode(v)
+                    .unwrap_or_else(|_| v.into())
+                    .to_string(),
+            ))
         })
         .collect();
 
@@ -372,7 +398,12 @@ async fn handle_callback(query: &str, _frontend_url: &str) -> Response {
     // Read the verifier we saved earlier
     let (saved_state, verifier) = match read_verifier() {
         Some((s, v)) => (s, v),
-        None => return text_response(500, "No saved verifier found — start auth from the SPX app".into()),
+        None => {
+            return text_response(
+                500,
+                "No saved verifier found — start auth from the SPX app".into(),
+            )
+        }
     };
 
     // Validate state (CSRF protection)
@@ -387,7 +418,8 @@ async fn handle_callback(query: &str, _frontend_url: &str) -> Response {
         .unwrap_or_else(|_| reqwest::Client::new());
     let code_owned = code.to_string();
     let verifier_owned = verifier.to_string();
-    let client_id = env::var("SPOTIFY_CLIENT_ID").unwrap_or_else(|_| "e1c9ee463a394fee84e031daa1665db2".to_string());
+    let client_id = env::var("SPOTIFY_CLIENT_ID")
+        .unwrap_or_else(|_| "e1c9ee463a394fee84e031daa1665db2".to_string());
     let client_secret = env::var("SPOTIFY_CLIENT_SECRET").ok();
     let redirect_uri = "http://127.0.0.1:1422/callback";
     let body = format!(
@@ -398,16 +430,20 @@ async fn handle_callback(query: &str, _frontend_url: &str) -> Response {
     );
 
     let token_resp = if let Some(secret) = client_secret {
-        client.post("https://accounts.spotify.com/api/token")
+        client
+            .post("https://accounts.spotify.com/api/token")
             .header("Content-Type", "application/x-www-form-urlencoded")
             .basic_auth(&client_id, Some(secret))
             .body(body)
-            .send().await
+            .send()
+            .await
     } else {
-        client.post("https://accounts.spotify.com/api/token")
+        client
+            .post("https://accounts.spotify.com/api/token")
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
-            .send().await
+            .send()
+            .await
     };
 
     let token_json: serde_json::Value = match token_resp {
@@ -419,7 +455,10 @@ async fn handle_callback(query: &str, _frontend_url: &str) -> Response {
     };
 
     if token_json.get("error").is_some() {
-        let err = token_json["error_description"].as_str().or(token_json["error"].as_str()).unwrap_or("unknown");
+        let err = token_json["error_description"]
+            .as_str()
+            .or(token_json["error"].as_str())
+            .unwrap_or("unknown");
         return text_response(400, format!("Spotify error: {}", err));
     }
 
@@ -435,7 +474,9 @@ async fn handle_callback(query: &str, _frontend_url: &str) -> Response {
     consume_verifier();
 
     // Return JSON with success — no redirect needed since we're not in a browser
-    json_response(serde_json::json!({"ok": true, "message": "Token saved. You can close this tab."}))
+    json_response(
+        serde_json::json!({"ok": true, "message": "Token saved. You can close this tab."}),
+    )
 }
 
 async fn handle_local_devices(state: Arc<RwLock<BackendState>>) -> Response {
@@ -444,7 +485,10 @@ async fn handle_local_devices(state: Arc<RwLock<BackendState>>) -> Response {
         let cache = state.read().await;
         if let Some(cached) = &cache.mdns_cache {
             if cached.is_fresh() {
-                info!("[local-devices] Returning cached scan ({}s old)", cached.cached_at.elapsed().as_secs());
+                info!(
+                    "[local-devices] Returning cached scan ({}s old)",
+                    cached.cached_at.elapsed().as_secs()
+                );
                 return cached.devices_response();
             }
         }
@@ -563,12 +607,9 @@ async fn invoke_command(cmd: &str, args: serde_json::Value) -> Result<serde_json
         "authenticate_cast_device_raw_command" => {
             let ip = require_str!(args, "ip");
             let access_token = require_str!(args, "accessToken");
-            let result = spx_lib::commands::authenticate_cast_device_raw_common(
-                None,
-                ip,
-                access_token,
-            )
-            .await?;
+            let result =
+                spx_lib::commands::authenticate_cast_device_raw_common(None, ip, access_token)
+                    .await?;
             Ok(serde_json::Value::String(result))
         }
 
@@ -584,12 +625,9 @@ async fn invoke_command(cmd: &str, args: serde_json::Value) -> Result<serde_json
                 .get("volumePercent")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(50) as u16;
-            let result = spx_lib::commands::start_local_connect_device(
-                access_token,
-                name,
-                volume_percent,
-            )
-            .await?;
+            let result =
+                spx_lib::commands::start_local_connect_device(access_token, name, volume_percent)
+                    .await?;
             Ok(serde_json::Value::String(result))
         }
 
@@ -622,14 +660,31 @@ async fn invoke_command(cmd: &str, args: serde_json::Value) -> Result<serde_json
 
         // Now Playing macOS integration (no-op on non-macOS)
         "update_now_playing" => {
-            let title = args.get("title").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let artist = args.get("artist").and_then(|v| v.as_str()).map(|s| s.to_string());
-            let album = args.get("album").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let title = args
+                .get("title")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let artist = args
+                .get("artist")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let album = args
+                .get("album")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let duration_ms = args.get("durationMs").and_then(|v| v.as_i64());
             let elapsed_ms = args.get("elapsedMs").and_then(|v| v.as_i64());
-            let is_playing = args.get("isPlaying").and_then(|v| v.as_bool()).unwrap_or(false);
+            let is_playing = args
+                .get("isPlaying")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             spx_lib::now_playing::update_now_playing(
-                title, artist, album, duration_ms, elapsed_ms, is_playing,
+                title,
+                artist,
+                album,
+                duration_ms,
+                elapsed_ms,
+                is_playing,
             );
             Ok(serde_json::Value::Null)
         }
@@ -663,30 +718,42 @@ async fn invoke_command(cmd: &str, args: serde_json::Value) -> Result<serde_json
         }
 
         "get_web_player_token_command" => {
-            let sp_dc = args.get("sp_dc").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let sp_dc = args
+                .get("sp_dc")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let result = spx_lib::commands::get_web_player_token_command(sp_dc).await?;
             serde_json::to_value(result).map_err(|e| e.to_string())
         }
 
         // Event bus helpers (no-op in browser mode, but kept for compatibility)
         "get_event_history" => {
-            let limit = args.get("limit").and_then(|v| v.as_u64()).map(|n| n as usize);
+            let limit = args
+                .get("limit")
+                .and_then(|v| v.as_u64())
+                .map(|n| n as usize);
             let result = spx_lib::commands::get_event_history(limit).await?;
             serde_json::to_value(result).map_err(|e| e.to_string())
         }
 
         "emit_spx_event" => {
-            let event = args.get("event").cloned().unwrap_or(serde_json::Value::Null);
+            let event = args
+                .get("event")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
             spx_lib::commands::emit_spx_event(event).await?;
             Ok(serde_json::Value::Null)
         }
 
         // Cookie capture is a desktop-only Tauri feature.
-        "start_spotify_cookie_capture" | "clear_spotify_sp_dc" | "get_stored_sp_dc" => Err(
-            "Cookie capture is only available in the desktop app".to_string(),
-        ),
+        "start_spotify_cookie_capture" | "clear_spotify_sp_dc" | "get_stored_sp_dc" => {
+            Err("Cookie capture is only available in the desktop app".to_string())
+        }
 
-        _ => Err(format!("Command '{}' is not exposed by the browser backend", cmd)),
+        _ => Err(format!(
+            "Command '{}' is not exposed by the browser backend",
+            cmd
+        )),
     }
 }
 
@@ -758,7 +825,9 @@ mod http_parser_tests {
         let mut verifier = String::new();
         for pair in body_str.split('&') {
             if let Some((k, v)) = pair.split_once('=') {
-                let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+                let v_dec = urlencoding::decode(v)
+                    .unwrap_or_else(|_| v.into())
+                    .to_string();
                 match k {
                     "state" => state = v_dec,
                     "verifier" => verifier = v_dec,
@@ -778,7 +847,9 @@ mod http_parser_tests {
         let mut verifier = String::new();
         for pair in body_str.split('&') {
             if let Some((k, v)) = pair.split_once('=') {
-                let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+                let v_dec = urlencoding::decode(v)
+                    .unwrap_or_else(|_| v.into())
+                    .to_string();
                 match k {
                     "state" => state = v_dec,
                     "verifier" => verifier = v_dec,
@@ -798,7 +869,9 @@ mod http_parser_tests {
         let mut verifier = String::new();
         for pair in body_str.split('&') {
             if let Some((k, v)) = pair.split_once('=') {
-                let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+                let v_dec = urlencoding::decode(v)
+                    .unwrap_or_else(|_| v.into())
+                    .to_string();
                 match k {
                     "state" => state = v_dec,
                     "verifier" => verifier = v_dec,
@@ -819,7 +892,9 @@ mod http_parser_tests {
         let mut extras = Vec::new();
         for pair in body_str.split('&') {
             if let Some((k, v)) = pair.split_once('=') {
-                let v_dec = urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string();
+                let v_dec = urlencoding::decode(v)
+                    .unwrap_or_else(|_| v.into())
+                    .to_string();
                 match k {
                     "state" => state = v_dec,
                     "verifier" => verifier = v_dec,
@@ -844,7 +919,12 @@ mod http_parser_tests {
                 let mut parts = pair.splitn(2, '=');
                 let k = parts.next()?;
                 let v = parts.next().unwrap_or("");
-                Some((k.to_string(), urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string()))
+                Some((
+                    k.to_string(),
+                    urlencoding::decode(v)
+                        .unwrap_or_else(|_| v.into())
+                        .to_string(),
+                ))
             })
             .collect();
         assert_eq!(params.get("code"), Some(&"abc123".to_string()));
@@ -861,7 +941,12 @@ mod http_parser_tests {
                 let mut parts = pair.splitn(2, '=');
                 let k = parts.next()?;
                 let v = parts.next().unwrap_or("");
-                Some((k.to_string(), urlencoding::decode(v).unwrap_or_else(|_| v.into()).to_string()))
+                Some((
+                    k.to_string(),
+                    urlencoding::decode(v)
+                        .unwrap_or_else(|_| v.into())
+                        .to_string(),
+                ))
             })
             .collect();
         assert_eq!(params.get("code"), Some(&"abc=123&xyz".to_string()));
@@ -926,8 +1011,8 @@ mod http_parser_tests {
             cached_at: Instant::now(),
         };
         let resp = cache.devices_response();
-        let body: serde_json::Value =
-            serde_json::from_slice(&resp.body).expect("should be valid JSON (fallback to empty array)");
+        let body: serde_json::Value = serde_json::from_slice(&resp.body)
+            .expect("should be valid JSON (fallback to empty array)");
         assert!(body["devices"].is_array());
         assert_eq!(body["devices"].as_array().unwrap().len(), 0);
     }

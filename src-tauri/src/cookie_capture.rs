@@ -37,7 +37,11 @@ pub async fn start_cookie_capture<R: tauri::Runtime>(
     let window = tauri::WebviewWindowBuilder::new(
         &app,
         WINDOW_LABEL,
-        tauri::WebviewUrl::External(SPOTIFY_LOGIN_URL.parse().map_err(|e| format!("invalid url: {e}"))?),
+        tauri::WebviewUrl::External(
+            SPOTIFY_LOGIN_URL
+                .parse()
+                .map_err(|e| format!("invalid url: {e}"))?,
+        ),
     )
     .title("Spotify Login — Cast support")
     .inner_size(800.0, 700.0)
@@ -56,7 +60,10 @@ pub async fn start_cookie_capture<R: tauri::Runtime>(
 
 /// Poll the capture window's cookies until `sp_dc` is found or the window is
 /// closed.
-async fn poll_for_sp_dc<R: tauri::Runtime>(app: tauri::AppHandle<R>, window: tauri::WebviewWindow<R>) {
+async fn poll_for_sp_dc<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    window: tauri::WebviewWindow<R>,
+) {
     let mut found = false;
     for attempt in 1..=150 {
         // 150 * 2s = 5 minutes max.
@@ -100,7 +107,10 @@ async fn poll_for_sp_dc<R: tauri::Runtime>(app: tauri::AppHandle<R>, window: tau
 }
 
 /// Save `sp_dc` to the Tauri store.
-async fn save_sp_dc<R: tauri::Runtime>(app: &tauri::AppHandle<R>, sp_dc: &str) -> Result<(), String> {
+async fn save_sp_dc<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    sp_dc: &str,
+) -> Result<(), String> {
     let store = app
         .store("store.json")
         .map_err(|e| format!("failed to open store: {e}"))?;
@@ -123,7 +133,9 @@ pub async fn load_sp_dc<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<
 }
 
 /// Check whether a non-empty `sp_dc` cookie is stored.
-pub async fn has_stored_sp_dc<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<bool, String> {
+pub async fn has_stored_sp_dc<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+) -> Result<bool, String> {
     let store = app
         .store("store.json")
         .map_err(|e| format!("failed to open store: {e}"))?;

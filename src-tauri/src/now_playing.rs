@@ -77,7 +77,9 @@ impl NowPlayingCenter {
         } else {
             warn!("MPNowPlayingInfoCenter is not available");
         }
-        Self { initialized: available }
+        Self {
+            initialized: available,
+        }
     }
 
     /// Check if Now Playing is available
@@ -88,19 +90,21 @@ impl NowPlayingCenter {
     /// Update the Now Playing info with track details
     pub fn update(&self, info: &TrackInfo) {
         if !self.initialized {
-            debug!("Now Playing not available, skipping update");
+            tracing::warn!("[NowPlaying] Not initialized, skipping update");
             return;
         }
+
+        tracing::info!("[NowPlaying] Updating with: {:?}", info.title);
 
         unsafe {
             // Get the default Now Playing Info Center
             let center_class = Class::get("MPNowPlayingInfoCenter").unwrap();
             let center: *mut Object = msg_send![center_class, defaultCenter];
-            
+
             // Build the info dictionary using NSMutableDictionary
             let dict_class = Class::get("NSMutableDictionary").unwrap();
             let dict: *mut Object = msg_send![dict_class, dictionary];
-            
+
             // Set title
             if let Some(title) = &info.title {
                 let key = nsstring("MPMediaItemPropertyTitle");
@@ -173,26 +177,26 @@ impl NowPlayingCenter {
         unsafe {
             let center_class = Class::get("MPNowPlayingInfoCenter").unwrap();
             let center: *mut Object = msg_send![center_class, defaultCenter];
-            
+
             // Get current info
             let current_info: Option<*mut Object> = msg_send![center, nowPlayingInfo];
-            
+
             if let Some(info) = current_info {
                 // Create mutable copy
                 let dict: *mut Object = msg_send![info, mutableCopy];
-                
+
                 // Update elapsed time
                 let elapsed_secs = elapsed_ms as f64 / 1000.0;
                 let key = nsstring("MPNowPlayingInfoPropertyElapsedPlaybackTime");
                 let value = nsnumber_f64(elapsed_secs);
                 let _: () = msg_send![dict, setObject: value forKey: key];
-                
+
                 // Update rate
                 let rate = if is_playing { 1.0 } else { 0.0 };
                 let key = nsstring("MPNowPlayingInfoPropertyPlaybackRate");
                 let value = nsnumber_f64(rate);
                 let _: () = msg_send![dict, setObject: value forKey: key];
-                
+
                 // Set back
                 let _: () = msg_send![center, setNowPlayingInfo: dict];
             }
@@ -226,6 +230,7 @@ pub fn update_now_playing(
     elapsed_ms: Option<i64>,
     is_playing: bool,
 ) {
+    tracing::info!("[NowPlaying] update_now_playing called: title={:?}, is_playing={}", title, is_playing);
     let info = TrackInfo {
         title,
         artist,
@@ -235,11 +240,12 @@ pub fn update_now_playing(
         is_playing,
         artwork_data: None,
     };
-    
+
     get_now_playing().update(&info);
 }
 
 #[tauri::command]
 pub fn clear_now_playing() {
+    tracing::info!("[NowPlaying] clear_now_playing called");
     get_now_playing().clear();
 }

@@ -2,15 +2,26 @@
   "$schema": "../gen/schemas/capabilities-schema.json",
   "identifier": "default",
   "description": "Default capabilities",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     {
       "identifier": "shell:allow-open",
       "allow": [
-        { "scheme": "https", "domain": "accounts.spotify.com" },
-        { "scheme": "https", "domain": "open.spotify.com" },
-        { "scheme": "https", "domain": "developer.spotify.com" }
+        {
+          "scheme": "https",
+          "domain": "accounts.spotify.com"
+        },
+        {
+          "scheme": "https",
+          "domain": "open.spotify.com"
+        },
+        {
+          "scheme": "https",
+          "domain": "developer.spotify.com"
+        }
       ]
     },
     "core:window:allow-start-dragging",

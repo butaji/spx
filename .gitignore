@@ -70,3 +70,6 @@ playwright-report/
 playwright/.cache/
 *.playwright.png
 *.playwright.jpeg
+
+# Published .app bundles
+publish/

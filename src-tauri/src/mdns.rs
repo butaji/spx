@@ -107,10 +107,22 @@ fn parse_friendly_name(line: &str) -> Option<String> {
     while let Some(c) = chars.next() {
         if c == '\\' {
             match chars.peek() {
-                Some(&' ') => { name.push(' '); chars.next(); }
-                Some(&'_') => { name.push('_'); chars.next(); }
-                Some(&'.') => { name.push('.'); chars.next(); }
-                Some(&'\\') => { name.push('\\'); chars.next(); }
+                Some(&' ') => {
+                    name.push(' ');
+                    chars.next();
+                }
+                Some(&'_') => {
+                    name.push('_');
+                    chars.next();
+                }
+                Some(&'.') => {
+                    name.push('.');
+                    chars.next();
+                }
+                Some(&'\\') => {
+                    name.push('\\');
+                    chars.next();
+                }
                 Some(d) if d.is_ascii_digit() => {
                     let mut octal = String::new();
                     let mut count = 0;
@@ -130,8 +142,14 @@ fn parse_friendly_name(line: &str) -> Option<String> {
                         name.push_str(&octal);
                     }
                 }
-                Some(c) => { name.push('\\'); name.push(*c); chars.next(); }
-                None => { name.push('\\'); }
+                Some(c) => {
+                    name.push('\\');
+                    name.push(*c);
+                    chars.next();
+                }
+                None => {
+                    name.push('\\');
+                }
             }
         } else if c == ' ' {
             break;
@@ -147,7 +165,11 @@ fn parse_friendly_name(line: &str) -> Option<String> {
         }
     }
 
-    if name.is_empty() { None } else { Some(name) }
+    if name.is_empty() {
+        None
+    } else {
+        Some(name)
+    }
 }
 
 pub async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, String> {
@@ -174,7 +196,11 @@ pub async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, Stri
         }
     }
 
-    info!("Found {} {} instance(s)", instance_names.len(), service_type);
+    info!(
+        "Found {} {} instance(s)",
+        instance_names.len(),
+        service_type
+    );
 
     let service_type_tag = if service_type.contains("googlecast") {
         "googlecast"
@@ -191,14 +217,11 @@ pub async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, Stri
         let svc = service_type.to_string();
         let tag = service_type_tag.to_string();
         handles.push(tokio::task::spawn(async move {
-            let resolve_output = match run_with_timeout(
-                "dns-sd",
-                &["-L", &instance, &svc, "local"],
-                5,
-            ).await {
-                Ok(o) => o,
-                Err(_) => return None,
-            };
+            let resolve_output =
+                match run_with_timeout("dns-sd", &["-L", &instance, &svc, "local"], 5).await {
+                    Ok(o) => o,
+                    Err(_) => return None,
+                };
 
             let mut addr = None;
             let mut friendly_name = None;
@@ -278,10 +301,7 @@ pub async fn browse_service(service_type: &str) -> Result<Vec<LocalDevice>, Stri
         };
         info!(
             "  Found device: {} ({}) at {}:{}",
-            device.name,
-            tag,
-            device.ip,
-            device.port
+            device.name, tag, device.ip, device.port
         );
         devices.push(device);
     }
@@ -346,7 +366,10 @@ mod parsing_tests {
         // Actually it strips the whole "._..." suffix:
         let parts: Vec<&str> = line.split_whitespace().collect();
         let full_name = parts.last().unwrap();
-        let stripped = full_name.strip_suffix(".local.").or_else(|| full_name.strip_suffix(".local")).unwrap_or(full_name);
+        let stripped = full_name
+            .strip_suffix(".local.")
+            .or_else(|| full_name.strip_suffix(".local"))
+            .unwrap_or(full_name);
         // Now stripped = "_googlecast._tcp."
         // The function finds "._" and returns the part before it
         assert_eq!(parse_instance_name(line), Some("_googlecast".to_string()));
@@ -409,7 +432,10 @@ mod parsing_tests {
     #[test]
     fn parse_txt_field_underscore_in_key() {
         let line = "device_type=Speaker id=d7b9d4c1ef58a1f3";
-        assert_eq!(parse_txt_field(line, "device_type"), Some("Speaker".to_string()));
+        assert_eq!(
+            parse_txt_field(line, "device_type"),
+            Some("Speaker".to_string())
+        );
     }
 
     // ── parse_friendly_name ────────────────────────────────────────────────────
@@ -425,7 +451,10 @@ mod parsing_tests {
     fn parse_friendly_name_simple() {
         // fn= followed by a name without special chars
         let line = "txtvers=1 md=.. fn=LivingRoomSpeaker id=abc";
-        assert_eq!(parse_friendly_name(line), Some("LivingRoomSpeaker".to_string()));
+        assert_eq!(
+            parse_friendly_name(line),
+            Some("LivingRoomSpeaker".to_string())
+        );
     }
 
     #[test]
@@ -445,7 +474,10 @@ mod parsing_tests {
         // In Rust: "\\040" in the source → "\" + "040" in the string
         //           → parser sees "\" + "040" → octal 040 → char 32 → space
         let line = "txtvers=1 md=.. fn=Living\\040Room\\040TV id=DEV123";
-        assert_eq!(parse_friendly_name(line), Some("Living Room TV".to_string()));
+        assert_eq!(
+            parse_friendly_name(line),
+            Some("Living Room TV".to_string())
+        );
     }
 
     #[test]
@@ -453,21 +485,30 @@ mod parsing_tests {
         // \_ = literal underscore (ASCII 95 = 0x5F = octal 137)
         // In Rust: "\\_" → "\" + "_" in string → parser sees "\_" → returns "_"
         let line = "txtvers=1 md=.. fn=Bedroom\\_Office\\_Speaker";
-        assert_eq!(parse_friendly_name(line), Some("Bedroom_Office_Speaker".to_string()));
+        assert_eq!(
+            parse_friendly_name(line),
+            Some("Bedroom_Office_Speaker".to_string())
+        );
     }
 
     #[test]
     fn parse_friendly_name_octal_dot() {
         // \. = literal period (ASCII 46 = octal 056)
         let line = r#"txtvers=1 md=.. fn=Living\056Room\056TV"#;
-        assert_eq!(parse_friendly_name(line), Some("Living.Room.TV".to_string()));
+        assert_eq!(
+            parse_friendly_name(line),
+            Some("Living.Room.TV".to_string())
+        );
     }
 
     #[test]
     fn parse_friendly_name_double_backslash() {
         // \\ = literal backslash
         let line = r#"txtvers=1 md=.. fn=Office\\Server"#;
-        assert_eq!(parse_friendly_name(line), Some(r"Office\Server".to_string()));
+        assert_eq!(
+            parse_friendly_name(line),
+            Some(r"Office\Server".to_string())
+        );
     }
 
     #[test]
@@ -486,7 +527,10 @@ mod parsing_tests {
     fn parse_friendly_name_real_nest_mini() {
         // Real device from the network
         let line = r#"txtvers=1 md=Google\040Nest\040Mini ic=/setup/icon.png fn=Living\040Room\040speaker ca=198660"#;
-        assert_eq!(parse_friendly_name(line), Some("Living Room speaker".to_string()));
+        assert_eq!(
+            parse_friendly_name(line),
+            Some("Living Room speaker".to_string())
+        );
     }
 }
 
@@ -499,11 +543,16 @@ mod integration_tests {
     #[tokio::test]
     #[ignore]
     async fn test_real_cast_discovery() {
-        let devices = browse_service("_googlecast._tcp").await.expect("browse should not fail");
+        let devices = browse_service("_googlecast._tcp")
+            .await
+            .expect("browse should not fail");
         println!("Found {} Cast device(s):", devices.len());
         for d in &devices {
             println!("  {} at {}:{}", d.name, d.ip, d.port);
         }
-        assert!(!devices.is_empty(), "expected at least one Cast device on this network");
+        assert!(
+            !devices.is_empty(),
+            "expected at least one Cast device on this network"
+        );
     }
 }
